@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Dashboard Direction - SOFEM-CI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>👑 Dashboard Direction</h1>
+        <p>Vue d'ensemble stratégique pour la direction</p>
+    </div>
+
+    <!-- Indicateurs clés -->
+    <div class="metrics-grid direction-metrics">
+        <div class="metric-card strategic">
+            <div class="metric-header">
+                <div>
+                    <div class="metric-title">Chiffre d'Affaires Mensuel</div>
+                    <div class="metric-value">{{ ca_mensuel|floatformat:0|intcomma }} FCFA</div>
+                    <div class="metric-label">Objectif: {{ objectif_ca|floatformat:0|intcomma }} FCFA</div>
+                </div>
+                <div class="metric-icon">💰</div>
+            </div>
+            <div class="metric-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ taux_objectif_ca }}%"></div>
+                </div>
+                <span>{{ taux_objectif_ca|floatformat:1 }}%</span>
+            </div>
+        </div>
+
+        <div class="metric-card production">
+            <div class="metric-header">
+                <div>
+                    <div class="metric-title">Production Mensuelle</div>
+                    <div class="metric-value">{{ production_mensuelle|floatformat:0|intcomma }} kg</div>
+                    <div class="metric-label">Objectif: {{ objectif_production|floatformat:0|intcomma }} kg</div>
+                </div>
+                <div class="metric-icon">🏭</div>
+            </div>
+            <div class="metric-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ taux_objectif_production }}%"></div>
+                </div>
+                <span>{{ taux_objectif_production|floatformat:1 }}%</span>
+            </div>
+        </div>
+
+        <div class="metric-card efficiency">
+            <div class="metric-header">
+                <div>
+                    <div class="metric-title">Rendement Global</div>
+                    <div class="metric-value">{{ rendement_global }}%</div>
+                    <div class="metric-label">Objectif: {{ objectif_rendement }}%</div>
+                </div>
+                <div class="metric-icon">⚡</div>
+            </div>
+            <div class="metric-change {% if rendement_global >= objectif_rendement %}change-positive{% else %}change-negative{% endif %}">
+                {% if rendement_global >= objectif_rendement %}↗{% else %}↘{% endif %} 
+                {{ difference_rendement|floatformat:1 }}%
+            </div>
+        </div>
+
+        <div class="metric-card waste">
+            <div class="metric-header">
+                <div>
+                    <div class="metric-title">Coûts de Production</div>
+                    <div class="metric-value">{{ cout_production|floatformat:0|intcomma }} FCFA/kg</div>
+                    <div class="metric-label">Objectif: {{ objectif_cout|floatformat:0|intcomma }} FCFA/kg</div>
+                </div>
+                <div class="metric-icon">📊</div>
+            </div>
+            <div class="metric-change {% if cout_production <= objectif_cout %}change-positive{% else %}change-negative{% endif %}">
+                {% if cout_production <= objectif_cout %}↘{% else %}↗{% endif %} 
+                {{ difference_cout|floatformat:0 }} FCFA
+            </div>
+        </div>
+    </div>
+
+    <!-- Graphiques -->
+    <div class="charts-section">
+        <div class="chart-row">
+            <div class="chart-card">
+                <h3>📈 Production par Section (30 jours)</h3>
+                <div class="chart-container">
+                    <canvas id="productionChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-card">
+                <h3>📊 Répartition des Coûts</h3>
+                <div class="chart-container">
+                    <canvas id="costsChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-row">
+            <div class="chart-card">
+                <h3>📉 Tendance Rendement</h3>
+                <div class="chart-container">
+                    <canvas id="rendementChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-card">
+                <h3>🔔 Alertes Actives</h3>
+                <div class="alerts-list">
+                    {% for alerte in alertes_actives %}
+                    <div class="alert-item alert-{{ alerte.type_alerte }}">
+                        <div class="alert-header">
+                            <span class="alert-title">{{ alerte.titre }}</span>
+                            <span class="alert-date">{{ alerte.date_creation|date:"d/m" }}</span>
+                        </div>
+                        <p class="alert-message">{{ alerte.message }}</p>
+                        <div class="alert-footer">
+                            <span class="alert-section">{{ alerte.get_section_display }}</span>
+                            <span class="alert-assigne">{{ alerte.assigne_a.get_full_name|default:alerte.assigne_a.username }}</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="no-alerts">✅ Aucune alerte active</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau de bord détaillé -->
+    <div class="detailed-section">
+        <h2>📋 Performance par Section</h2>
+        <div class="performance-grid">
+            {% for section in performances_sections %}
+            <div class="performance-card">
+                <div class="performance-header">
+                    <h4>
+                        {% if section.nom == 'Extrusion' %}🏭
+                        {% elif section.nom == 'Imprimerie' %}🖨️
+                        {% elif section.nom == 'Soudure' %}🔌
+                        {% elif section.nom == 'Recyclage' %}♻️
+                        {% endif %}
+                        {{ section.nom }}
+                    </h4>
+                    <span class="performance-status {% if section.performance >= 80 %}status-excellent{% elif section.performance >= 60 %}status-good{% else %}status-poor{% endif %}">
+                        {{ section.performance }}%
+                    </span>
+                </div>
+                
+                <div class="performance-metrics">
+                    <div class="metric">
+                        <span class="label">Production:</span>
+                        <span class="value">{{ section.production|floatformat:0 }} kg</span>
+                    </div>
+                    <div class="metric">
+                        <span class="label">Rendement:</span>
+                        <span class="value">{{ section.rendement }}%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="label">Déchets:</span>
+                        <span class="value">{{ section.dechets }}%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="label">Coût/kg:</span>
+                        <span class="value">{{ section.cout|floatformat:0 }} FCFA</span>
+                    </div>
+                </div>
+                
+                <div class="performance-actions">
+                    <a href="{% url 'rapports_section' section.nom|lower %}" class="btn-details">📊 Détails</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Actions direction -->
+    <div class="direction-actions">
+        <h2>🚀 Actions de Direction</h2>
+        <div class="actions-grid">
+            <a href="{% url 'generer_rapport' %}" class="action-btn strategic">📈 Générer Rapport Mensuel</a>
+            <a href="{% url 'alertes' %}" class="action-btn alerts">🔔 Gérer Alertes</a>
+            <a href="{% url 'objectifs' %}" class="action-btn objectives">🎯 Définir Objectifs</a>
+            <a href="{% url 'analyse_couts' %}" class="action-btn analysis">💰 Analyse Coûts</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Graphique de production
+const productionCtx = document.getElementById('productionChart').getContext('2d');
+new Chart(productionCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ labels_production|safe }},
+        datasets: [{
+            label: 'Production (kg)',
+            data: {{ data_production|safe }},
+            backgroundColor: ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0']
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            title: { display: true, text: 'Production par Section' }
+        }
+    }
+});
+
+// Autres graphiques similaires...
+</script>
+{% endblock %}

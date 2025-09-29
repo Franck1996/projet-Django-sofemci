@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gestion des Alertes - SOFEM-CI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>🔔 Gestion des Alertes</h1>
+        <p>Suivi et résolution des alertes système</p>
+    </div>
+
+    <!-- Filtres alertes -->
+    <div class="alerts-filters">
+        <div class="filter-tabs">
+            <button class="filter-tab active" data-filter="toutes">Toutes les alertes</button>
+            <button class="filter-tab" data-filter="nouveau">Nouvelles</button>
+            <button class="filter-tab" data-filter="en_cours">En cours</button>
+            <button class="filter-tab" data-filter="assignees">Qui me sont assignées</button>
+        </div>
+        
+        <div class="filter-actions">
+            <select id="typeFiltre" class="form-control">
+                <option value="">Tous les types</option>
+                <option value="critique">Critique</option>
+                <option value="important">Important</option>
+                <option value="info">Information</option>
+                <option value="maintenance">Maintenance</option>
+            </select>
+            
+            <select id="sectionFiltre" class="form-control">
+                <option value="">Toutes les sections</option>
+                <option value="extrusion">Extrusion</option>
+                <option value="imprimerie">Imprimerie</option>
+                <option value="soudure">Soudure</option>
+                <option value="recyclage">Recyclage</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Liste des alertes -->
+    <div class="alerts-list">
+        {% for alerte in alertes %}
+        <div class="alert-item alert-{{ alerte.type_alerte }} alert-{{ alerte.statut }}" 
+             data-type="{{ alerte.type_alerte }}" data-section="{{ alerte.section }}">
+            <div class="alert-header">
+                <div class="alert-title-section">
+                    <span class="alert-type-badge">{{ alerte.get_type_alerte_display }}</span>
+                    <h3 class="alert-title">{{ alerte.titre }}</h3>
+                </div>
+                <div class="alert-meta">
+                    <span class="alert-date">{{ alerte.date_creation|date:"d/m/Y H:i" }}</span>
+                    <span class="alert-section">{{ alerte.get_section_display }}</span>
+                </div>
+            </div>
+            
+            <div class="alert-body">
+                <p class="alert-message">{{ alerte.message }}</p>
+                
+                <div class="alert-details">
+                    <div class="detail">
+                        <strong>Créée par:</strong> {{ alerte.cree_par.get_full_name|default:alerte.cree_par.username }}
+                    </div>
+                    {% if alerte.assigne_a %}
+                    <div class="detail">
+                        <strong>Assignée à:</strong> {{ alerte.assigne_a.get_full_name|default:alerte.assigne_a.username }}
+                    </div>
+                    {% endif %}
+                    {% if alerte.date_resolution %}
+                    <div class="detail">
+                        <strong>Résolue le:</strong> {{ alerte.date_resolution|date:"d/m/Y H:i" }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="alert-actions">
+                <span class="alert-status status-{{ alerte.statut }}">
+                    {{ alerte.get_statut_display }}
+                </span>
+                
+                <div class="action-buttons">
+                    {% if alerte.statut == 'nouveau' and user.role in 'superviseur,admin' %}
+                    <button class="btn-assign" onclick="assignerAlerte({{ alerte.id }})">
+                        👤 M'assigner
+                    </button>
+                    {% endif %}
+                    
+                    {% if alerte.assigne_a == user or user.role in 'superviseur,admin' %}
+                        {% if alerte.statut == 'nouveau' or alerte.statut == 'en_cours' %}
+                        <button class="btn-resolve" onclick="resoudreAlerte({{ alerte.id }})">
+                            ✅ Résoudre
+                        </button>
+                        {% endif %}
+                    {% endif %}
+                    
+                    <button class="btn-view" onclick="afficherDetailsAlerte({{ alerte.id }})">
+                        👁️ Détails
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="no-alerts">
+            <p>✅ Aucune alerte à afficher</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if alertes.has_other_pages %}
+    <div class="pagination">
+        <!-- Code de pagination similaire à l'historique -->
+    </div>
+    {% endif %}
+
+    <!-- Bouton nouvelle alerte -->
+    {% if user.role in 'superviseur,admin' %}
+    <div class="new-alert-section">
+        <button class="btn-new-alert" onclick="afficherModalNouvelleAlerte()">
+            ➕ Nouvelle Alerte
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal nouvelle alerte -->
+<div id="newAlertModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>➕ Nouvelle Alerte</h2>
+        
+        <form id="newAlertForm">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="alertTitre">Titre de l'alerte</label>
+                <input type="text" id="alertTitre" name="titre" required class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label for="alertMessage">Message</label>
+                <textarea id="alertMessage" name="message" rows="4" required class="form-control"></textarea>
+            </div>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="alertType">Type</label>
+                    <select id="alertType" name="type_alerte" required class="form-control">
+                        <option value="info">Information</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="important">Important</option>
+                        <option value="critique">Critique</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="alertSection">Section</label>
+                    <select id="alertSection" name="section" required class="form-control">
+                        <option value="extrusion">Extrusion</option>
+                        <option value="imprimerie">Imprimerie</option>
+                        <option value="soudure">Soudure</option>
+                        <option value="recyclage">Recyclage</option>
+                        <option value="general">Général</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="alertAssign">Assigner à (optionnel)</label>
+                <select id="alertAssign" name="assigne_a" class="form-control">
+                    <option value="">Non assignée</option>
+                    {% for utilisateur in utilisateurs %}
+                    <option value="{{ utilisateur.id }}">{{ utilisateur.get_full_name|default:utilisateur.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">💾 Créer l'alerte</button>
+                <button type="button" class="btn-secondary" onclick="fermerModalNouvelleAlerte()">❌ Annuler</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Filtrage des alertes
+document.querySelectorAll('.filter-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        filtrerAlertes();
+    });
+});
+
+function filtrerAlertes() {
+    const filtre = document.querySelector('.filter-tab.active').getAttribute('data-filter');
+    const typeFiltre = document.getElementById('typeFiltre').value;
+    const sectionFiltre = document.getElementById('sectionFiltre').value;
+    
+    document.querySelectorAll('.alert-item').forEach(alerte => {
+        const type = alerte.getAttribute('data-type');
+        const section = alerte.getAttribute('data-section');
+        let afficher = true;
+        
+        if (filtre !== 'toutes') {
+            afficher = alerte.classList.contains(`alert-${filtre}`);
+        }
+        
+        if (typeFiltre && type !== typeFiltre) {
+            afficher = false;
+        }
+        
+        if (sectionFiltre && section !== sectionFiltre) {
+            afficher = false;
+        }
+        
+        alerte.style.display = afficher ? 'block' : 'none';
+    });
+}
+
+// Gestion des modales et actions
+function afficherModalNouvelleAlerte() {
+    document.getElementById('newAlertModal').style.display = 'block';
+}
+
+function fermerModalNouvelleAlerte() {
+    document.getElementById('newAlertModal').style.display = 'none';
+}
+
+function assignerAlerte(alerteId) {
+    if (confirm('Voulez-vous vous assigner cette alerte ?')) {
+        fetch(`/api/alertes/${alerteId}/assigner/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': window.SOFEMCI.csrf,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            }
+        });
+    }
+}
+
+function resoudreAlerte(alerteId) {
+    if (confirm('Marquer cette alerte comme résolue ?')) {
+        fetch(`/api/alertes/${alerteId}/resoudre/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': window.SOFEMCI.csrf,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            }
+        });
+    }
+}
+
+// Fermer modales
+document.querySelectorAll('.close').forEach(close => {
+    close.addEventListener('click', function() {
+        this.closest('.modal').style.display = 'none';
+    });
+});
+</script>
+{% endblock %}
