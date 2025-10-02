@@ -1,5 +1,5 @@
 # sofemci/admin.py
-# 🎯 ADMINISTRATION DJANGO POUR SOFEM-CI
+# ADMINISTRATION DJANGO POUR SOFEM-CI
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
@@ -13,8 +13,18 @@ from .models import *
 class CustomUserAdmin(UserAdmin):
     list_display = ['username', 'first_name', 'last_name', 'role', 'is_active', 'date_joined']
     list_filter = ['role', 'is_active', 'date_joined']
-    search_fields = ['titre', 'message']
+    search_fields = ['username', 'first_name', 'last_name', 'email']
     ordering = ['username']
+    
+    fieldsets = UserAdmin.fieldsets + (
+        ('Informations SOFEM-CI', {
+            'fields': ('role', 'telephone', 'date_embauche')
+        }),
+    )
+
+# ==========================================
+# ADMINISTRATION RAPPORTS
+# ==========================================
 
 @admin.register(RapportMensuel)
 class RapportMensuelAdmin(admin.ModelAdmin):
@@ -22,18 +32,22 @@ class RapportMensuelAdmin(admin.ModelAdmin):
     list_filter = ['mois', 'genere_par']
     readonly_fields = ['date_generation']
     ordering = ['-mois']
-    fields = ['username', 'first_name', 'last_name', 'email']
     
-class RapportMensuelAdmin(admin.ModelAdmin):
     fieldsets = (
-        ('Informations générales', {
-            'fields': ('titre', 'mois', 'annee')
+        ('Période', {
+            'fields': ('mois',)
         }),
-        ('Détails', {
-            'fields': ('contenu',)
+        ('Statistiques Globales', {
+            'fields': ('total_production_kg', 'total_extrusion_kg', 'total_imprimerie_kg', 
+                      'total_soudure_kg', 'total_recyclage_kg', 'total_dechets_kg')
+        }),
+        ('Indicateurs', {
+            'fields': ('rendement_moyen', 'taux_dechet_moyen', 'nombre_jours_production')
+        }),
+        ('Fichiers', {
+            'fields': ('fichier_pdf', 'fichier_excel')
         }),
     )
-
 
 # ==========================================
 # ADMINISTRATION CONFIGURATION
@@ -66,50 +80,39 @@ class ProductionExtrusionAdmin(admin.ModelAdmin):
     list_display = ['date_production', 'zone', 'equipe', 'total_production_kg', 'rendement_pourcentage', 'valide', 'cree_par']
     list_filter = ['date_production', 'zone', 'equipe', 'valide']
     search_fields = ['chef_zone']
-    readonly_fields = ['total_production_kg', 'rendement_pourcentage', 'taux_dechet_pourcentage', 'production_par_machine']
+    readonly_fields = ['total_production_kg', 'rendement_pourcentage', 'taux_dechet_pourcentage', 'production_par_machine', 'date_creation', 'date_modification']
     ordering = ['-date_production']
 
 @admin.register(ProductionImprimerie)
 class ProductionImprimerieAdmin(admin.ModelAdmin):
     list_display = ['date_production', 'total_production_kg', 'taux_dechet_pourcentage', 'valide', 'cree_par']
     list_filter = ['date_production', 'valide']
-    readonly_fields = ['total_production_kg', 'taux_dechet_pourcentage']
+    readonly_fields = ['total_production_kg', 'taux_dechet_pourcentage', 'date_creation', 'date_modification']
     ordering = ['-date_production']
 
 @admin.register(ProductionSoudure)
 class ProductionSoudureAdmin(admin.ModelAdmin):
     list_display = ['date_production', 'total_production_kg', 'total_production_specifique_kg', 'valide', 'cree_par']
     list_filter = ['date_production', 'valide']
-    readonly_fields = ['total_production_kg', 'total_production_specifique_kg', 'taux_dechet_pourcentage']
+    readonly_fields = ['total_production_kg', 'total_production_specifique_kg', 'taux_dechet_pourcentage', 'date_creation', 'date_modification']
     ordering = ['-date_production']
 
 @admin.register(ProductionRecyclage)
 class ProductionRecyclageAdmin(admin.ModelAdmin):
     list_display = ['date_production', 'equipe', 'total_production_kg', 'production_par_moulinex', 'valide', 'cree_par']
     list_filter = ['date_production', 'equipe', 'valide']
-    readonly_fields = ['total_production_kg', 'production_par_moulinex', 'taux_transformation_pourcentage']
+    readonly_fields = ['total_production_kg', 'production_par_moulinex', 'taux_transformation_pourcentage', 'date_creation', 'date_modification']
     ordering = ['-date_production']
 
 # ==========================================
 # ADMINISTRATION SYSTÈME
 # ==========================================
 
-from django.contrib import admin
-from .models import Alerte
-
 @admin.register(Alerte)
 class AlerteAdmin(admin.ModelAdmin):
-    list_display = (
-        'titre',
-        'type_alerte',
-        'statut',
-        'section',
-        'cree_par',
-        'assigne_a',
-        'date_creation',
-        'date_resolution',
-    )
-    list_filter = ('type_alerte', 'statut', 'section', 'cree_par', 'assigne_a')
-    search_fields = ('titre', 'message', 'section')
-    ordering = ('-date_creation',)
+    list_display = ['titre', 'type_alerte', 'statut', 'section', 'cree_par', 'assigne_a', 'date_creation', 'date_resolution']
+    list_filter = ['type_alerte', 'statut', 'section', 'cree_par', 'assigne_a']
+    search_fields = ['titre', 'message', 'section']
+    ordering = ['-date_creation']
     date_hierarchy = 'date_creation'
+    readonly_fields = ['date_creation']

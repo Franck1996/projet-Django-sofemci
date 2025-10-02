@@ -1,11 +1,9 @@
-# sofemci/models.py
-# 🎯 TOUS LES MODÈLES DE L'APPLICATION SOFEM-CI
-
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
-from decimal import Decimal
 from django.utils import timezone
+from decimal import Decimal
+from datetime import datetime, timedelta
 
 # ==========================================
 # MODÈLE UTILISATEUR PERSONNALISÉ
@@ -27,6 +25,10 @@ class CustomUser(AbstractUser):
     telephone = models.CharField(max_length=20, blank=True)
     date_embauche = models.DateField(null=True, blank=True)
     actif = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = "Utilisateur"
+        verbose_name_plural = "Utilisateurs"
     
     def __str__(self):
         return f"{self.username} - {self.get_role_display()}"

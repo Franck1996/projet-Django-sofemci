@@ -210,65 +210,72 @@
 <body class="{% block body_class %}{% endblock %}">
     
     <!-- Navigation (seulement si connecté) -->
-    {% if user.is_authenticated %}
-    <nav class="navbar">
-        <div class="container">
-            <div class="d-flex justify-content-between align-items-center w-100">
-                <div>
-                    <a href="{% url 'dashboard' %}" class="navbar-brand">
-                        <img src="{% static 'img/logo_sofem_ci.jpeg' %}" alt="SOFEM-CI Logo" class="navbar-logo">
+   {% if user.is_authenticated %}
+<nav class="navbar">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center w-100">
+            <div>
+                <a href="{% url 'dashboard' %}" class="navbar-brand">
+                    <img src="{% static 'img/logo_sofem_ci.jpeg' %}" alt="SOFEM-CI Logo" class="navbar-logo">
+                </a>
+            </div>
+            
+            <div class="d-flex align-items-center">
+                <!-- Menu principal -->
+                <div class="nav-menu d-flex">
+                    <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                        📊 Dashboard
                     </a>
+                    
+                    {% if user.role in 'chef_extrusion,superviseur,admin' %}
+                    <a href="{% url 'saisie_extrusion' %}" class="nav-link {% if request.resolver_match.url_name == 'saisie_extrusion' %}active{% endif %}">
+                        🔧 Extrusion
+                    </a>
+                    {% endif %}
+                    
+                    {% if user.role in 'chef_imprimerie,chef_soudure,chef_recyclage,superviseur,admin' %}
+                    <a href="{% url 'saisie_sections' %}" class="nav-link {% if request.resolver_match.url_name == 'saisie_sections' %}active{% endif %}">
+                        🏭 Sections
+                    </a>
+                    {% endif %}
+                    
+                    <!-- NOUVEL ONGLET MACHINES -->
+                    {% if user.role in 'superviseur,admin' %}
+                    <a href="{% url 'machines_list' %}" class="nav-link {% if 'machine' in request.resolver_match.url_name %}active{% endif %}">
+                        🔧 Machines
+                    </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'historique' %}" class="nav-link {% if request.resolver_match.url_name == 'historique' %}active{% endif %}">
+                        📋 Historique
+                    </a>
+                    
+                    {% if user.role in 'superviseur,admin,direction' %}
+                    <a href="{% url 'rapports' %}" class="nav-link {% if request.resolver_match.url_name == 'rapports' %}active{% endif %}">
+                        📈 Rapports
+                    </a>
+                    {% endif %}
+                    
+                    {% if user.role in 'direction,admin' %}
+                    <a href="{% url 'dashboard_direction' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard_direction' %}active{% endif %}">
+                        👑 Direction
+                    </a>
+                    {% endif %}
                 </div>
                 
-                <div class="d-flex align-items-center">
-                    <!-- Menu principal -->
-                    <div class="nav-menu d-flex">
-                        <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                            📊 Dashboard
-                        </a>
-                        
-                        {% if user.role in 'chef_extrusion,superviseur,admin' %}
-                        <a href="{% url 'saisie_extrusion' %}" class="nav-link {% if request.resolver_match.url_name == 'saisie_extrusion' %}active{% endif %}">
-                            🔧 Extrusion
-                        </a>
-                        {% endif %}
-                        
-                        {% if user.role in 'chef_imprimerie,chef_soudure,chef_recyclage,superviseur,admin' %}
-                        <a href="{% url 'saisie_sections' %}" class="nav-link {% if request.resolver_match.url_name == 'saisie_sections' %}active{% endif %}">
-                            🏭 Sections
-                        </a>
-                        {% endif %}
-                        
-                        <a href="{% url 'historique' %}" class="nav-link {% if request.resolver_match.url_name == 'historique' %}active{% endif %}">
-                            📋 Historique
-                        </a>
-                        
-                        {% if user.role in 'superviseur,admin,direction' %}
-                        <a href="{% url 'rapports' %}" class="nav-link {% if request.resolver_match.url_name == 'rapports' %}active{% endif %}">
-                            📈 Rapports
-                        </a>
-                        {% endif %}
-                        
-                        {% if user.role in 'direction,admin' %}
-                        <a href="{% url 'dashboard_direction' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard_direction' %}active{% endif %}">
-                            👑 Direction
-                        </a>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Info utilisateur -->
-                    <div class="ms-4 user-info">
-                        <span class="badge bg-primary">{{ user.get_role_display|default:user.role }}</span>
-                        <span class="ms-2">{{ user.get_full_name|default:user.username }}</span>
-                        <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger ms-3">
-                            🚪 Déconnexion
-                        </a>
-                    </div>
+                <!-- Info utilisateur -->
+                <div class="ms-4 user-info">
+                    <span class="badge bg-primary">{{ user.get_role_display|default:user.role }}</span>
+                    <span class="ms-2">{{ user.get_full_name|default:user.username }}</span>
+                    <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger ms-3">
+                        🚪 Déconnexion
+                    </a>
                 </div>
             </div>
         </div>
-    </nav>
-    {% endif %}
+    </div>
+</nav>
+{% endif %}
     
     <!-- Messages Django -->
     {% if messages %}
