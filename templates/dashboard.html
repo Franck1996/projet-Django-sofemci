@@ -81,41 +81,7 @@
     </div>
 </div>
 
-    <!-- Filtre de date -->
-    <div class="date-filter-section">
-        <form method="get" class="date-filter-form">
-            <div class="filter-container">
-                <label for="date-filter">
-                    <span class="filter-icon">📅</span>
-                    Date de consultation :
-                </label>
-                <input type="date" 
-                       id="date-filter" 
-                       name="date" 
-                       value="{{ selected_date|date:'Y-m-d' }}"
-                       max="{{ 'now'|date:'Y-m-d' }}"
-                       class="form-control date-input">
-                
-                <button type="submit" class="btn-filter">
-                    🔍 Rafraichir les données
-                </button>
-                
-                {% if not is_today %}
-                <a href="{% url 'dashboard' %}" class="btn-today">
-                    📆 Aujourd'hui
-                </a>
-                {% endif %}
-            </div>
-            
-            {% if not is_today %}
-            <div class="date-info">
-                <span class="info-badge">
-                    Vous consultez les données du {{ selected_date|date:"d/m/Y" }}
-                </span>
-            </div>
-            {% endif %}
-        </form>
-    </div>
+    
 
     <!-- Métriques Principales en Temps Réel -->
     <div class="metrics-grid">
@@ -862,8 +828,8 @@
 
 .btn-refresh {
     padding: 10px 20px;
-    background: white;
-    color: #667eea;
+    background: #6ce8f6ff;
+    color: #101b50ff;
     border: none;
     border-radius: 8px;
     font-weight: 700;
@@ -878,7 +844,7 @@
 
 .btn-today-inline {
     padding: 10px 20px;
-    background: #27ae60;
+    background: #1096efff;
     color: white;
     border: none;
     border-radius: 8px;
