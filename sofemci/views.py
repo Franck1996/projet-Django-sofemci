@@ -47,35 +47,46 @@ def logout_view(request):
 
 @login_required
 def dashboard_view(request):
-    today = timezone.now().date()
+    """Dashboard principal - Page dashboard.html"""
     
-    # Données réelles
+    # Récupérer la date depuis le paramètre GET, sinon utiliser aujourd'hui
+    date_str = request.GET.get('date')
+    if date_str:
+        try:
+            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            selected_date = timezone.now().date()
+    else:
+        selected_date = timezone.now().date()
+    
+    # Métriques du jour sélectionné (au lieu de today)
     context = {
-        'today': today,
-        'production_totale': get_production_totale_jour(today),
-        'production_extrusion': get_production_section_jour('extrusion', today),
-        'production_imprimerie': get_production_section_jour('imprimerie', today),
-        'production_soudure': get_production_section_jour('soudure', today),
-        'production_recyclage': get_production_section_jour('recyclage', today),
-        'total_dechets': get_dechets_totaux_jour(today),
-        'efficacite_moyenne': get_efficacite_moyenne_jour(today),
+        'today': selected_date,  # Date sélectionnée
+        'selected_date': selected_date,  # Pour le formulaire
+        'is_today': selected_date == timezone.now().date(),  # Savoir si c'est aujourd'hui
+        'production_totale': get_production_totale_jour(selected_date),
+        'production_extrusion': get_production_section_jour('extrusion', selected_date),
+        'production_imprimerie': get_production_section_jour('imprimerie', selected_date),
+        'production_soudure': get_production_section_jour('soudure', selected_date),
+        'production_recyclage': get_production_section_jour('recyclage', selected_date),
+        'total_dechets': get_dechets_totaux_jour(selected_date),
+        'efficacite_moyenne': get_efficacite_moyenne_jour(selected_date),
         'machines_stats': get_machines_stats(),
-        'zones_performance': get_zones_performance(today),
+        'zones_performance': get_zones_performance(selected_date),
         'alertes': Alerte.objects.filter(
             statut__in=['nouveau', 'en_cours']
         ).order_by('-date_creation')[:5],
-        'extrusion_stats': get_extrusion_details_jour(today),
-        'imprimerie_stats': get_imprimerie_details_jour(today),
-        'soudure_stats': get_soudure_details_jour(today),
-        'recyclage_stats': get_recyclage_details_jour(today),
-        # Données pour graphiques Analytics
+        'extrusion_stats': get_extrusion_details_jour(selected_date),
+        'imprimerie_stats': get_imprimerie_details_jour(selected_date),
+        'soudure_stats': get_soudure_details_jour(selected_date),
+        'recyclage_stats': get_recyclage_details_jour(selected_date),
         'chart_data': get_chart_data_for_dashboard(),
         'analytics_kpis': get_analytics_kpis(),
         'analytics_table': get_analytics_table_data(),
     }
     
     return render(request, 'dashboard.html', context)
-
+    
 @login_required
 def dashboard_direction_view(request):
     if request.user.role not in ['direction', 'admin']:
