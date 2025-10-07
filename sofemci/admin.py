@@ -4,6 +4,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import *
+from .models import HistoriqueMachine, AlerteIA
 
 # ==========================================
 # ADMINISTRATION UTILISATEURS
@@ -116,3 +117,16 @@ class AlerteAdmin(admin.ModelAdmin):
     ordering = ['-date_creation']
     date_hierarchy = 'date_creation'
     readonly_fields = ['date_creation']
+
+@admin.register(AlerteIA)
+class AlerteIAAdmin(admin.ModelAdmin):
+    list_display = ['machine', 'titre', 'niveau', 'statut', 'probabilite_panne', 'date_creation']
+    list_filter = ['niveau', 'statut', 'date_creation']
+    search_fields = ['machine__numero', 'titre']  
+
+@admin.register(HistoriqueMachine)
+class HistoriqueMachineAdmin(admin.ModelAdmin):
+    list_display = ['machine', 'type_evenement', 'date_evenement', 'technicien']
+    list_filter = ['type_evenement', 'date_evenement']
+    search_fields = ['machine__numero', 'description']
+

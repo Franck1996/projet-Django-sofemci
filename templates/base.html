@@ -261,6 +261,12 @@
                         👑 Direction
                     </a>
                     {% endif %}
+                    
+                    {% if user.role in 'superviseur,admin,direction' %}
+                    <a href="{% url 'dashboard_ia' %}" class="nav-link">
+                      🤖 IA Prédictive
+                    </a>
+                    {% endif %}
                 </div>
                 
                 <!-- Info utilisateur -->

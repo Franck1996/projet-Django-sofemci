@@ -60,6 +60,28 @@ urlpatterns = [
     # ==========================================
     path('api/calculs/', views.api_calculs_production, name='api_calculs'),
     path('api/dashboard/', views.api_dashboard_data, name='api_dashboard'),
+
+
+    # ==========================================
+    # MODULE IA - MAINTENANCE PRÉDICTIVE
+    # ==========================================
+    path('ia/dashboard/', views.dashboard_ia_view, name='dashboard_ia'),
+    path('ia/machine/<int:machine_id>/', views.machine_detail_ia_view, name='machine_detail_ia'),
+    path('ia/analyser/', views.lancer_analyse_complete, name='lancer_analyse_complete'),
+    
+    # Gestion maintenances et pannes
+    path('ia/machine/<int:machine_id>/maintenance/', views.enregistrer_maintenance_view, name='enregistrer_maintenance'),
+    path('ia/machine/<int:machine_id>/panne/', views.enregistrer_panne_view, name='enregistrer_panne'),
+    path('ia/machine/<int:machine_id>/simuler/', views.simuler_capteurs_view, name='simuler_capteurs'),
+    
+    # Alertes IA
+    path('ia/alertes/', views.liste_alertes_ia, name='liste_alertes_ia'),
+    path('ia/alerte/<int:alerte_id>/traiter/', views.traiter_alerte_ia, name='traiter_alerte_ia'),
+    
+    # API IA
+    path('api/ia/machines-status/', views.api_machines_status, name='api_machines_status'),
+    path('api/ia/alertes-count/', views.api_alertes_count, name='api_alertes_count'),
+    path('api/ia/statistiques/', views.api_statistiques_ia, name='api_statistiques_ia'),
 ]
 
 # ==========================================

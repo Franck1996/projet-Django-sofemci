@@ -1,0 +1,1523 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Dashboard IA - Maintenance Prédictive{% endblock %}
+
+{% block content %}
+<div class="container-ia">
+    <div class="page-header-ia">
+        <div>
+            <h1>🤖 Dashboard IA - Maintenance Prédictive</h1>
+            <p>Intelligence artificielle pour prévenir les pannes machines</p>
+        </div>
+        
+        <!-- BOUTON ULTRA-ANIMÉ -->
+        <button onclick="lancerAnalyseIA()" class="btn-analyze-futuristic" id="btnAnalyse">
+            <!-- Couches d'effets multiples -->
+            <span class="btn-glow"></span>
+            <span class="btn-glow-2"></span>
+            
+            <!-- Orbites animées -->
+            <div class="btn-orbit orbit-1"></div>
+            <div class="btn-orbit orbit-2"></div>
+            <div class="btn-orbit orbit-3"></div>
+            
+            <!-- Particules flottantes -->
+            <div class="btn-particles">
+                <span class="particle"></span>
+                <span class="particle"></span>
+                <span class="particle"></span>
+                <span class="particle"></span>
+                <span class="particle"></span>
+                <span class="particle"></span>
+            </div>
+            
+            <!-- Vagues d'énergie -->
+            <div class="energy-waves">
+                <span class="wave"></span>
+                <span class="wave"></span>
+                <span class="wave"></span>
+            </div>
+            
+            <!-- Contenu principal -->
+            <span class="btn-content-ia">
+                <span class="icon-container">
+                    <svg class="btn-icon-ai icon-layer-1" viewBox="0 0 24 24" width="24" height="24">
+                        <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" fill="currentColor"/>
+                    </svg>
+                    <svg class="btn-icon-ai icon-layer-2" viewBox="0 0 24 24" width="20" height="20">
+                        <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                        <circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="1"/>
+                    </svg>
+                    <span class="icon-pulse"></span>
+                </span>
+                <span class="btn-text-ai">
+                    <span class="text-main">Lancer l'Analyse IA</span>
+                    <span class="text-glitch">Lancer l'Analyse IA</span>
+                    <span class="text-shadow">Lancer l'Analyse IA</span>
+                </span>
+            </span>
+            
+            <!-- Hexagones décoratifs -->
+            <div class="hexagon-container">
+                <div class="hexagon hex-1"></div>
+                <div class="hexagon hex-2"></div>
+                <div class="hexagon hex-3"></div>
+            </div>
+            
+            <!-- Scanline effet -->
+            <div class="scanline"></div>
+        </button>
+    </div>
+
+    <!-- Statistiques globales -->
+    <div class="stats-grid-ia">
+        <div class="stat-card-ia health">
+            <div class="stat-icon">💚</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ stats_parc.score_sante_moyen|floatformat:1 }}%</div>
+                <div class="stat-label">Score Santé Moyen</div>
+            </div>
+        </div>
+
+        <div class="stat-card-ia critical">
+            <div class="stat-icon">🚨</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ stats_parc.machines_risque_critique }}</div>
+                <div class="stat-label">Risque Critique</div>
+            </div>
+        </div>
+
+        <div class="stat-card-ia warning">
+            <div class="stat-icon">⚠️</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ stats_parc.machines_risque_eleve }}</div>
+                <div class="stat-label">Risque Élevé</div>
+            </div>
+        </div>
+
+        <div class="stat-card-ia anomaly">
+            <div class="stat-icon">🔍</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ stats_parc.anomalies_detectees }}</div>
+                <div class="stat-label">Anomalies Détectées</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Machines critiques -->
+    {% if machines_critiques %}
+    <div class="section-critical">
+        <h2>🚨 MACHINES À RISQUE CRITIQUE</h2>
+        <div class="machines-grid">
+            {% for machine in machines_critiques %}
+            <div class="machine-card critical">
+                <div class="machine-header">
+                    <div>
+                        <h3>{{ machine.numero }}</h3>
+                        <span class="machine-section">{{ machine.get_section_display }}</span>
+                    </div>
+                    <div class="risk-badge critical">
+                        {{ machine.probabilite_panne_7_jours|floatformat:0 }}%
+                    </div>
+                </div>
+                
+                <div class="machine-stats">
+                    <div class="stat">
+                        <span class="label">Score Santé:</span>
+                        <span class="value health-{{ machine.score_sante_global|floatformat:0 }}">
+                            {{ machine.score_sante_global|floatformat:1 }}%
+                        </span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Température:</span>
+                        <span class="value {% if machine.est_en_surchauffe %}text-danger{% endif %}">
+                            {{ machine.temperature_actuelle|default:"--" }}°C
+                        </span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Heures fonct.:</span>
+                        <span class="value">{{ machine.heures_fonctionnement_totales|floatformat:0 }}h</span>
+                    </div>
+                </div>
+
+                {% if machine.facteurs_risque %}
+                <div class="risk-factors">
+                    <strong>Facteurs de risque:</strong>
+                    <ul>
+                        {% for facteur in machine.facteurs_risque %}
+                        <li>{{ facteur }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <div class="machine-actions">
+                    <a href="{% url 'machine_detail_ia' machine.id %}" class="btn-detail">
+                        📊 Détails
+                    </a>
+                    <a href="{% url 'enregistrer_maintenance' machine.id %}" class="btn-maintenance">
+                        🔧 Maintenance
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Alertes IA actives -->
+    <div class="alerts-section">
+        <div class="section-header">
+            <h2>🔔 Alertes IA Actives ({{ alertes.count }})</h2>
+            <a href="{% url 'liste_alertes_ia' %}" class="btn-secondary">Voir toutes les alertes</a>
+        </div>
+
+        <div class="alerts-list-ia">
+            {% for alerte in alertes %}
+            <div class="alert-card-ia alert-{{ alerte.niveau }}">
+                <div class="alert-header-ia">
+                    <div class="alert-badge {{ alerte.niveau }}">
+                        {{ alerte.get_niveau_display }}
+                    </div>
+                    <div class="alert-machine">
+                        Machine {{ alerte.machine.numero }} - {{ alerte.machine.get_section_display }}
+                    </div>
+                    <div class="alert-time">
+                        {{ alerte.date_creation|timesince }} ago
+                    </div>
+                </div>
+                
+                <h4>{{ alerte.titre }}</h4>
+                <p>{{ alerte.message }}</p>
+                
+                <div class="alert-metrics">
+                    <span>Probabilité: <strong>{{ alerte.probabilite_panne }}%</strong></span>
+                    <span>Délai: <strong>{{ alerte.delai_estime_jours }} jours</strong></span>
+                    <span>Confiance: <strong>{{ alerte.confiance_prediction }}%</strong></span>
+                </div>
+                
+                {% if alerte.action_recommandee %}
+                <div class="action-recommandee">
+                    <strong>Action recommandée:</strong> {{ alerte.action_recommandee }}
+                </div>
+                {% endif %}
+                
+                <div class="alert-actions-ia">
+                    <form method="post" action="{% url 'traiter_alerte_ia' alerte.id %}" style="display: inline;">
+                        {% csrf_token %}
+                        {% if alerte.statut == 'nouvelle' %}
+                        <button type="submit" name="action" value="prendre_en_charge" class="btn-sm btn-primary">
+                            Prendre en charge
+                        </button>
+                        {% endif %}
+                        {% if alerte.statut == 'en_traitement' %}
+                        <button type="submit" name="action" value="resoudre" class="btn-sm btn-success">
+                            Résoudre
+                        </button>
+                        {% endif %}
+                        <button type="submit" name="action" value="ignorer" class="btn-sm btn-secondary">
+                            Ignorer
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% empty %}
+            <p class="no-alerts">Aucune alerte active</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Vue d'ensemble machines -->
+    <div class="machines-overview">
+        <h2>Vue d'ensemble du parc machines</h2>
+        <div class="machines-table-container">
+            <table class="machines-table-ia">
+                <thead>
+                    <tr>
+                        <th>Machine</th>
+                        <th>Section</th>
+                        <th>Score Santé</th>
+                        <th>Risque 7j</th>
+                        <th>Température</th>
+                        <th>Consommation</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for machine in machines_actives %}
+                    <tr class="machine-row">
+                        <td><strong>{{ machine.numero }}</strong></td>
+                        <td>{{ machine.get_section_display }}</td>
+                        <td>
+                            <div class="health-bar">
+                                <div class="health-fill" style="width: {{ machine.score_sante_global }}%; background: {% if machine.score_sante_global >= 80 %}#27ae60{% elif machine.score_sante_global >= 60 %}#f39c12{% else %}#e74c3c{% endif %}"></div>
+                                <span class="health-text">{{ machine.score_sante_global|floatformat:0 }}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="risk-badge {% if machine.probabilite_panne_7_jours >= 70 %}critical{% elif machine.probabilite_panne_7_jours >= 40 %}warning{% else %}ok{% endif %}">
+                                {{ machine.probabilite_panne_7_jours|floatformat:0 }}%
+                            </span>
+                        </td>
+                        <td class="{% if machine.est_en_surchauffe %}text-danger{% endif %}">
+                            {{ machine.temperature_actuelle|default:"--" }}°C
+                        </td>
+                        <td class="{% if machine.est_en_surconsommation %}text-warning{% endif %}">
+                            {{ machine.consommation_electrique_kwh|floatformat:1 }} kWh
+                        </td>
+                        <td>
+                            {% if machine.anomalie_detectee %}
+                            <span class="badge-anomalie">Anomalie</span>
+                            {% else %}
+                            <span class="badge-ok">OK</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'machine_detail_ia' machine.id %}" class="btn-icon">📊</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Interface d'analyse futuriste -->
+<div id="analyseOverlay" class="analyse-overlay">
+    <div class="neural-background">
+        <canvas id="neuralCanvas"></canvas>
+    </div>
+    
+    <div class="analyse-container">
+        <!-- Cercle de progression principal -->
+        <div class="main-circle-container">
+            <svg class="progress-ring" viewBox="0 0 200 200">
+                <defs>
+                    <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#00f5ff;stop-opacity:1" />
+                        <stop offset="50%" style="stop-color:#667eea;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#f56ef8;stop-opacity:1" />
+                    </linearGradient>
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+                <circle class="progress-ring-bg" cx="100" cy="100" r="90" />
+                <circle class="progress-ring-circle" cx="100" cy="100" r="90" id="progressCircle" />
+            </svg>
+            
+            <div class="circle-content">
+                <div class="ai-brain">
+                    <svg viewBox="0 0 100 100" width="80" height="80">
+                        <g class="brain-wave">
+                            <path d="M20 50 Q30 40, 40 50 T60 50 T80 50" stroke="url(#progressGradient)" stroke-width="3" fill="none"/>
+                            <path d="M20 60 Q30 50, 40 60 T60 60 T80 60" stroke="url(#progressGradient)" stroke-width="3" fill="none"/>
+                            <path d="M20 70 Q30 60, 40 70 T60 70 T80 70" stroke="url(#progressGradient)" stroke-width="3" fill="none"/>
+                        </g>
+                    </svg>
+                </div>
+                <div class="progress-percentage" id="progressPercentage">0%</div>
+                <div class="progress-label">ANALYSE IA</div>
+            </div>
+        </div>
+        
+        <!-- Statistiques en temps réel -->
+        <div class="stats-grid-ai">
+            <div class="stat-card-ai" data-stat="machines">
+                <div class="stat-value-ai" id="machinesAnalysees">0</div>
+                <div class="stat-label-ai">Machines Analysées</div>
+                <div class="stat-bar-ai"></div>
+            </div>
+            
+            <div class="stat-card-ai" data-stat="capteurs">
+                <div class="stat-value-ai" id="capteursLus">0</div>
+                <div class="stat-label-ai">Capteurs Lus</div>
+                <div class="stat-bar-ai"></div>
+            </div>
+            
+            <div class="stat-card-ai" data-stat="anomalies">
+                <div class="stat-value-ai" id="anomaliesDetectees">0</div>
+                <div class="stat-label-ai">Anomalies Détectées</div>
+                <div class="stat-bar-ai"></div>
+            </div>
+            
+            <div class="stat-card-ai" data-stat="predictions">
+                <div class="stat-value-ai" id="predictionsCalculees">0</div>
+                <div class="stat-label-ai">Prédictions Calculées</div>
+                <div class="stat-bar-ai"></div>
+            </div>
+        </div>
+        
+        <!-- Log d'analyse en temps réel -->
+        <div class="analyse-log">
+            <div class="log-header">
+                <span class="log-title">Console IA</span>
+                <span class="log-status" id="logStatus">INITIALISATION...</span>
+            </div>
+            <div class="log-content" id="logContent"></div>
+        </div>
+    </div>
+</div>
+
+<style>
+.container-ia {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.page-header-ia {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+/* ==================== BOUTON ULTRA-ANIMÉ ==================== */
+.btn-analyze-futuristic {
+    position: relative;
+    background: linear-gradient(135deg, #0a0e27 0%, #1a1d3a 100%);
+    color: white;
+    border: 2px solid rgba(0, 245, 255, 0.3);
+    padding: 16px 40px;
+    border-radius: 50px;
+    font-weight: 700;
+    cursor: pointer;
+    overflow: visible;
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 0.9rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.btn-analyze-futuristic::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #00f5ff, #667eea, #f56ef8);
+    opacity: 0;
+    transition: opacity 0.4s;
+    border-radius: 50px;
+}
+
+.btn-analyze-futuristic:hover {
+    transform: translateY(-3px);
+    border-color: rgba(0, 245, 255, 0.8);
+    box-shadow: 0 12px 48px rgba(102, 126, 234, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.btn-analyze-futuristic:hover::before {
+    opacity: 0.15;
+}
+
+.btn-analyze-futuristic:active {
+    transform: translateY(-1px);
+}
+
+/* Lueur primaire animée */
+.btn-glow {
+    position: absolute;
+    inset: -4px;
+    background: linear-gradient(135deg, #00f5ff, #667eea, #f56ef8, #00f5ff);
+    background-size: 300% 300%;
+    border-radius: 50px;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.4s;
+    filter: blur(15px);
+    animation: gradientShift 4s ease infinite;
+}
+
+@keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+.btn-analyze-futuristic:hover .btn-glow {
+    opacity: 0.8;
+}
+
+/* Lueur secondaire */
+.btn-glow-2 {
+    position: absolute;
+    inset: -8px;
+    background: radial-gradient(circle, rgba(102, 126, 234, 0.4), transparent 70%);
+    border-radius: 50px;
+    z-index: -2;
+    opacity: 0;
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { 
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    50% { 
+        opacity: 1;
+        transform: scale(1.05);
+    }
+}
+
+.btn-analyze-futuristic:hover .btn-glow-2 {
+    animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+/* Orbites tournantes */
+.btn-orbit {
+    position: absolute;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    border-top-color: rgba(0, 245, 255, 0.6);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.orbit-1 {
+    inset: -20px;
+    animation: orbit-rotate 3s linear infinite;
+}
+
+.orbit-2 {
+    inset: -30px;
+    animation: orbit-rotate 4s linear infinite reverse;
+    border-top-color: rgba(102, 126, 234, 0.6);
+}
+
+.orbit-3 {
+    inset: -40px;
+    animation: orbit-rotate 5s linear infinite;
+    border-top-color: rgba(245, 110, 248, 0.6);
+}
+
+@keyframes orbit-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.btn-analyze-futuristic:hover .btn-orbit {
+    opacity: 1;
+}
+
+/* Particules améliorées */
+.btn-particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: visible;
+}
+
+.particle {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: #00f5ff;
+    border-radius: 50%;
+    opacity: 0;
+    box-shadow: 0 0 6px #00f5ff;
+}
+
+.btn-analyze-futuristic:hover .particle {
+    animation: particle-burst 2s ease-out infinite;
+}
+
+.particle:nth-child(1) { left: 20%; top: 50%; animation-delay: 0s; }
+.particle:nth-child(2) { left: 40%; top: 50%; animation-delay: 0.3s; }
+.particle:nth-child(3) { left: 60%; top: 50%; animation-delay: 0.6s; }
+.particle:nth-child(4) { left: 80%; top: 50%; animation-delay: 0.9s; }
+.particle:nth-child(5) { left: 30%; top: 50%; animation-delay: 1.2s; }
+.particle:nth-child(6) { left: 70%; top: 50%; animation-delay: 1.5s; }
+
+@keyframes particle-burst {
+    0% {
+        opacity: 0;
+        transform: translate(0, 0) scale(1);
+    }
+    20% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        transform: translate(var(--tx, 0), -80px) scale(0);
+    }
+}
+
+.particle:nth-child(odd) { --tx: 40px; }
+.particle:nth-child(even) { --tx: -40px; }
+
+/* Vagues d'énergie */
+.energy-waves {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    border-radius: 50px;
+}
+
+.wave {
+    position: absolute;
+    inset: -2px;
+    border: 2px solid rgba(0, 245, 255, 0.4);
+    border-radius: 50px;
+    opacity: 0;
+}
+
+.btn-analyze-futuristic:hover .wave {
+    animation: wave-expand 2s ease-out infinite;
+}
+
+.wave:nth-child(2) { animation-delay: 0.6s; }
+.wave:nth-child(3) { animation-delay: 1.2s; }
+
+@keyframes wave-expand {
+    0% {
+        opacity: 0.8;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.5);
+    }
+}
+
+/* Contenu du bouton */
+.btn-content-ia {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+/* Container d'icône avec effets multiples */
+.icon-container {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon-ai {
+    position: absolute;
+    transition: all 0.3s ease;
+}
+
+.icon-layer-1 {
+    animation: icon-float 3s ease-in-out infinite;
+    filter: drop-shadow(0 0 8px rgba(0, 245, 255, 0.6));
+}
+
+.icon-layer-2 {
+    animation: icon-spin 4s linear infinite;
+    opacity: 0.7;
+}
+
+@keyframes icon-float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-3px) rotate(5deg); }
+}
+
+@keyframes icon-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.btn-analyze-futuristic:hover .icon-layer-1 {
+    animation: icon-float 1.5s ease-in-out infinite, icon-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes icon-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
+.icon-pulse {
+    position: absolute;
+    inset: -4px;
+    border: 2px solid rgba(0, 245, 255, 0.4);
+    border-radius: 50%;
+    opacity: 0;
+}
+
+.btn-analyze-futuristic:hover .icon-pulse {
+    animation: pulse-ring 1.5s ease-out infinite;
+}
+
+@keyframes pulse-ring {
+    0% {
+        opacity: 1;
+        transform: scale(0.8);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.8);
+    }
+}
+
+/* Texte avec effet glitch */
+.btn-text-ai {
+    position: relative;
+    display: inline-block;
+}
+
+.text-main {
+    position: relative;
+    z-index: 2;
+    display: inline-block;
+}
+
+.text-glitch,
+.text-shadow {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+}
+
+.btn-analyze-futuristic:hover .text-glitch {
+    animation: glitch-1 0.3s ease-in-out infinite;
+    color: #00f5ff;
+    opacity: 0.8;
+}
+
+.btn-analyze-futuristic:hover .text-shadow {
+    animation: glitch-2 0.3s ease-in-out infinite;
+    color: #f56ef8;
+    opacity: 0.8;
+}
+
+@keyframes glitch-1 {
+    0%, 100% { transform: translate(0, 0); opacity: 0; }
+    33% { transform: translate(-2px, 1px); opacity: 0.7; }
+    66% { transform: translate(2px, -1px); opacity: 0.7; }
+}
+
+@keyframes glitch-2 {
+    0%, 100% { transform: translate(0, 0); opacity: 0; }
+    33% { transform: translate(2px, -1px); opacity: 0.5; }
+    66% { transform: translate(-2px, 1px); opacity: 0.5; }
+}
+
+/* Hexagones décoratifs */
+.hexagon-container {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: visible;
+}
+
+.hexagon {
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    opacity: 0;
+}
+
+.hexagon::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 245, 255, 0.3);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    animation: hexagon-spin 3s linear infinite;
+}
+
+@keyframes hexagon-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.hex-1 { left: -25px; top: 10px; }
+.hex-2 { right: -25px; top: 10px; }
+.hex-3 { right: -25px; bottom: 10px; }
+
+.btn-analyze-futuristic:hover .hexagon {
+    opacity: 1;
+    animation: hexagon-float 2s ease-in-out infinite;
+}
+
+.hex-1 { animation-delay: 0s; }
+.hex-2 { animation-delay: 0.3s; }
+.hex-3 { animation-delay: 0.6s; }
+
+@keyframes hexagon-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+/* Scanline effet */
+.scanline {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        rgba(0, 245, 255, 0.1) 50%,
+        transparent 100%
+    );
+    height: 4px;
+    opacity: 0;
+    pointer-events: none;
+    border-radius: 50px;
+}
+
+.btn-analyze-futuristic:hover .scanline {
+    opacity: 1;
+    animation: scanline-move 2s linear infinite;
+}
+
+@keyframes scanline-move {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(400%); }
+}
+
+/* ==================== FIN BOUTON ==================== */
+
+.stats-grid-ia {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card-ia {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border-left: 4px solid;
+}
+
+.stat-card-ia.health { border-left-color: #27ae60; }
+.stat-card-ia.critical { border-left-color: #e74c3c; }
+.stat-card-ia.warning { border-left-color: #f39c12; }
+.stat-card-ia.anomaly { border-left-color: #9b59b6; }
+
+.stat-icon {
+    font-size: 3rem;
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2c3e50;
+    line-height: 1;
+}
+
+.stat-label {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
+
+.section-critical {
+    background: #fff5f5;
+    border: 2px solid #e74c3c;
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+}
+
+.section-critical h2 {
+    color: #e74c3c;
+    margin-bottom: 20px;
+}
+
+.machines-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+}
+
+.machine-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border-left: 4px solid;
+}
+
+.machine-card.critical { border-left-color: #e74c3c; }
+
+.machine-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+
+.machine-header h3 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.machine-section {
+    background: #ecf0f1;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    color: #7f8c8d;
+}
+
+.risk-badge {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 1.2rem;
+}
+
+.risk-badge.critical {
+    background: #e74c3c;
+    color: white;
+}
+
+.machine-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 15px 0;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.machine-stats .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.machine-stats .label {
+    font-size: 0.75rem;
+    color: #7f8c8d;
+}
+
+.machine-stats .value {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.risk-factors {
+    background: #fff3cd;
+    border-left: 3px solid #f39c12;
+    padding: 12px;
+    margin: 15px 0;
+    border-radius: 4px;
+}
+
+.risk-factors ul {
+    margin: 8px 0 0 20px;
+    padding: 0;
+}
+
+.risk-factors li {
+    margin: 4px 0;
+    color: #856404;
+}
+
+.machine-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.btn-detail, .btn-maintenance {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-detail {
+    background: #3498db;
+    color: white;
+}
+
+.btn-maintenance {
+    background: #27ae60;
+    color: white;
+}
+
+.alerts-section {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.alerts-list-ia {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.alert-card-ia {
+    border-left: 4px solid;
+    padding: 20px;
+    border-radius: 8px;
+    background: #f8f9fa;
+}
+
+.alert-card-ia.alert-critique { border-left-color: #e74c3c; background: #fff5f5; }
+.alert-card-ia.alert-urgent { border-left-color: #f39c12; background: #fff8e1; }
+.alert-card-ia.alert-attention { border-left-color: #3498db; background: #e3f2fd; }
+
+.alert-header-ia {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.alert-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+}
+
+.alert-badge.critique { background: #e74c3c; }
+.alert-badge.urgent { background: #f39c12; }
+.alert-badge.attention { background: #3498db; }
+
+.alert-metrics {
+    display: flex;
+    gap: 20px;
+    margin: 15px 0;
+    font-size: 0.9rem;
+}
+
+.action-recommandee {
+    background: white;
+    padding: 12px;
+    border-radius: 6px;
+    margin: 10px 0;
+    border-left: 3px solid #27ae60;
+}
+
+.machines-table-ia {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.machines-table-ia th {
+    background: #3498db;
+    color: white;
+    padding: 12px;
+    text-align: left;
+}
+
+.machines-table-ia td {
+    padding: 12px;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.health-bar {
+    width: 100%;
+    height: 24px;
+    background: #ecf0f1;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+}
+
+.health-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.health-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #2c3e50;
+}
+
+.badge-anomalie {
+    background: #e74c3c;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+
+.badge-ok {
+    background: #27ae60;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+
+/* ==================== OVERLAY D'ANALYSE ==================== */
+.analyse-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(10, 14, 39, 0.95);
+    backdrop-filter: blur(10px);
+}
+
+.analyse-overlay.active {
+    display: block;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.neural-background {
+    position: absolute;
+    inset: 0;
+    opacity: 0.3;
+}
+
+#neuralCanvas {
+    width: 100%;
+    height: 100%;
+}
+
+.analyse-container {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 60px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+}
+
+.main-circle-container {
+    position: relative;
+    width: 280px;
+    height: 280px;
+}
+
+.progress-ring {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.progress-ring-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.1);
+    stroke-width: 8;
+}
+
+.progress-ring-circle {
+    fill: none;
+    stroke: url(#progressGradient);
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 565.48;
+    stroke-dashoffset: 565.48;
+    filter: url(#glow);
+    transition: stroke-dashoffset 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.circle-content {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.ai-brain {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -80%);
+}
+
+.brain-wave {
+    animation: wave 2s ease-in-out infinite;
+}
+
+@keyframes wave {
+    0%, 100% { opacity: 0.5; transform: translateY(0); }
+    50% { opacity: 1; transform: translateY(-5px); }
+}
+
+.progress-percentage {
+    font-size: 3rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #00f5ff, #667eea, #f56ef8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-top: 40px;
+    text-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
+}
+
+.progress-label {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.85rem;
+    letter-spacing: 3px;
+    font-weight: 600;
+}
+
+.stats-grid-ai {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    width: 100%;
+}
+
+.stat-card-ai {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.stat-card-ai:hover {
+    transform: translateY(-5px);
+    border-color: rgba(102, 126, 234, 0.5);
+}
+
+.stat-card-ai::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #00f5ff, transparent);
+    animation: scan 2s linear infinite;
+}
+
+@keyframes scan {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.stat-value-ai {
+    font-size: 2.5rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #00f5ff, #667eea);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+}
+
+.stat-label-ai {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.stat-bar-ai {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 0%;
+    background: linear-gradient(90deg, #00f5ff, #667eea);
+    animation: fillBar 2s ease-out forwards;
+}
+
+@keyframes fillBar {
+    to { width: 100%; }
+}
+
+.analyse-log {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(0, 245, 255, 0.3);
+    border-radius: 12px;
+    overflow: hidden;
+    max-height: 200px;
+}
+
+.log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: rgba(0, 245, 255, 0.1);
+    border-bottom: 1px solid rgba(0, 245, 255, 0.3);
+}
+
+.log-title {
+    color: #00f5ff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.log-status {
+    color: #4ade80;
+    font-size: 0.75rem;
+    font-weight: 600;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 50%, 100% { opacity: 1; }
+    25%, 75% { opacity: 0.5; }
+}
+
+.log-content {
+    padding: 16px 20px;
+    max-height: 140px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+}
+
+.log-entry {
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 8px;
+    animation: slideInLog 0.3s ease;
+    display: flex;
+    gap: 12px;
+}
+
+@keyframes slideInLog {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.log-time {
+    color: #00f5ff;
+    font-weight: 600;
+}
+
+.log-text {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.log-success {
+    color: #4ade80;
+}
+
+.log-warning {
+    color: #fbbf24;
+}
+
+.log-error {
+    color: #ef4444;
+}
+
+@media (max-width: 768px) {
+    .stats-grid-ia {
+        grid-template-columns: 1fr;
+    }
+    
+    .machines-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid-ai {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>
+
+<script>
+function lancerAnalyseIA() {
+    const overlay = document.getElementById('analyseOverlay');
+    const btn = document.getElementById('btnAnalyse');
+    
+    btn.disabled = true;
+    overlay.classList.add('active');
+    
+    initNeuralNetwork();
+    startAnalyse();
+}
+
+function initNeuralNetwork() {
+    const canvas = document.getElementById('neuralCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    const nodes = [];
+    const numNodes = 50;
+    
+    for (let i = 0; i < numNodes; i++) {
+        nodes.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: (Math.random() - 0.5) * 0.5
+        });
+    }
+    
+    function animate() {
+        ctx.fillStyle = 'rgba(10, 14, 39, 0.1)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        nodes.forEach(node => {
+            node.x += node.vx;
+            node.y += node.vy;
+            
+            if (node.x < 0 || node.x > canvas.width) node.vx *= -1;
+            if (node.y < 0 || node.y > canvas.height) node.vy *= -1;
+            
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, 2, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 245, 255, 0.5)';
+            ctx.fill();
+            
+            nodes.forEach(otherNode => {
+                const dx = node.x - otherNode.x;
+                const dy = node.y - otherNode.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 150) {
+                    ctx.beginPath();
+                    ctx.moveTo(node.x, node.y);
+                    ctx.lineTo(otherNode.x, otherNode.y);
+                    ctx.strokeStyle = `rgba(102, 126, 234, ${(1 - distance / 150) * 0.2})`;
+                    ctx.stroke();
+                }
+            });
+        });
+        
+        requestAnimationFrame(animate);
+    }
+    
+    animate();
+}
+
+function startAnalyse() {
+    const progressCircle = document.getElementById('progressCircle');
+    const progressPercentage = document.getElementById('progressPercentage');
+    const logContent = document.getElementById('logContent');
+    const logStatus = document.getElementById('logStatus');
+    
+    const radius = 90;
+    const circumference = 2 * Math.PI * radius;
+    
+    let progress = 0;
+    const duration = 6000;
+    const startTime = Date.now();
+    
+    const logs = [
+        { time: 0, text: 'Initialisation du système IA...', type: 'log-text' },
+        { time: 500, text: 'Connexion aux capteurs IoT établie', type: 'log-success' },
+        { time: 1000, text: 'Lecture des données en temps réel...', type: 'log-text' },
+        { time: 1500, text: 'Chargement du modèle prédictif ML', type: 'log-text' },
+        { time: 2000, text: 'Analyse des patterns de température', type: 'log-text' },
+        { time: 2500, text: 'Détection d\'anomalie sur Machine M-12', type: 'log-warning' },
+        { time: 3000, text: 'Calcul des probabilités de panne...', type: 'log-text' },
+        { time: 3500, text: 'Évaluation des scores de santé', type: 'log-text' },
+        { time: 4000, text: 'Génération des alertes critiques', type: 'log-warning' },
+        { time: 4500, text: 'Mise à jour des prédictions', type: 'log-text' },
+        { time: 5000, text: 'Analyse terminée avec succès', type: 'log-success' },
+        { time: 5500, text: 'Redirection vers le dashboard...', type: 'log-success' }
+    ];
+    
+    let logIndex = 0;
+    
+    function addLog(log) {
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.innerHTML = `
+            <span class="log-time">[${new Date().toLocaleTimeString()}]</span>
+            <span class="${log.type}">${log.text}</span>
+        `;
+        logContent.appendChild(entry);
+        logContent.scrollTop = logContent.scrollHeight;
+    }
+    
+    function updateStats() {
+        const elapsed = Date.now() - startTime;
+        const progressPercent = Math.min((elapsed / duration) * 100, 100);
+        
+        document.getElementById('machinesAnalysees').textContent = Math.floor(progressPercent / 100 * 24);
+        document.getElementById('capteursLus').textContent = Math.floor(progressPercent / 100 * 156);
+        document.getElementById('anomaliesDetectees').textContent = Math.floor(progressPercent / 100 * 7);
+        document.getElementById('predictionsCalculees').textContent = Math.floor(progressPercent / 100 * 24);
+    }
+    
+    function animate() {
+        const elapsed = Date.now() - startTime;
+        progress = Math.min(elapsed / duration, 1);
+        
+        const offset = circumference - (progress * circumference);
+        progressCircle.style.strokeDashoffset = offset;
+        progressPercentage.textContent = Math.floor(progress * 100) + '%';
+        
+        updateStats();
+        
+        while (logIndex < logs.length && elapsed >= logs[logIndex].time) {
+            addLog(logs[logIndex]);
+            logIndex++;
+        }
+        
+        if (progress < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            logStatus.textContent = 'ANALYSE TERMINÉE';
+            setTimeout(() => {
+                window.location.href = '{% url "lancer_analyse_complete" %}';
+            }, 1000);
+        }
+    }
+    
+    logStatus.textContent = 'ANALYSE EN COURS...';
+    animate();
+}
+</script>
+{% endblock %}

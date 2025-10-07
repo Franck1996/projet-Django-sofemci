@@ -1,0 +1,265 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Simuler Capteurs - Machine {{ machine.numero }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>🔬 Simuler Capteurs IoT</h1>
+        <p>Machine {{ machine.numero }} - Mode Test Admin</p>
+    </div>
+
+    <div class="form-container">
+        <div class="info-admin">
+            <strong>ℹ️ Mode Administrateur</strong>
+            <p>Cette fonction simule la mise à jour des données capteurs pour tester le système IA.</p>
+        </div>
+
+        <form method="post" class="capteurs-form">
+            {% csrf_token %}
+            
+            <div class="current-values">
+                <h3>Valeurs Actuelles</h3>
+                <div class="values-grid">
+                    <div class="value-item">
+                        <span class="label">Température:</span>
+                        <span class="value">{{ machine.temperature_actuelle }}°C</span>
+                    </div>
+                    <div class="value-item">
+                        <span class="label">Consommation:</span>
+                        <span class="value">{{ machine.consommation_electrique_kwh }} kWh</span>
+                    </div>
+                    <div class="value-item">
+                        <span class="label">Score Santé:</span>
+                        <span class="value">{{ machine.score_sante_global }}%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="temperature">Nouvelle Température (°C)</label>
+                <input type="number" id="temperature" name="temperature" step="0.1" class="form-control"
+                       placeholder="Ex: 85.5">
+                <small>Température nominale: {{ machine.temperature_nominale }}°C | Max: {{ machine.temperature_max_autorisee }}°C</small>
+            </div>
+
+            <div class="form-group">
+                <label for="consommation">Nouvelle Consommation (kWh)</label>
+                <input type="number" id="consommation" name="consommation" step="0.1" class="form-control"
+                       placeholder="Ex: 125.5">
+                <small>Consommation nominale: {{ machine.consommation_electrique_nominale }} kWh</small>
+            </div>
+
+            <div class="scenarios">
+                <h3>Scénarios Pré-définis</h3>
+                <div class="scenarios-grid">
+                    <button type="button" onclick="setScenario('normal')" class="scenario-btn normal">
+                        ✅ Fonctionnement Normal
+                    </button>
+                    <button type="button" onclick="setScenario('surchauffe')" class="scenario-btn warning">
+                        🔥 Surchauffe Légère
+                    </button>
+                    <button type="button" onclick="setScenario('critique')" class="scenario-btn danger">
+                        🚨 Situation Critique
+                    </button>
+                    <button type="button" onclick="setScenario('optimal')" class="scenario-btn success">
+                        ⭐ État Optimal
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">🔄 Mettre à jour et Analyser</button>
+                <a href="{% url 'machine_detail_ia' machine.id %}" class="btn-secondary">Retour</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.form-container {
+    max-width: 900px;
+    margin: 30px auto;
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.info-admin {
+    background: #fff3cd;
+    border-left: 4px solid #f39c12;
+    padding: 15px;
+    margin-bottom: 30px;
+    border-radius: 4px;
+}
+
+.current-values {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.values-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.value-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    background: white;
+    border-radius: 6px;
+}
+
+.value-item .label {
+    color: #7f8c8d;
+}
+
+.value-item .value {
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 5px;
+    color: #7f8c8d;
+    font-size: 0.85rem;
+}
+
+.scenarios {
+    margin: 30px 0;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.scenarios-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.scenario-btn {
+    padding: 15px;
+    border: 2px solid;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.scenario-btn.normal {
+    background: #e8f5e9;
+    border-color: #27ae60;
+    color: #27ae60;
+}
+
+.scenario-btn.warning {
+    background: #fff8e1;
+    border-color: #f39c12;
+    color: #f39c12;
+}
+
+.scenario-btn.danger {
+    background: #ffebee;
+    border-color: #e74c3c;
+    color: #e74c3c;
+}
+
+.scenario-btn.success {
+    background: #e3f2fd;
+    border-color: #3498db;
+    color: #3498db;
+}
+
+.scenario-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.btn-primary, .btn-secondary {
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+    flex: 1;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+</style>
+
+<script>
+const tempNominale = {{ machine.temperature_nominale }};
+const tempMax = {{ machine.temperature_max_autorisee }};
+const consoNominale = {{ machine.consommation_electrique_nominale }};
+
+function setScenario(type) {
+    const tempInput = document.getElementById('temperature');
+    const consoInput = document.getElementById('consommation');
+    
+    switch(type) {
+        case 'normal':
+            tempInput.value = (tempNominale + 2).toFixed(1);
+            consoInput.value = (consoNominale * 1.05).toFixed(1);
+            break;
+        case 'surchauffe':
+            tempInput.value = (tempMax * 0.92).toFixed(1);
+            consoInput.value = (consoNominale * 1.25).toFixed(1);
+            break;
+        case 'critique':
+            tempInput.value = (tempMax * 1.02).toFixed(1);
+            consoInput.value = (consoNominale * 1.5).toFixed(1);
+            break;
+        case 'optimal':
+            tempInput.value = tempNominale.toFixed(1);
+            consoInput.value = (consoNominale * 0.95).toFixed(1);
+            break;
+    }
+}
+</script>
+{% endblock %}
