@@ -47,8 +47,9 @@ def logout_view(request):
 
 @login_required
 def dashboard_view(request):
+    """Dashboard principal - Page dashboard.html"""
     
-
+    # Récupérer la date depuis le paramètre GET, sinon utiliser aujourd'hui
     date_str = request.GET.get('date')
     if date_str:
         try:
@@ -58,42 +59,16 @@ def dashboard_view(request):
     else:
         selected_date = timezone.now().date()
     
-    # Calculs de production
-    production_totale = get_production_totale_jour(selected_date)
-    production_extrusion = get_production_section_jour('extrusion', selected_date)
-    production_imprimerie = get_production_section_jour('imprimerie', selected_date)
-    production_soudure = get_production_section_jour('soudure', selected_date)
-    production_recyclage = get_production_section_jour('recyclage', selected_date)
-    
-    # Objectif journalier total
-    objectif_total = Decimal('75000')  # 75 tonnes/jour
-    
+    # Métriques du jour sélectionné (au lieu de today)
     context = {
-        'today': selected_date,
-        'selected_date': selected_date,
-        'is_today': selected_date == timezone.now().date(),
-        
-        # Productions avec pourcentages
-        'production_totale': production_totale,
-        'pourcentage_production_totale': calculer_pourcentage_production(production_totale, objectif_total),
-        'objectif_total': objectif_total,
-        
-        'production_extrusion': production_extrusion,
-        'pourcentage_extrusion': calculer_pourcentage_section('extrusion', production_extrusion),
-        'objectif_extrusion': get_objectif_section('extrusion'),
-        
-        'production_imprimerie': production_imprimerie,
-        'pourcentage_imprimerie': calculer_pourcentage_section('imprimerie', production_imprimerie),
-        'objectif_imprimerie': get_objectif_section('imprimerie'),
-        
-        'production_soudure': production_soudure,
-        'pourcentage_soudure': calculer_pourcentage_section('soudure', production_soudure),
-        'objectif_soudure': get_objectif_section('soudure'),
-        
-        'production_recyclage': production_recyclage,
-        'pourcentage_recyclage': calculer_pourcentage_section('recyclage', production_recyclage),
-        'objectif_recyclage': get_objectif_section('recyclage'),
-        
+        'today': selected_date,  # Date sélectionnée
+        'selected_date': selected_date,  # Pour le formulaire
+        'is_today': selected_date == timezone.now().date(),  # Savoir si c'est aujourd'hui
+        'production_totale': get_production_totale_jour(selected_date),
+        'production_extrusion': get_production_section_jour('extrusion', selected_date),
+        'production_imprimerie': get_production_section_jour('imprimerie', selected_date),
+        'production_soudure': get_production_section_jour('soudure', selected_date),
+        'production_recyclage': get_production_section_jour('recyclage', selected_date),
         'total_dechets': get_dechets_totaux_jour(selected_date),
         'efficacite_moyenne': get_efficacite_moyenne_jour(selected_date),
         'machines_stats': get_machines_stats(),
@@ -109,7 +84,6 @@ def dashboard_view(request):
         'analytics_kpis': get_analytics_kpis(),
         'analytics_table': get_analytics_table_data(),
     }
-    
     
     return render(request, 'dashboard.html', context)
     
@@ -471,8 +445,6 @@ def get_extrusion_details_jour(date):
             'production_totale': 0,
             'dechets_totaux': 0,
             'taux_dechet': 0,
-            'pourcentage_objectif': 0,
-            'objectif': get_objectif_section('extrusion'),
         }
     
     temps_total_minutes = 0
@@ -509,8 +481,6 @@ def get_extrusion_details_jour(date):
         'production_totale': total_prod,
         'dechets_totaux': dechets,
         'taux_dechet': round(taux_dechet, 1),
-        'pourcentage_objectif': calculer_pourcentage_section('extrusion', production_totale),
-        'objectif': objectif,
     }
 
 def get_imprimerie_details_jour(date):
@@ -527,10 +497,6 @@ def get_imprimerie_details_jour(date):
             'production_totale': 0,
             'dechets_totaux': 0,
             'taux_dechet': 0,
-            'pourcentage_objectif': 0,
-            'objectif': get_objectif_section('imprimerie'),
-            'pourcentage_bobines_finies': 0,
-            'pourcentage_bobines_semi_finies': 0,
         }
     
     temps_total_minutes = 0
@@ -553,24 +519,16 @@ def get_imprimerie_details_jour(date):
     total = aggregats['total'] or 0
     dechets = aggregats['dechets'] or 0
     taux_dechet = (dechets / (total + dechets) * 100) if (total + dechets) > 0 else 0
-    pourcentage_bobines_finies = (bobines_finies / total * 100) if total > 0 else 0
-    pourcentage_bobines_semi_finies = (bobines_semi_finies / total * 100) if total > 0 else 0
+    
     return {
         'temps_travail': round(temps_total_minutes / 60, 1),
         'machines_actives': round(aggregats['machines'] or 0, 0),
         'machines_totales': Machine.objects.filter(section='imprimerie').count(),
-        'equipes_actives': aggregats['count_productions'],
-        'bobines_finies': bobines_finies,
-        'bobines_semi_finies': bobines_semi_finies,
+        'bobines_finies': aggregats['bobines_finis'] or 0,
+        'bobines_semi_finies': aggregats['bobines_semi_finis'] or 0,
         'production_totale': total,
         'dechets_totaux': dechets,
         'taux_dechet': round(taux_dechet, 1),
-        'pourcentage_objectif': calculer_pourcentage_section('imprimerie', total),
-        'objectif': objectif,
-        'pourcentage_bobines_finies': round(pourcentage_bobines_finies, 1),
-        'pourcentage_bobines_semi_finies': round(pourcentage_bobines_semi_finies, 1),
-        # Statut de l'objectif bobines finies (idéalement 70%)
-        'objectif_bobines_finies_atteint': pourcentage_bobines_finies >= 65,
     }
 
 def get_soudure_details_jour(date):
@@ -579,23 +537,15 @@ def get_soudure_details_jour(date):
     
     if not productions.exists():
         return {
-           'temps_travail': 0,
+            'temps_travail': 0,
             'machines_actives': 0,
             'machines_totales': Machine.objects.filter(section='soudure').count(),
-            'operateurs': 0,
             'production_bretelles': 0,
             'production_rema': 0,
             'production_batta': 0,
-            'production_sac_emballage': 0,
             'production_totale': 0,
             'dechets_totaux': 0,
             'taux_dechet': 0,
-            'pourcentage_objectif': 0,
-            'objectif': get_objectif_section('soudure'),
-            'pourcentage_bretelles': 0,
-            'pourcentage_rema': 0,
-            'pourcentage_batta': 0,
-            'pourcentage_sac_emballage': 0,
         }
     
     temps_total_minutes = 0
@@ -612,51 +562,24 @@ def get_soudure_details_jour(date):
         bretelles=Sum('production_bretelles_kg'),
         rema=Sum('production_rema_kg'),
         batta=Sum('production_batta_kg'),
-        sac_emballage=Sum('production_sac_emballage_kg'),
         total=Sum('total_production_kg'),
-        dechets=Sum('dechets_kg'),
-        operateurs_total=Sum('nombre_operateurs'),
-        count_productions=Count('id')
+        dechets=Sum('dechets_kg')
     )
     
     total = aggregats['total'] or 0
     dechets = aggregats['dechets'] or 0
-    bretelles = aggregats['bretelles'] or 0
-    rema = aggregats['rema'] or 0
-    batta = aggregats['batta'] or 0
-    sac_emballage = aggregats['sac_emballage'] or 0
-    objectif = get_objectif_section('soudure')
-    
-    nombre_moyen_operateurs = (aggregats['operateurs_total'] / aggregats['count_productions']) if aggregats['count_productions'] > 0 else 0
-    
     taux_dechet = (dechets / (total + dechets) * 100) if (total + dechets) > 0 else 0
     
-    # Calcul des pourcentages par type de production
-    pourcentage_bretelles = (bretelles / total * 100) if total > 0 else 0
-    pourcentage_rema = (rema / total * 100) if total > 0 else 0
-    pourcentage_batta = (batta / total * 100) if total > 0 else 0
-    pourcentage_sac_emballage = (sac_emballage / total * 100) if total > 0 else 0
     return {
         'temps_travail': round(temps_total_minutes / 60, 1),
         'machines_actives': round(aggregats['machines'] or 0, 0),
         'machines_totales': Machine.objects.filter(section='soudure').count(),
-        'operateurs': round(nombre_moyen_operateurs, 0),
-        'production_bretelles': bretelles,
-        'production_rema': rema,
-        'production_batta': batta,
-        'production_sac_emballage': sac_emballage,
+        'production_bretelles': aggregats['bretelles'] or 0,
+        'production_rema': aggregats['rema'] or 0,
+        'production_batta': aggregats['batta'] or 0,
         'production_totale': total,
         'dechets_totaux': dechets,
         'taux_dechet': round(taux_dechet, 1),
-        'pourcentage_objectif': calculer_pourcentage_section('soudure', total),
-        'objectif': objectif,
-        'pourcentage_bretelles': round(pourcentage_bretelles, 1),
-        'pourcentage_rema': round(pourcentage_rema, 1),
-        'pourcentage_batta': round(pourcentage_batta, 1),
-        'pourcentage_sac_emballage': round(pourcentage_sac_emballage, 1),
-        # Production spécifique vs bobines finies
-        'production_specifique_total': bretelles + rema + batta + sac_emballage,
-        'pourcentage_production_specifique': round(((bretelles + rema + batta + sac_emballage) / total * 100) if total > 0 else 0, 1),
     }
 
 def get_recyclage_details_jour(date):
@@ -665,74 +588,41 @@ def get_recyclage_details_jour(date):
     
     if not productions.exists():
         return {
-           'moulinex_actifs': 0,
+            'moulinex_actifs': 0,
             'moulinex_totaux': Machine.objects.filter(section='recyclage').count(),
-            'operateurs': 0,
-            'temps_travail': 0,
             'total_broyage': 0,
             'total_bache_noir': 0,
             'production_totale': 0,
             'taux_transformation': 0,
             'rendement': 0,
             'productivite_par_moulinex': 0,
-            'pourcentage_objectif': 0,
-            'objectif': get_objectif_section('recyclage'),
-            'pourcentage_broyage': 0,
-            'pourcentage_bache_noir': 0,
         }
     
     aggregats = productions.aggregate(
         moulinex=Avg('nombre_moulinex'),
         broyage=Sum('production_broyage_kg'),
         bache=Sum('production_bache_noir_kg'),
-        total=Sum('total_production_kg'),
-        operateurs_total=Sum('nombre_operateurs'),
-        count_productions=Count('id')
+        total=Sum('total_production_kg')
     )
     
     broyage = aggregats['broyage'] or 0
     bache = aggregats['bache'] or 0
     total = aggregats['total'] or 0
     moulinex_avg = aggregats['moulinex'] or 1
-    objectif = get_objectif_section('recyclage')
     
-    nombre_moyen_operateurs = (aggregats['operateurs_total'] / aggregats['count_productions']) if aggregats['count_productions'] > 0 else 0
-    
-    # Taux de transformation (objectif: ≥ 80%)
     taux_transformation = (bache / broyage * 100) if broyage > 0 else 0
-    
-    # Productivité par moulinex
     productivite = (total / moulinex_avg) if moulinex_avg > 0 else 0
-    
-    # Calcul des pourcentages par type de production
-    pourcentage_broyage = (broyage / total * 100) if total > 0 else 0
-    pourcentage_bache_noir = (bache / total * 100) if total > 0 else 0
-    
-    # Rendement global (production vs objectif)
-    rendement = calculer_pourcentage_section('recyclage', total)
-    
-    # Vérifier si objectif de transformation est atteint (≥ 75% de bâche noire)
-    objectif_transformation_atteint = taux_transformation >= 75
     
     return {
         'moulinex_actifs': round(moulinex_avg, 0),
         'moulinex_totaux': Machine.objects.filter(section='recyclage').count(),
-        'operateurs': round(nombre_moyen_operateurs, 0),
-        'temps_travail': round(temps_total_minutes / 60, 1),
         'total_broyage': broyage,
         'total_bache_noir': bache,
         'production_totale': total,
         'taux_transformation': round(taux_transformation, 1),
-        'rendement': round(rendement, 1),
+        'rendement': round(taux_transformation, 1),
         'productivite_par_moulinex': round(productivite, 1),
-        'pourcentage_objectif': calculer_pourcentage_section('recyclage', total),
-        'objectif': objectif,
-        'pourcentage_broyage': round(pourcentage_broyage, 1),
-        'pourcentage_bache_noir': round(pourcentage_bache_noir, 1),
-        'objectif_transformation_atteint': objectif_transformation_atteint,
-        # Productivité cible par moulinex (500 kg/h idéalement)
-        'objectif_productivite': Decimal('500'),
-        'pourcentage_productivite': round((productivite / 500 * 100) if productivite > 0 else 0, 1),
+        'temps_travail': 8,  # Valeur par défaut
     }
 
 def get_productions_filtrees(filters):
@@ -988,11 +878,9 @@ def calculate_soudure_metrics(data):
     bretelles = float(data.get('bretelles', 0))
     rema = float(data.get('rema', 0))
     batta = float(data.get('batta', 0))
-    sac_emballage = float(data.get('sac_emballage', 0))  # NOUVEAU
-    sac_emballage = float(data.get('sac_emballage', 0))
     dechets = float(data.get('dechets', 0))
     
-    total_specifique = bretelles + rema + batta + sac_emballage
+    total_specifique = bretelles + rema + batta
     total_production = bobines_finies + total_specifique
     taux_dechet = (dechets / (total_production + dechets) * 100) if (total_production + dechets) > 0 else 0
     
@@ -1728,54 +1616,3 @@ def api_statistiques_ia(request):
         'statistiques': stats,
         'timestamp': timezone.now().isoformat()
     })
-
-
-
-# Ajouter après les imports existants
-
-def calculer_pourcentage_production(production_actuelle, production_reference=None):
-    """
-    Calcule le pourcentage de production par rapport à une référence
-    Si pas de référence, utilise l'objectif journalier standard
-    """
-    if production_reference is None:
-        # Objectifs journaliers standards par section (à ajuster selon votre réalité)
-        objectifs_journaliers = {
-            'extrusion': Decimal('35000'),  # 35 tonnes
-            'imprimerie': Decimal('20000'),  # 20 tonnes
-            'soudure': Decimal('12000'),     # 12 tonnes
-            'recyclage': Decimal('8000'),    # 8 tonnes
-        }
-        production_reference = sum(objectifs_journaliers.values())
-    
-    if production_reference == 0:
-        return 0
-    
-    pourcentage = (production_actuelle / production_reference) * 100
-    return round(pourcentage, 1)
-
-def calculer_pourcentage_section(section, production_actuelle):
-    """Calcule le pourcentage pour une section spécifique"""
-    objectifs = {
-        'extrusion': Decimal('35000'),
-        'imprimerie': Decimal('20000'),
-        'soudure': Decimal('12000'),
-        'recyclage': Decimal('8000'),
-    }
-    
-    objectif = objectifs.get(section, Decimal('10000'))
-    
-    if objectif == 0:
-        return 0
-    
-    return round((production_actuelle / objectif) * 100, 1)
-
-def get_objectif_section(section):
-    """Retourne l'objectif journalier d'une section"""
-    objectifs = {
-        'extrusion': Decimal('35000'),
-        'imprimerie': Decimal('20000'),
-        'soudure': Decimal('12000'),
-        'recyclage': Decimal('8000'),
-    }
-    return objectifs.get(section, Decimal('10000'))

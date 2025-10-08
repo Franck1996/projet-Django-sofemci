@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Enregistrer Maintenance - Machine {{ machine.numero }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>🔧 Enregistrer Maintenance</h1>
+        <p>Machine {{ machine.numero }} - {{ machine.get_section_display }}</p>
+    </div>
+
+    <div class="form-container">
+        <form method="post" class="maintenance-form">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="description">Description de la maintenance *</label>
+                <textarea id="description" name="description" rows="4" required class="form-control"
+                          placeholder="Ex: Changement des roulements, lubrification, nettoyage filtres..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="technicien">Technicien responsable *</label>
+                <input type="text" id="technicien" name="technicien" required class="form-control"
+                       placeholder="Nom du technicien">
+            </div>
+
+            <div class="form-group">
+                <label for="pieces_remplacees">Pièces remplacées (optionnel)</label>
+                <textarea id="pieces_remplacees" name="pieces_remplacees" rows="3" class="form-control"
+                          placeholder="Liste des pièces remplacées..."></textarea>
+            </div>
+
+            <div class="info-box">
+                <strong>ℹ️ Information:</strong>
+                <p>Cette maintenance réinitialisera le compteur d'heures depuis dernière maintenance et mettra à jour le score de santé de la machine.</p>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">💾 Enregistrer Maintenance</button>
+                <a href="{% url 'machine_detail_ia' machine.id %}" class="btn-secondary">Annuler</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.form-container {
+    max-width: 800px;
+    margin: 30px auto;
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.maintenance-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+.info-box {
+    background: #e3f2fd;
+    border-left: 4px solid #3498db;
+    padding: 15px;
+    border-radius: 4px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.btn-primary, .btn-secondary {
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.btn-primary {
+    background: #27ae60;
+    color: white;
+    flex: 1;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+</style>
+{% endblock %}

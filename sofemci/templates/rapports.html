@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Rapports - SOFEM-CI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>📈 Rapports et Analyses</h1>
+        <p>Génération et consultation des rapports de production</p>
+    </div>
+
+    <!-- Sélection de période -->
+    <div class="period-selection">
+        <form method="get" class="period-form">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="mois">Mois</label>
+                    <select id="mois" name="mois" class="form-control">
+                        {% for mois in mois_disponibles %}
+                        <option value="{{ mois.value }}" {% if mois.selected %}selected{% endif %}>
+                            {{ mois.nom }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="annee">Année</label>
+                    <select id="annee" name="annee" class="form-control">
+                        {% for annee in annees_disponibles %}
+                        <option value="{{ annee }}" {% if annee == annee_courante %}selected{% endif %}>
+                            {{ annee }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="section">Section</label>
+                    <select id="section" name="section" class="form-control">
+                        <option value="">Toutes les sections</option>
+                        <option value="extrusion" {% if section_selectionnee == 'extrusion' %}selected{% endif %}>Extrusion</option>
+                        <option value="imprimerie" {% if section_selectionnee == 'imprimerie' %}selected{% endif %}>Imprimerie</option>
+                        <option value="soudure" {% if section_selectionnee == 'soudure' %}selected{% endif %}>Soudure</option>
+                        <option value="recyclage" {% if section_selectionnee == 'recyclage' %}selected{% endif %}>Recyclage</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">📊 Générer le rapport</button>
+                <button type="button" class="btn-secondary" onclick="exporterExcel()">📄 Exporter Excel</button>
+                <button type="button" class="btn-secondary" onclick="genererPDF()">📋 Générer PDF</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Résumé du rapport -->
+    {% if rapport %}
+    <div class="report-summary">
+        <h2>📋 Résumé du Rapport - {{ mois_nom }} {{ annee_courante }}</h2>
+        
+        <div class="summary-grid">
+            <div class="summary-card total">
+                <div class="summary-value">{{ rapport.total_production|floatformat:0|intcomma }} kg</div>
+                <div class="summary-label">Production Totale</div>
+                <div class="summary-change {% if rapport.evolution_production >= 0 %}positive{% else %}negative{% endif %}">
+                    {% if rapport.evolution_production >= 0 %}↗{% else %}↘{% endif %} 
+                    {{ rapport.evolution_production|floatformat:1 }}%
+                </div>
+            </div>
+            
+            <div class="summary-card efficiency">
+                <div class="summary-value">{{ rapport.rendement_moyen|floatformat:1 }}%</div>
+                <div class="summary-label">Rendement Moyen</div>
+                <div class="summary-change {% if rapport.evolution_rendement >= 0 %}positive{% else %}negative{% endif %}">
+                    {% if rapport.evolution_rendement >= 0 %}↗{% else %}↘{% endif %} 
+                    {{ rapport.evolution_rendement|floatformat:1 }}%
+                </div>
+            </div>
+            
+            <div class="summary-card waste">
+                <div class="summary-value">{{ rapport.taux_dechet_moyen|floatformat:1 }}%</div>
+                <div class="summary-label">Taux Déchet Moyen</div>
+                <div class="summary-change {% if rapport.evolution_dechets < 0 %}positive{% else %}negative{% endif %}">
+                    {% if rapport.evolution_dechets < 0 %}↘{% else %}↗{% endif %} 
+                    {{ rapport.evolution_dechets|floatformat:1 }}%
+                </div>
+            </div>
+            
+            <div class="summary-card days">
+                <div class="summary-value">{{ rapport.jours_production }}</div>
+                <div class="summary-label">Jours de Production</div>
+                <div class="summary-change">📅 {{ rapport.taux_activite }}%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Détails par section -->
+    <div class="section-details">
+        <h3>🏭 Détails par Section</h3>
+        
+        <div class="details-tabs">
+            <button class="tab-btn active" data-tab="extrusion">Extrusion</button>
+            <button class="tab-btn" data-tab="imprimerie">Imprimerie</button>
+            <button class="tab-btn" data-tab="soudure">Soudure</button>
+            <button class="tab-btn" data-tab="recyclage">Recyclage</button>
+        </div>
+
+        {% for section in rapport.sections %}
+        <div class="tab-content {% if forloop.first %}active{% endif %}" id="{{ section.nom|lower }}-details">
+            <div class="section-metrics">
+                <div class="metric-row">
+                    <div class="metric">
+                        <span class="label">Production:</span>
+                        <span class="value">{{ section.production|floatformat:0 }} kg</span>
+                    </div>
+                    <div class="metric">
+                        <span class="label">Rendement:</span>
+                        <span class="value">{{ section.rendement|floatformat:1 }}%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="label">Déchets:</span>
+                        <span class="value">{{ section.dechets|floatformat:0 }} kg</span>
+                    </div>
+                </div>
+                
+                <div class="metric-row">
+                    <div class="metric">
+                        <span class="label">Taux déchet:</span>
+                        <span class="value">{{ section.taux_dechet|floatformat:1 }}%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="label">Jours actifs:</span>
+                        <span class="value">{{ section.jours_actifs }}/{{ section.jours_total }}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="label">Production/jour:</span>
+                        <span class="value">{{ section.production_jour|floatformat:0 }} kg</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tableau détaillé -->
+            <div class="detailed-table">
+                <h4>📅 Production Journalière</h4>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Équipe</th>
+                            <th>Production (kg)</th>
+                            <th>Rendement</th>
+                            <th>Déchets</th>
+                            <th>Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for jour in section.production_journaliere %}
+                        <tr>
+                            <td>{{ jour.date|date:"d/m" }}</td>
+                            <td>{{ jour.equipe }}</td>
+                            <td class="text-right">{{ jour.production|floatformat:1 }}</td>
+                            <td class="text-right">{{ jour.rendement|floatformat:1 }}%</td>
+                            <td class="text-right">{{ jour.dechets|floatformat:1 }}%</td>
+                            <td>
+                                <span class="status-badge {% if jour.valide %}valid{% else %}pending{% endif %}">
+                                    {{ jour.statut }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Graphiques -->
+    <div class="report-charts">
+        <h3>📈 Visualisations</h3>
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h4>Production par Section</h4>
+                <canvas id="sectionChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h4>Évolution Mensuelle</h4>
+                <canvas id="evolutionChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="no-report">
+        <p>📊 Aucun rapport disponible pour la période sélectionnée.</p>
+        <p>Sélectionnez une période et cliquez sur "Générer le rapport".</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Navigation par onglets
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        this.classList.add('active');
+        const tabId = this.getAttribute('data-tab');
+        document.getElementById(tabId + '-details').classList.add('active');
+    });
+});
+
+function exporterExcel() {
+    // Logique d'export Excel
+    alert('Fonctionnalité d\'export Excel en cours de développement...');
+}
+
+function genererPDF() {
+    // Logique de génération PDF
+    alert('Fonctionnalité de génération PDF en cours de développement...');
+}
+
+// Graphiques
+{% if rapport %}
+const sectionCtx = document.getElementById('sectionChart').getContext('2d');
+new Chart(sectionCtx, {
+    type: 'pie',
+    data: {
+        labels: {{ labels_sections|safe }},
+        datasets: [{
+            data: {{ data_sections|safe }},
+            backgroundColor: ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0']
+        }]
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

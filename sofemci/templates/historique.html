@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Historique Production - SOFEM-CI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>📋 Historique de Production</h1>
+        <p>Consultation des données de production historiques</p>
+    </div>
+
+    <!-- Filtres -->
+    <div class="filters-section">
+        <form method="get" class="filter-form">
+            <div class="filter-grid">
+                <div class="form-group">
+                    <label for="section">Section</label>
+                    <select id="section" name="section" class="form-control">
+                        <option value="">Toutes les sections</option>
+                        <option value="extrusion" {% if request.GET.section == 'extrusion' %}selected{% endif %}>Extrusion</option>
+                        <option value="imprimerie" {% if request.GET.section == 'imprimerie' %}selected{% endif %}>Imprimerie</option>
+                        <option value="soudure" {% if request.GET.section == 'soudure' %}selected{% endif %}>Soudure</option>
+                        <option value="recyclage" {% if request.GET.section == 'recyclage' %}selected{% endif %}>Recyclage</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="date_debut">Date début</label>
+                    <input type="date" id="date_debut" name="date_debut" 
+                           value="{{ request.GET.date_debut }}" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="date_fin">Date fin</label>
+                    <input type="date" id="date_fin" name="date_fin" 
+                           value="{{ request.GET.date_fin }}" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="equipe">Équipe</label>
+                    <select id="equipe" name="equipe" class="form-control">
+                        <option value="">Toutes les équipes</option>
+                        {% for equipe in equipes %}
+                        <option value="{{ equipe.id }}" {% if request.GET.equipe == equipe.id|stringformat:"i" %}selected{% endif %}>
+                            {{ equipe.get_nom_display }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="filter-actions">
+                <button type="submit" class="btn-primary">🔍 Filtrer</button>
+                <a href="{% url 'historique' %}" class="btn-secondary">🔄 Réinitialiser</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Résultats -->
+    <div class="results-section">
+        {% if productions %}
+        <div class="table-responsive">
+            <table class="production-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Section</th>
+                        <th>Équipe</th>
+                        <th>Production (kg)</th>
+                        <th>Déchets (kg)</th>
+                        <th>Rendement</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for production in productions %}
+                    <tr>
+                        <td>{{ production.date_production|date:"d/m/Y" }}</td>
+                        <td>
+                            {% if production.section == 'extrusion' %}
+                                🏭 Extrusion
+                            {% elif production.section == 'imprimerie' %}
+                                🖨️ Imprimerie
+                            {% elif production.section == 'soudure' %}
+                                🔌 Soudure
+                            {% elif production.section == 'recyclage' %}
+                                ♻️ Recyclage
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if production.equipe %}
+                                {{ production.equipe.get_nom_display }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="text-right">{{ production.total_production_kg|floatformat:1 }}</td>
+                        <td class="text-right">{{ production.dechets_kg|default:0|floatformat:1 }}</td>
+                        <td class="text-right">
+                            {% if production.rendement_pourcentage %}
+                                {{ production.rendement_pourcentage|floatformat:1 }}%
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="status-badge {% if production.valide %}status-valid{% else %}status-pending{% endif %}">
+                                {% if production.valide %}✅ Validé{% else %}⏳ En attente{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn-view" onclick="afficherDetails({{ production.id }}, '{{ production.section }}')">
+                                    👁️ Voir
+                                </button>
+                                {% if not production.valide and user.role in 'superviseur,admin' %}
+                                <button class="btn-validate" onclick="validerProduction({{ production.id }}, '{{ production.section }}')">
+                                    ✅ Valider
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if productions.has_other_pages %}
+        <div class="pagination">
+            {% if productions.has_previous %}
+                <a href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">« Première</a>
+                <a href="?page={{ productions.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">‹ Précédente</a>
+            {% endif %}
+
+            <span class="current-page">Page {{ productions.number }} sur {{ productions.paginator.num_pages }}</span>
+
+            {% if productions.has_next %}
+                <a href="?page={{ productions.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Suivante ›</a>
+                <a href="?page={{ productions.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Dernière »</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="no-data">
+            <p>📊 Aucune donnée de production trouvée pour les critères sélectionnés.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal pour afficher les détails -->
+<div id="detailsModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <div id="modal-body"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function afficherDetails(productionId, section) {
+    fetch(`/api/production/${section}/${productionId}/`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('modal-body').innerHTML = `
+                <h3>Détails de la production</h3>
+                <div class="details-grid">
+                    ${Object.entries(data).map(([key, value]) => `
+                        <div class="detail-item">
+                            <strong>${key}:</strong> <span>${value}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            document.getElementById('detailsModal').style.display = 'block';
+        });
+}
+
+function validerProduction(productionId, section) {
+    if (confirm('Êtes-vous sûr de vouloir valider cette production ?')) {
+        fetch(`/api/production/${section}/${productionId}/valider/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': window.SOFEMCI.csrf,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur lors de la validation: ' + data.error);
+            }
+        });
+    }
+}
+
+// Fermer le modal
+document.querySelector('.close').addEventListener('click', function() {
+    document.getElementById('detailsModal').style.display = 'none';
+});
+</script>
+{% endblock %}

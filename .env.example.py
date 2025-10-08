@@ -8,12 +8,12 @@ ALLOWED_HOSTS=127.0.0.1,localhost
 
 # Database Configuration (SQLite par défaut)
 # Pour MySQL, décommenter et remplir :
-DB_ENGINE=django.db.backends.mysql
-DB_NAME=sofemci_db
-DB_USER=root
-DB_PASSWORD=
-DB_HOST=localhost
-DB_PORT=3306
+# DB_ENGINE=django.db.backends.mysql
+# DB_NAME=sofemci_db
+# DB_USER=root
+# DB_PASSWORD=votre_mot_de_passe
+# DB_HOST=localhost
+# DB_PORT=3306
 
 # Email Configuration (optionnel pour les alertes)
 # EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend

@@ -253,14 +253,83 @@ class ProductionImprimerieForm(forms.ModelForm):
         return date
 
 class ProductionSoudureForm(forms.ModelForm):
-    """Formulaire saisie production Soudure - EXACTEMENT comme dans votre maquette"""
+    class Meta:
+        model = ProductionSoudure
+        fields = [
+            'date_production',
+            'heure_debut',
+            'heure_fin',
+            'nombre_machines_actives',
+            'production_bobines_finies_kg',
+            'production_bretelles_kg',
+            'production_rema_kg',
+            'production_batta_kg',
+            'production_sac_emballage_kg',  # NOUVEAU
+            'dechets_kg',
+            'observations',
+        ]
+        widgets = {
+            'date_production': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'form-control'
+            }),
+            'heure_debut': forms.TimeInput(attrs={
+                'type': 'time',
+                'class': 'form-control'
+            }),
+            'heure_fin': forms.TimeInput(attrs={
+                'type': 'time',
+                'class': 'form-control'
+            }),
+            'nombre_machines_actives': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0',
+                'max': '8'
+            }),
+            'production_bobines_finies_kg': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'production_bretelles_kg': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'production_rema_kg': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'production_batta_kg': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'production_sac_emballage_kg': forms.NumberInput(attrs={  # NOUVEAU
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0',
+                'placeholder': 'Sacs imprimés'
+            }),
+            'dechets_kg': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'observations': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3
+            }),
+        }
+             """Formulaire saisie production Soudure - EXACTEMENT comme dans votre maquette"""
     
     class Meta:
         model = ProductionSoudure
         fields = [
             'date_production', 'heure_debut', 'heure_fin',
             'nombre_machines_actives', 'production_bobines_finies_kg',
-            'production_bretelles_kg', 'production_rema_kg', 'production_batta_kg',    'production_sac_emballage_kg',
+            'production_bretelles_kg', 'production_rema_kg', 'production_batta_kg',
             'dechets_kg', 'observations'
         ]
         
@@ -315,12 +384,6 @@ class ProductionSoudureForm(forms.ModelForm):
                 'min': '0',
                 'placeholder': '0.00',
                 'id': 'sou_batta'
-            }),
-            'production_sac_emballage_kg': forms.NumberInput(attrs={  # NOUVEAU
-                'class': 'form-control',
-                'step': '0.01',
-                'min': '0',
-                'placeholder': 'Sacs imprimés'
             }),
             'dechets_kg': forms.NumberInput(attrs={
                 'class': 'form-control',

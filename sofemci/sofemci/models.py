@@ -762,6 +762,7 @@ class ProductionImprimerie(models.Model):
     
     def __str__(self):
         return f"Imprimerie - {self.date_production}"
+
 class ProductionSoudure(models.Model):
     """Production journalière section Soudure - EXACTEMENT comme dans vos maquettes"""
     
@@ -873,6 +874,84 @@ class ProductionSoudure(models.Model):
             ) * 100
         else:
             self.taux_dechet_pourcentage = Decimal('0')
+        
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Soudure - {self.date_production}"
+    """Production journalière section Soudure - EXACTEMENT comme dans vos maquettes"""
+    
+    # Informations de base
+    date_production = models.DateField()
+    heure_debut = models.TimeField()
+    heure_fin = models.TimeField()
+    
+    # Ressources
+    nombre_machines_actives = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(8)],
+        verbose_name="Nombre moyen de machines actives"
+    )
+    
+    # Production standard
+    production_bobines_finies_kg = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        validators=[MinValueValidator(Decimal('0'))],
+        verbose_name="Production bobines produits finis (kg)"
+    )
+    
+    # Production spécifique soudure
+    production_bretelles_kg = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        validators=[MinValueValidator(Decimal('0'))],
+        verbose_name="Production BRETELLE (EMBALLAGE) (kg)"
+    )
+    production_rema_kg = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        validators=[MinValueValidator(Decimal('0'))],
+        verbose_name="Production REMA-PLASTIQUE (kg)"
+    )
+    production_batta_kg = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        validators=[MinValueValidator(Decimal('0'))],
+        verbose_name="Production BATTA (kg)"
+    )
+    
+    # Déchets
+    dechets_kg = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        validators=[MinValueValidator(Decimal('0'))],
+        verbose_name="Total des déchets (kg)"
+    )
+    
+    # Champs calculés
+    total_production_specifique_kg = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    total_production_kg = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    taux_dechet_pourcentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    
+    # Métadonnées
+    observations = models.TextField(blank=True)
+    cree_par = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+    valide = models.BooleanField(default=False)
+    
+    class Meta:
+        unique_together = ['date_production']
+        verbose_name = "Production Soudure"
+        verbose_name_plural = "Productions Soudure"
+        ordering = ['-date_production']
+    
+    def save(self, *args, **kwargs):
+        # Calculs automatiques EXACTEMENT comme dans vos maquettes
+        self.total_production_specifique_kg = (
+            self.production_bretelles_kg + 
+            self.production_rema_kg + 
+            self.production_batta_kg
+        )
+        self.total_production_kg = self.production_bobines_finies_kg + self.total_production_specifique_kg
+        
+        if self.total_production_kg + self.dechets_kg > 0:
+            self.taux_dechet_pourcentage = (self.dechets_kg / (self.total_production_kg + self.dechets_kg)) * 100
         
         super().save(*args, **kwargs)
     

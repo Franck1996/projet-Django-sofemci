@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Saisie Extrusion - SOFEM-CI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>🔧 Saisie Production - Extrusion</h1>
+        <p>Saisie des données de production pour les zones d'extrusion</p>
+    </div>
+
+    <form method="post" class="production-form">
+        {% csrf_token %}
+        
+        <!-- Informations de base -->
+        <div class="form-section">
+            <h2>Informations Générales</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="date_production">Date de production</label>
+                    <input type="date" id="date_production" name="date_production" 
+                           value="{{ today|date:'Y-m-d' }}" required class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="zone">Zone d'extrusion</label>
+                    <select id="zone" name="zone" required class="form-control">
+                        <option value="">Sélectionnez une zone</option>
+                        {% for zone in zones %}
+                        <option value="{{ zone.id }}">Zone {{ zone.numero }} - {{ zone.nom }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="equipe">Équipe</label>
+                    <select id="equipe" name="equipe" required class="form-control">
+                        <option value="">Sélectionnez une équipe</option>
+                        {% for equipe in equipes %}
+                        <option value="{{ equipe.id }}">{{ equipe.get_nom_display }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="heure_debut">Heure de début</label>
+                    <input type="time" id="heure_debut" name="heure_debut" required class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="heure_fin">Heure de fin</label>
+                    <input type="time" id="heure_fin" name="heure_fin" required class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="chef_zone">Chef de zone</label>
+                    <input type="text" id="chef_zone" name="chef_zone" 
+                           value="{{ user.get_full_name }}" required class="form-control">
+                </div>
+            </div>
+        </div>
+
+        <!-- Ressources utilisées -->
+        <div class="form-section">
+            <h2>Ressources Utilisées</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="matiere_premiere_kg">Matière première (kg)</label>
+                    <input type="number" id="matiere_premiere_kg" name="matiere_premiere_kg" 
+                           step="0.01" min="0.01" required class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="nombre_machines_actives">Machines actives</label>
+                    <input type="number" id="nombre_machines_actives" name="nombre_machines_actives" 
+                           min="0" max="4" required class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="nombre_machinistes">Nombre de machinistes</label>
+                    <input type="number" id="nombre_machinistes" name="nombre_machinistes" 
+                           min="0" required class="form-control">
+                </div>
+            </div>
+        </div>
+
+        <!-- Production -->
+        <div class="form-section">
+            <h2>Production</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="nombre_bobines_kg">Bobines produites (kg)</label>
+                    <input type="number" id="nombre_bobines_kg" name="nombre_bobines_kg" 
+                           step="0.01" min="0" required class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="production_finis_kg">Produits finis (kg)</label>
+                    <input type="number" id="production_finis_kg" name="production_finis_kg" 
+                           step="0.01" min="0" required class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="production_semi_finis_kg">Produits semi-finis (kg)</label>
+                    <input type="number" id="production_semi_finis_kg" name="production_semi_finis_kg" 
+                           step="0.01" min="0" required class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="dechets_kg">Déchets (kg)</label>
+                    <input type="number" id="dechets_kg" name="dechets_kg" 
+                           step="0.01" min="0" required class="form-control">
+                </div>
+            </div>
+        </div>
+
+        <!-- Observations -->
+        <div class="form-section">
+            <h2>Observations</h2>
+            <div class="form-group">
+                <label for="observations">Remarques et observations du jour</label>
+                <textarea id="observations" name="observations" rows="4" 
+                          class="form-control" placeholder="Notes importantes..."></textarea>
+            </div>
+        </div>
+
+        <!-- Calculs automatiques (affichage seulement) -->
+        <div class="form-section calculations">
+            <h2>Calculs Automatiques</h2>
+            <div class="calculations-grid">
+                <div class="calc-item">
+                    <span class="calc-label">Production totale:</span>
+                    <span id="calc-total" class="calc-value">0.00 kg</span>
+                </div>
+                <div class="calc-item">
+                    <span class="calc-label">Rendement:</span>
+                    <span id="calc-rendement" class="calc-value">0.00%</span>
+                </div>
+                <div class="calc-item">
+                    <span class="calc-label">Taux déchets:</span>
+                    <span id="calc-dechets" class="calc-value">0.00%</span>
+                </div>
+                <div class="calc-item">
+                    <span class="calc-label">Production/machine:</span>
+                    <span id="calc-machine" class="calc-value">0.00 kg</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">💾 Enregistrer la production</button>
+            <button type="button" class="btn-secondary" onclick="calculerAutomatique()">
+                🔄 Calculer automatique
+            </button>
+            <a href="{% url 'dashboard' %}" class="btn-cancel">❌ Annuler</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function calculerAutomatique() {
+    // Récupération des valeurs
+    const finis = parseFloat(document.getElementById('production_finis_kg').value) || 0;
+    const semiFinis = parseFloat(document.getElementById('production_semi_finis_kg').value) || 0;
+    const matiere = parseFloat(document.getElementById('matiere_premiere_kg').value) || 0;
+    const dechets = parseFloat(document.getElementById('dechets_kg').value) || 0;
+    const machines = parseInt(document.getElementById('nombre_machines_actives').value) || 0;
+    
+    // Calculs
+    const total = finis + semiFinis;
+    const rendement = matiere > 0 ? (total / matiere) * 100 : 0;
+    const tauxDechets = (total + dechets) > 0 ? (dechets / (total + dechets)) * 100 : 0;
+    const prodMachine = machines > 0 ? total / machines : 0;
+    
+    // Affichage
+    document.getElementById('calc-total').textContent = total.toFixed(2) + ' kg';
+    document.getElementById('calc-rendement').textContent = rendement.toFixed(2) + '%';
+    document.getElementById('calc-dechets').textContent = tauxDechets.toFixed(2) + '%';
+    document.getElementById('calc-machine').textContent = prodMachine.toFixed(2) + ' kg';
+}
+
+// Calcul automatique lors de la saisie
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = ['production_finis_kg', 'production_semi_finis_kg', 'matiere_premiere_kg', 
+                   'dechets_kg', 'nombre_machines_actives'];
+    
+    inputs.forEach(id => {
+        document.getElementById(id).addEventListener('input', calculerAutomatique);
+    });
+});
+</script>
+{% endblock %}
