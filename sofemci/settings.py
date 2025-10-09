@@ -73,22 +73,22 @@ DATABASES = {
     }
 }
 
-# --- Exemple MySQL (pour plus tard, en prod) ---
-"""
+# ==========================================
+# Base de données - MySQL
+# ==========================================
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': config('sofemci_db'),
-        'USER': config('root'),
-        'PASSWORD': config(''),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='3306'),
+        'NAME': 'sofemci_db',
+        'USER': 'root',
+        'PASSWORD': '',  # Mot de passe vide
+        'HOST': 'localhost',
+        'PORT': '3306',
         'OPTIONS': {
             'charset': 'utf8mb4',
         },
     }
 }
-"""
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

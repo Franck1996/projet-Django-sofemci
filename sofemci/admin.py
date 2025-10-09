@@ -67,10 +67,85 @@ class ZoneExtrusionAdmin(admin.ModelAdmin):
 
 @admin.register(Machine)
 class MachineAdmin(admin.ModelAdmin):
-    list_display = ['numero', 'type_machine', 'section', 'zone_extrusion', 'etat']
-    list_filter = ['section', 'etat', 'type_machine']
-    search_fields = ['numero']
-    ordering = ['section', 'numero']
+    list_display = [
+        'numero', 
+        'type_machine', 
+        'section', 
+        'provenance',  # Nouveau champ
+        'est_nouvelle',  # Nouveau champ
+        'etat', 
+        'score_sante_global',
+        'probabilite_panne_7_jours',
+        'derniere_maintenance'
+    ]
+    
+    list_filter = [
+        'section', 
+        'type_machine', 
+        'etat', 
+        'provenance',  # Nouveau filtre
+        'est_nouvelle',  # Nouveau filtre
+        'anomalie_detectee'
+    ]
+    
+    search_fields = ['numero', 'observations']
+    
+    fieldsets = (
+        ('Informations de base', {
+            'fields': (
+                'numero', 
+                'type_machine', 
+                'section', 
+                'zone_extrusion',
+                'provenance',  # Nouveau champ
+                'est_nouvelle',  # Nouveau champ
+                'etat',
+                'date_installation',
+                'capacite_horaire',
+                'observations'
+            )
+        }),
+        ('Maintenance', {
+            'fields': (
+                'derniere_maintenance',
+                'prochaine_maintenance_prevue',
+                'frequence_maintenance_jours',
+                'heures_fonctionnement_totales',
+                'heures_depuis_derniere_maintenance'
+            )
+        }),
+        ('Historique pannes', {
+            'fields': (
+                'nombre_pannes_totales',
+                'nombre_pannes_6_derniers_mois',
+                'nombre_pannes_1_dernier_mois',
+                'date_derniere_panne',
+                'duree_moyenne_reparation'
+            )
+        }),
+        ('Consommation et Température', {
+            'fields': (
+                'consommation_electrique_kwh',
+                'consommation_electrique_nominale',
+                'temperature_actuelle',
+                'temperature_nominale',
+                'temperature_max_autorisee'
+            )
+        }),
+        ('Analyses IA', {
+            'fields': (
+                'score_sante_global',
+                'probabilite_panne_7_jours',
+                'probabilite_panne_30_jours',
+                'anomalie_detectee',
+                'type_anomalie',
+                'date_derniere_analyse_ia'
+            )
+        }),
+    )
+    
+    readonly_fields = ['derniere_mise_a_jour_donnees']
+    
 
 # ==========================================
 # ADMINISTRATION PRODUCTION

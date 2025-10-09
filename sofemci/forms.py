@@ -526,7 +526,72 @@ class CustomUserForm(forms.ModelForm):
 
 # sofemci/forms.py
 
+# sofemci/forms.py
+from django import forms
+from .models import Machine, ZoneExtrusion
+
 class MachineForm(forms.ModelForm):
+    class Meta:
+        model = Machine
+        fields = [
+            'numero', 'type_machine', 'section', 'zone_extrusion', 'etat',
+            'date_installation', 'derniere_maintenance', 'capacite_horaire',
+            'observations', 'heures_fonctionnement_totales',
+            'frequence_maintenance_jours', 'consommation_electrique_nominale',
+            'temperature_nominale', 'temperature_max_autorisee'
+        ]
+        widgets = {
+            'numero': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: EXT-01'}),
+            'type_machine': forms.Select(attrs={'class': 'form-control'}),
+            'section': forms.Select(attrs={'class': 'form-control'}),
+            'zone_extrusion': forms.Select(attrs={'class': 'form-control'}),
+            'etat': forms.Select(attrs={'class': 'form-control'}),
+            'date_installation': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'derniere_maintenance': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'capacite_horaire': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'observations': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'heures_fonctionnement_totales': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'frequence_maintenance_jours': forms.NumberInput(attrs={'class': 'form-control'}),
+            'consommation_electrique_nominale': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'temperature_nominale': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'temperature_max_autorisee': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        }
+        labels = {
+            'numero': 'Numéro de la machine',
+            'type_machine': 'Type de machine',
+            'section': 'Section',
+            'zone_extrusion': 'Zone d\'extrusion',
+            'etat': 'État actuel',
+            'date_installation': 'Date d\'installation',
+            'derniere_maintenance': 'Dernière maintenance',
+            'capacite_horaire': 'Capacité horaire (kg/h)',
+            'observations': 'Observations',
+            'heures_fonctionnement_totales': 'Heures de fonctionnement totales',
+            'frequence_maintenance_jours': 'Fréquence de maintenance (jours)',
+            'consommation_electrique_nominale': 'Consommation nominale (kWh)',
+            'temperature_nominale': 'Température nominale (°C)',
+            'temperature_max_autorisee': 'Température max autorisée (°C)',
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Rendre zone_extrusion optionnel sauf pour section extrusion
+        self.fields['zone_extrusion'].required = False
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        section = cleaned_data.get('section')
+        zone = cleaned_data.get('zone_extrusion')
+        
+        # Validation: zone requise pour extrusion
+        if section == 'extrusion' and not zone:
+            self.add_error('zone_extrusion', 'Une zone est requise pour la section Extrusion')
+        
+        # Validation: zone non applicable pour autres sections
+        if section != 'extrusion' and zone:
+            cleaned_data['zone_extrusion'] = None
+        
+        return cleaned_data
     # Ajouter un champ personnalisé pour la zone
     zone_numero = forms.IntegerField(
         required=False,

@@ -1134,18 +1134,37 @@ def machine_create_view(request):
     
     if request.method == 'POST':
         form = MachineForm(request.POST)
+        
+        # DEBUG - Affichage dans la console
+        print("=" * 50)
+        print("DEBUG CRÉATION MACHINE")
+        print("=" * 50)
+        print(f"Formulaire valide: {form.is_valid()}")
+        
         if form.is_valid():
-            machine = form.save()
-            messages.success(request, f'Machine {machine.numero} créée avec succès !')
-            return redirect('machines_list')
+            try:
+                machine = form.save()
+                print(f"✅ Machine créée: {machine.numero}")
+                messages.success(request, f'Machine {machine.numero} créée avec succès !')
+                return redirect('machines_list')
+            except Exception as e:
+                print(f"❌ Erreur sauvegarde: {e}")
+                messages.error(request, f'Erreur lors de la sauvegarde: {str(e)}')
         else:
-            messages.error(request, 'Erreur dans le formulaire. Veuillez corriger.')
+            # Afficher les erreurs dans la console
+            print("❌ ERREURS DU FORMULAIRE:")
+            for field, errors in form.errors.items():
+                print(f"  {field}: {errors}")
+            
+            # Ajouter un message d'erreur visible
+            messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
     else:
         form = MachineForm()
     
     context = {
         'form': form,
         'action': 'Créer',
+        'show_errors': request.method == 'POST',  # Pour afficher les erreurs
     }
     
     return render(request, 'machine_form.html', context)
