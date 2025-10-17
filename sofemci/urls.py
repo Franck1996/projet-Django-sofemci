@@ -6,8 +6,9 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
-
 from . import views
+
+
 
 urlpatterns = [
     # ==========================================
@@ -49,18 +50,19 @@ urlpatterns = [
     path('machines/<int:machine_id>/delete/', views.machine_delete_view, name='machine_delete'),
     path('machines/<int:machine_id>/change-status/', views.machine_change_status_ajax, name='machine_change_status'),
     path('api/zones/create/', views.api_create_zone, name='api_create_zone'),
+    
     # ==========================================
     # HISTORIQUE ET RAPPORTS
     # ==========================================
     path('historique/', views.historique_view, name='historique'),
     path('rapports/', views.rapports_view, name='rapports'),
-    
+    #path('rapports/export/excel/', views.rapports_export_excel, name='rapports_export_excel'),
+    #path('rapports/export/pdf/', views.rapports_export_pdf, name='rapports_export_pdf'),    
     # ==========================================
     # API POUR CALCULS TEMPS RÉEL
     # ==========================================
     path('api/calculs/', views.api_calculs_production, name='api_calculs'),
     path('api/dashboard/', views.api_dashboard_data, name='api_dashboard'),
-
 
     # ==========================================
     # MODULE IA - MAINTENANCE PRÉDICTIVE
@@ -85,11 +87,15 @@ urlpatterns = [
 ]
 
 # ==========================================
-# FICHIERS STATIQUES ET MÉDIA
+# FICHIERS STATIQUES ET MÉDIA (DÉVELOPPEMENT)
 # ==========================================
 if settings.DEBUG:
+    # Servir les fichiers média (uploads utilisateurs)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    
+    # Servir les fichiers statiques (CSS, JS, Images, Logos)
+    from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+    urlpatterns += staticfiles_urlpatterns()
 
 # ==========================================
 # CONFIGURATION ADMIN

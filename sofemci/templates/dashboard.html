@@ -255,95 +255,7 @@
                 </div>
             </div>
 
-            <!-- Section Imprimerie -->
-            <div class="section-card-extended imprimerie-card">
-                <div class="section-header-expanded">
-                    <div class="section-info-main">
-                        <div class="section-icon">🖨️</div>
-                        <div class="section-title-content">
-                            <h3>Imprimerie</h3>
-                            <span class="section-status status-active">● Production en cours</span>
-                        </div>
-                    </div>
-                    <div class="section-production-main">
-                        <div class="production-value">{{ production_imprimerie|floatformat:0|intcomma }} kg</div>
-                        <div class="production-label">Production du jour</div>
-                    </div>
-                </div>
-                
-                <div class="section-details-grid">
-                    <div class="detail-column">
-                        <div class="detail-group">
-                            <h4 class="detail-group-title">📊 Performance</h4>
-                            <div class="detail-item-enhanced">
-                                <span class="detail-label">⏱️ Temps de travail:</span>
-                                <span class="detail-value">{{ imprimerie_stats.temps_travail|default:"0" }}h</span>
-                            </div>
-                            <div class="detail-item-enhanced">
-                                <span class="detail-label">👥 Équipes actives:</span>
-                                <span class="detail-value">{{ imprimerie_stats.equipes_actives|default:"0" }}</span>
-                            </div>
-                            <div class="detail-item-enhanced">
-                                <span class="detail-label">🔧 Machines:</span>
-                                <span class="detail-value">{{ imprimerie_stats.machines_actives|default:"0" }}/{{ imprimerie_stats.machines_totales|default:"0" }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="detail-column">
-                        <div class="detail-group">
-                            <h4 class="detail-group-title">🎨 Production détaillée</h4>
-                            <div class="production-breakdown-enhanced">
-                                <div class="breakdown-item-enhanced">
-                                    <span class="breakdown-label">Bobines finies:</span>
-                                    <span class="breakdown-value">{{ imprimerie_stats.bobines_finies|default:"0"|floatformat:0|intcomma }} kg</span>
-                                </div>
-                                <div class="breakdown-item-enhanced">
-                                    <span class="breakdown-label">Bobines semi-finies:</span>
-                                    <span class="breakdown-value">{{ imprimerie_stats.bobines_semi_finies|default:"0"|floatformat:0|intcomma }} kg</span>
-                                </div>
-                                <div class="breakdown-item-enhanced total">
-                                    <span class="breakdown-label">Total production:</span>
-                                    <span class="breakdown-value">{{ imprimerie_stats.production_totale|default:"0"|floatformat:0|intcomma }} kg</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="detail-column">
-                        <div class="detail-group">
-                            <h4 class="detail-group-title">📈 Indicateurs</h4>
-                            <div class="indicators-grid">
-                                <div class="indicator-item">
-                                    <span class="indicator-label">🗑️ Déchets:</span>
-                                    <span class="indicator-value waste">{{ imprimerie_stats.dechets_totaux|default:"0"|floatformat:0|intcomma }} kg</span>
-                                </div>
-                                <div class="indicator-item">
-                                    <span class="indicator-label">📊 Taux déchet:</span>
-                                    <span class="indicator-value {% if imprimerie_stats.taux_dechet < 3 %}good{% else %}poor{% endif %}">
-                                        {{ imprimerie_stats.taux_dechet|default:"0" }}%
-                                    </span>
-                                </div>
-                                <div class="indicator-item">
-                                    <span class="indicator-label">⚡ Efficacité:</span>
-                                    <span class="indicator-value good">{{ imprimerie_stats.efficacite|default:"92" }}%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="section-actions-expanded">
-                    <a href="{% url 'saisie_sections' %}" class="btn-section-action primary">
-                        📊 Saisir production
-                    </a>
-                    <a href="#" class="btn-section-action secondary">
-                        📈 Voir détails
-                    </a>
-                </div>
-            </div>
-
-            <!-- Section Soudure -->
+             <!-- Section Soudure -->
             <div class="section-card-extended soudure-card">
                 <div class="section-header-expanded">
                     <div class="section-info-main">
@@ -435,6 +347,94 @@
                 </div>
             </div>
 
+            <!-- Section Imprimerie -->
+            <div class="section-card-extended imprimerie-card">
+                <div class="section-header-expanded">
+                    <div class="section-info-main">
+                        <div class="section-icon">🖨️</div>
+                        <div class="section-title-content">
+                            <h3>Imprimerie</h3>
+                            <span class="section-status status-active">● Production en cours</span>
+                        </div>
+                    </div>
+                    <div class="section-production-main">
+                        <div class="production-value">{{ production_imprimerie|floatformat:0|intcomma }} kg</div>
+                        <div class="production-label">Production du jour</div>
+                    </div>
+                </div>
+                
+                <div class="section-details-grid">
+                    <div class="detail-column">
+                        <div class="detail-group">
+                            <h4 class="detail-group-title">📊 Performance</h4>
+                            <div class="detail-item-enhanced">
+                                <span class="detail-label">⏱️ Temps de travail:</span>
+                                <span class="detail-value">{{ imprimerie_stats.temps_travail|default:"0" }}h</span>
+                            </div>
+                            <div class="detail-item-enhanced">
+                                <span class="detail-label">👥 Équipes actives:</span>
+                                <span class="detail-value">{{ imprimerie_stats.equipes_actives|default:"0" }}</span>
+                            </div>
+                            <div class="detail-item-enhanced">
+                                <span class="detail-label">🔧 Machines:</span>
+                                <span class="detail-value">{{ imprimerie_stats.machines_actives|default:"0" }}/{{ imprimerie_stats.machines_totales|default:"0" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-column">
+                        <div class="detail-group">
+                            <h4 class="detail-group-title">🎨 Production détaillée</h4>
+                            <div class="production-breakdown-enhanced">
+                                <div class="breakdown-item-enhanced">
+                                    <span class="breakdown-label">Bobines finies:</span>
+                                    <span class="breakdown-value">{{ imprimerie_stats.bobines_finies|default:"0"|floatformat:0|intcomma }} kg</span>
+                                </div>
+                                <div class="breakdown-item-enhanced">
+                                    <span class="breakdown-label">Bobines semi-finies:</span>
+                                    <span class="breakdown-value">{{ imprimerie_stats.bobines_semi_finies|default:"0"|floatformat:0|intcomma }} kg</span>
+                                </div>
+                                <div class="breakdown-item-enhanced total">
+                                    <span class="breakdown-label">Total production:</span>
+                                    <span class="breakdown-value">{{ imprimerie_stats.production_totale|default:"0"|floatformat:0|intcomma }} kg</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-column">
+                        <div class="detail-group">
+                            <h4 class="detail-group-title">📈 Indicateurs</h4>
+                            <div class="indicators-grid">
+                                <div class="indicator-item">
+                                    <span class="indicator-label">🗑️ Déchets:</span>
+                                    <span class="indicator-value waste">{{ imprimerie_stats.dechets_totaux|default:"0"|floatformat:0|intcomma }} kg</span>
+                                </div>
+                                <div class="indicator-item">
+                                    <span class="indicator-label">📊 Taux déchet:</span>
+                                    <span class="indicator-value {% if imprimerie_stats.taux_dechet < 3 %}good{% else %}poor{% endif %}">
+                                        {{ imprimerie_stats.taux_dechet|default:"0" }}%
+                                    </span>
+                                </div>
+                                <div class="indicator-item">
+                                    <span class="indicator-label">⚡ Efficacité:</span>
+                                    <span class="indicator-value good">{{ imprimerie_stats.efficacite|default:"92" }}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section-actions-expanded">
+                    <a href="{% url 'saisie_sections' %}" class="btn-section-action primary">
+                        📊 Saisir production
+                    </a>
+                    <a href="#" class="btn-section-action secondary">
+                        📈 Voir détails
+                    </a>
+                </div>
+            </div>
+           
             <!-- Section Recyclage -->
             <div class="section-card-extended recyclage-card">
                 <div class="section-header-expanded">

@@ -74,8 +74,49 @@
     </div>
     <small class="form-help">La zone sera créée automatiquement si elle n'existe pas</small>
 </div>
+</div>
+</div>
+<!-- SECTION 2: Origine et État (NOUVELLE SECTION) -->
+            <div class="form-section">
+                <h2>🌍 Origine et État</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="{{ form.provenance.id_for_label }}">
+                            Pays d'Origine <span class="required">*</span>
+                        </label>
+                        {{ form.provenance }}
+                        {% if form.provenance.errors %}
+                            <div class="error-message">{{ form.provenance.errors.0 }}</div>
+                        {% endif %}
+                        <small class="form-help">Pays de fabrication de la machine</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="{{ form.etat.id_for_label }}">
+                            État Actuel <span class="required">*</span>
+                        </label>
+                        {{ form.etat }}
+                        {% if form.etat.errors %}
+                            <div class="error-message">{{ form.etat.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-group-checkbox">
+                    <div class="checkbox-container">
+                        {{ form.est_nouvelle }}
+                        <label for="{{ form.est_nouvelle.id_for_label }}" class="checkbox-label">
+                            <span class="checkbox-icon">✨</span>
+                            Machine neuve (lors de son installation)
+                        </label>
+                    </div>
+                    {% if form.est_nouvelle.errors %}
+                        <div class="error-message">{{ form.est_nouvelle.errors.0 }}</div>
+                    {% endif %}
+                    <small class="form-help">Cochez si la machine était neuve lors de son installation à SOFEM-CI</small>
                 </div>
             </div>
+
 
             <div class="form-section">
                 <h2>État et Maintenance</h2>
@@ -143,7 +184,7 @@
 .form-container {
     max-width: 1000px;
     margin: 0 auto;
-    background: white;
+    background:#e9e9e9;
     padding: 30px;
     border-radius: 12px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -202,6 +243,44 @@
     min-height: 100px;
     resize: vertical;
 }
+* NOUVEAU: Styles pour checkbox */
+.form-group-checkbox {
+    margin-top: 20px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border-left: 4px solid #27ae60;
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.checkbox-container input[type="checkbox"] {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    accent-color: #27ae60;
+}
+
+.checkbox-label {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #2c3e50;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.checkbox-icon {
+    font-size: 1.3rem;
+}
+
 
 .form-help {
     color: #7f8c8d;

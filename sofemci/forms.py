@@ -260,7 +260,8 @@ class ProductionSoudureForm(forms.ModelForm):
         fields = [
             'date_production', 'heure_debut', 'heure_fin',
             'nombre_machines_actives', 'production_bobines_finies_kg',
-            'production_bretelles_kg', 'production_rema_kg', 'production_batta_kg',    'production_sac_emballage_kg',
+            'production_bretelles_kg', 'production_rema_kg', 'production_batta_kg',
+            'production_sac_emballage_kg',
             'dechets_kg', 'observations'
         ]
         
@@ -316,11 +317,12 @@ class ProductionSoudureForm(forms.ModelForm):
                 'placeholder': '0.00',
                 'id': 'sou_batta'
             }),
-            'production_sac_emballage_kg': forms.NumberInput(attrs={  # NOUVEAU
+            'production_sac_emballage_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
                 'min': '0',
-                'placeholder': 'Sacs imprimés'
+                'placeholder': 'Sacs imprimés',
+                'id': 'sou_sac_emballage'
             }),
             'dechets_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
@@ -521,85 +523,20 @@ class CustomUserForm(forms.ModelForm):
         }
 
 # ==========================================
-# FORMULAIRES MACHINES
+# FORMULAIRES MACHINES - VERSION ACTUALISÉE
 # ==========================================
 
-# sofemci/forms.py
-
-# sofemci/forms.py
-from django import forms
-from .models import Machine, ZoneExtrusion
-
 class MachineForm(forms.ModelForm):
-    class Meta:
-        model = Machine
-        fields = [
-            'numero', 'type_machine', 'section', 'zone_extrusion', 'etat',
-            'date_installation', 'derniere_maintenance', 'capacite_horaire',
-            'observations', 'heures_fonctionnement_totales',
-            'frequence_maintenance_jours', 'consommation_electrique_nominale',
-            'temperature_nominale', 'temperature_max_autorisee'
-        ]
-        widgets = {
-            'numero': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: EXT-01'}),
-            'type_machine': forms.Select(attrs={'class': 'form-control'}),
-            'section': forms.Select(attrs={'class': 'form-control'}),
-            'zone_extrusion': forms.Select(attrs={'class': 'form-control'}),
-            'etat': forms.Select(attrs={'class': 'form-control'}),
-            'date_installation': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'derniere_maintenance': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'capacite_horaire': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'observations': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'heures_fonctionnement_totales': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'frequence_maintenance_jours': forms.NumberInput(attrs={'class': 'form-control'}),
-            'consommation_electrique_nominale': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'temperature_nominale': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'temperature_max_autorisee': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-        }
-        labels = {
-            'numero': 'Numéro de la machine',
-            'type_machine': 'Type de machine',
-            'section': 'Section',
-            'zone_extrusion': 'Zone d\'extrusion',
-            'etat': 'État actuel',
-            'date_installation': 'Date d\'installation',
-            'derniere_maintenance': 'Dernière maintenance',
-            'capacite_horaire': 'Capacité horaire (kg/h)',
-            'observations': 'Observations',
-            'heures_fonctionnement_totales': 'Heures de fonctionnement totales',
-            'frequence_maintenance_jours': 'Fréquence de maintenance (jours)',
-            'consommation_electrique_nominale': 'Consommation nominale (kWh)',
-            'temperature_nominale': 'Température nominale (°C)',
-            'temperature_max_autorisee': 'Température max autorisée (°C)',
-        }
+    """Formulaire gestion machines - AVEC PROVENANCE ET EST_NOUVELLE"""
     
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Rendre zone_extrusion optionnel sauf pour section extrusion
-        self.fields['zone_extrusion'].required = False
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        section = cleaned_data.get('section')
-        zone = cleaned_data.get('zone_extrusion')
-        
-        # Validation: zone requise pour extrusion
-        if section == 'extrusion' and not zone:
-            self.add_error('zone_extrusion', 'Une zone est requise pour la section Extrusion')
-        
-        # Validation: zone non applicable pour autres sections
-        if section != 'extrusion' and zone:
-            cleaned_data['zone_extrusion'] = None
-        
-        return cleaned_data
-    # Ajouter un champ personnalisé pour la zone
+    # Champs personnalisés pour la zone d'extrusion
     zone_numero = forms.IntegerField(
         required=False,
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Numéro de zone (1-5)',
+            'placeholder': 'Numéro de zone (1-10)',
             'min': 1,
-            'max': 5
+            'max': 10
         }),
         label='Numéro de Zone'
     )
@@ -617,67 +554,15 @@ class MachineForm(forms.ModelForm):
         model = Machine
         fields = [
             'numero', 'type_machine', 'section', 
+            'provenance', 'est_nouvelle',  # CHAMPS AJOUTÉS
             'etat', 'capacite_horaire', 'date_installation', 
             'derniere_maintenance', 'observations'
-        ]
-        # Ne pas inclure zone_extrusion dans fields
-        
-        widgets = {
-            # ... vos widgets existants ...
-        }
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        
-        # Si modification, pré-remplir les champs zone
-        if self.instance and self.instance.pk and self.instance.zone_extrusion:
-            self.fields['zone_numero'].initial = self.instance.zone_extrusion.numero
-            self.fields['zone_nom'].initial = self.instance.zone_extrusion.nom
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        section = cleaned_data.get('section')
-        zone_numero = cleaned_data.get('zone_numero')
-        zone_nom = cleaned_data.get('zone_nom')
-        
-        if section == 'extrusion':
-            if not zone_numero:
-                raise forms.ValidationError({
-                    'zone_numero': 'Le numéro de zone est obligatoire pour une machine d\'extrusion.'
-                })
-            if not zone_nom:
-                raise forms.ValidationError({
-                    'zone_nom': 'Le nom de la zone est obligatoire pour une machine d\'extrusion.'
-                })
-            
-            # Créer ou récupérer la zone
-            zone, created = ZoneExtrusion.objects.get_or_create(
-                numero=zone_numero,
-                defaults={'nom': zone_nom, 'nombre_machines_max': 4}
-            )
-            cleaned_data['zone_extrusion'] = zone
-        
-        return cleaned_data
-    
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-        instance.zone_extrusion = self.cleaned_data.get('zone_extrusion')
-        if commit:
-            instance.save()
-        return instance
-    """Formulaire gestion machines"""
-    
-    class Meta:
-        model = Machine
-        fields = [
-            'numero', 'type_machine', 'section', 'zone_extrusion', 'etat', 
-            'capacite_horaire', 'date_installation', 'derniere_maintenance', 'observations'
         ]
         
         widgets = {
             'numero': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Ex: EXT-Z1-M1, IMP-05, SOU-03'
+                'placeholder': 'Ex: EXT-01, IMP-05, SOU-03'
             }),
             'type_machine': forms.Select(attrs={
                 'class': 'form-control'
@@ -685,8 +570,12 @@ class MachineForm(forms.ModelForm):
             'section': forms.Select(attrs={
                 'class': 'form-control'
             }),
-            'zone_extrusion': forms.Select(attrs={
+            'provenance': forms.Select(attrs={  # NOUVEAU
                 'class': 'form-control'
+            }),
+            'est_nouvelle': forms.CheckboxInput(attrs={  # NOUVEAU
+                'class': 'form-check-input',
+                'id': 'id_est_nouvelle'
             }),
             'etat': forms.Select(attrs={
                 'class': 'form-control'
@@ -707,78 +596,74 @@ class MachineForm(forms.ModelForm):
             }),
             'observations': forms.Textarea(attrs={
                 'class': 'form-control',
-                'rows': 3,
+                'rows': 4,
                 'placeholder': 'Particularités, historique, recommandations...'
             }),
+        }
+        
+        labels = {
+            'numero': 'Numéro de la machine',
+            'type_machine': 'Type de machine',
+            'section': 'Section',
+            'provenance': 'Pays d\'origine',  # NOUVEAU
+            'est_nouvelle': 'Machine neuve',  # NOUVEAU
+            'etat': 'État actuel',
+            'capacite_horaire': 'Capacité horaire (kg/h)',
+            'date_installation': 'Date d\'installation',
+            'derniere_maintenance': 'Dernière maintenance',
+            'observations': 'Observations / Notes',
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # Rendre la zone optionnelle par défaut
-        self.fields['zone_extrusion'].required = False
+        # Champ caché pour zone_extrusion
+        self.fields['zone_extrusion'] = forms.ModelChoiceField(
+            queryset=ZoneExtrusion.objects.filter(active=True),
+            required=False,
+            widget=forms.HiddenInput()
+        )
         
-        # Si on modifie une machine non-extrusion, cacher le champ zone
-        if self.instance and self.instance.pk and self.instance.section != 'extrusion':
-            self.fields['zone_extrusion'].widget = forms.HiddenInput()
+        # Si modification, pré-remplir les champs zone
+        if self.instance and self.instance.pk and self.instance.zone_extrusion:
+            self.fields['zone_numero'].initial = self.instance.zone_extrusion.numero
+            self.fields['zone_nom'].initial = self.instance.zone_extrusion.nom
     
     def clean(self):
         cleaned_data = super().clean()
         section = cleaned_data.get('section')
-        zone_extrusion = cleaned_data.get('zone_extrusion')
+        zone_numero = cleaned_data.get('zone_numero')
+        zone_nom = cleaned_data.get('zone_nom')
         
         # VALIDATION : Zone obligatoire pour Extrusion
         if section == 'extrusion':
-            if not zone_extrusion:
+            if not zone_numero:
                 raise forms.ValidationError({
-                    'zone_extrusion': 'Une zone d\'extrusion doit être sélectionnée pour une machine d\'extrusion.'
+                    'zone_numero': 'Le numéro de zone est obligatoire pour une machine d\'extrusion.'
                 })
-        
-        # NETTOYAGE : Supprimer la zone pour les autres sections
-        if section != 'extrusion':
+            if not zone_nom:
+                raise forms.ValidationError({
+                    'zone_nom': 'Le nom de la zone est obligatoire pour une machine d\'extrusion.'
+                })
+            
+            # Créer ou récupérer la zone
+            zone, created = ZoneExtrusion.objects.get_or_create(
+                numero=zone_numero,
+                defaults={'nom': zone_nom, 'nombre_machines_max': 4, 'active': True}
+            )
+            cleaned_data['zone_extrusion'] = zone
+        else:
+            # Pour les autres sections, pas de zone
             cleaned_data['zone_extrusion'] = None
         
         return cleaned_data
-    """Formulaire gestion machines"""
     
-    class Meta:
-        model = Machine
-        fields = ['numero', 'type_machine', 'section', 'zone_extrusion', 'etat', 
-                  'capacite_horaire', 'date_installation', 'derniere_maintenance', 'observations']
-        
-        widgets = {
-            'numero': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: EXT-Z1-M1'}),
-            'type_machine': forms.Select(attrs={'class': 'form-control'}),
-            'section': forms.Select(attrs={'class': 'form-control'}),
-            'zone_extrusion': forms.Select(attrs={'class': 'form-control'}),
-            'etat': forms.Select(attrs={'class': 'form-control'}),
-            'capacite_horaire': forms.NumberInput(attrs={
-                'class': 'form-control', 
-                'step': '0.01',
-                'placeholder': 'Ex: 150'
-            }),
-            # AJOUTEZ CES LIGNES IMPORTANTES :
-            'date_installation': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'  # Widget HTML5 pour date
-            }),
-            'derniere_maintenance': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'  # Widget HTML5 pour date
-            }),
-            'observations': forms.Textarea(attrs={
-                'class': 'form-control', 
-                'rows': 3,
-                'placeholder': 'Notes sur la machine...'
-            }),
-        
-        }
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Zone seulement pour section extrusion
-        if self.instance and self.instance.section != 'extrusion':
-            self.fields['zone_extrusion'].widget = forms.HiddenInput()
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.zone_extrusion = self.cleaned_data.get('zone_extrusion')
+        if commit:
+            instance.save()
+        return instance
 
 # ==========================================
 # FORMULAIRES ALERTES
