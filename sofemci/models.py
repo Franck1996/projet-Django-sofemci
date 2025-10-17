@@ -847,33 +847,33 @@ class Machine(models.Model):
         return 0
     
     def est_en_surchauffe(self):
-        """Vérifie si la machine est en surchauffe"""
         try:
-            # Conversion en Decimal pour éviter l'erreur
-            seuil_surchauffe = Decimal('0.9')  # 90% de la température max
-            
-            # Calcul avec des Decimals
-            temperature_max = Decimal(str(self.temperature_max_autorisee))
-            temperature_actuelle = Decimal(str(self.temperature_actuelle))
-            
-            return temperature_actuelle >= (temperature_max * seuil_surchauffe)
-        except (TypeError, ValueError, AttributeError):
+            # Vérifier si l'objet a un ID (est sauvegardé en base)
+            if not self.pk:
+                return False
+
+            # Récupérer le dernier rapport avec gestion d'erreur
+            try:
+                dernier_rapport = self.rapportsurveillance_set.order_by('-date_creation').first()
+            except AttributeError:
+                return False
+
+            if not dernier_rapport:
+                return False
+
+            # Vérifier que la température moyenne existe et est numérique
+            temperature = getattr(dernier_rapport, 'temperature_moyenne', None)
+            if temperature is None or not isinstance(temperature, (int, float)):
+                return False
+
+            # Vérifier que temperature_maximale existe
+            temp_max = getattr(self, 'temperature_maximale', 80)  # Valeur par défaut
+
+            return float(temperature) > float(temp_max)
+
+        except Exception as e:
+            print(f"Erreur dans est_en_surchauffe pour machine {self.pk}: {e}")
             return False
-    
-        def pourcentage_utilisation_temperature(self):
-                 """Calcule le pourcentage d'utilisation de la température"""
-        try:
-            if not self.temperature_nominale or self.temperature_nominale == 0:
-                return 0
-                
-            # Conversion en Decimal
-            temp_actuelle = Decimal(str(self.temperature_actuelle))
-            temp_nominale = Decimal(str(self.temperature_nominale))
-            
-            pourcentage = (temp_actuelle / temp_nominale) * Decimal('100')
-            return min(pourcentage, Decimal('100'))  # Limite à 100%
-        except (TypeError, ValueError, AttributeError, ZeroDivisionError):
-            return 0
     
     def risque_surchauffe(self):
         """Calcule le risque de surchauffe en pourcentage"""
@@ -892,6 +892,25 @@ class Machine(models.Model):
             return min(risque, Decimal('100'))
         except (TypeError, ValueError, AttributeError, ZeroDivisionError):
             return 0
+        
+
+    def dashboard_ia_view(request):
+        try:
+        # Récupérer les machines avec gestion des erreurs
+            machines = Machine.objects.all()
+        
+        # Préparer les données pour le template
+            context = {
+            'machines': machines,
+            # ... autres variables contextuelles
+            }
+        
+            return render(request, 'ia/dashboard.html', context)
+        
+        except Exception as e:
+            print(f"Erreur dans dashboard_ia_view: {e}")
+        # Retourner une réponse d'erreur ou un contexte vide
+            return render(request, 'ia/dashboard.html', {'machines': []})    
     
     def consommation_actuelle_kwh(self):
         """Calcule la consommation électrique actuelle"""

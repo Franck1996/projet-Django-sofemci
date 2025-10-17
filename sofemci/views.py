@@ -18,10 +18,13 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 import json
 from .models import ProductionExtrusion, ProductionSoudure, ProductionImprimerie, ProductionRecyclage, Equipe
-
+from .models import Machine, AlerteIA
+import logging
 from .models import *
 from .forms import *
 
+
+logger = logging.getLogger(__name__)
 # ==========================================
 # AUTHENTIFICATION
 # ==========================================
@@ -1699,119 +1702,101 @@ from .ia_predictive import (
 # ==========================================
 @login_required
 def dashboard_ia_view(request):
-    
-    # Permissions
-    if request.user.role not in ['superviseur', 'admin', 'direction']:
-        messages.error(request, 'Accès refusé.')
-        return redirect('dashboard')
-    
-    # Statistiques du parc machines
-    stats_parc = statistiques_parc_machines()
-    
-    # Machines à risque
-    machines_critiques = obtenir_machines_a_risque(seuil_probabilite=70)
-    ids_critiques = list(machines_critiques.values_list('id', flat=True))
-    
-    machines_risque_eleve = obtenir_machines_a_risque(seuil_probabilite=40).exclude(
-        id__in=ids_critiques
-    )
-    
-    # Alertes IA actives - CORRECTION ICI
-    alertes_queryset = obtenir_alertes_actives()
-    
-    # Compter AVANT de slicer
-    nombre_alertes_critiques = alertes_queryset.filter(niveau='critique').count()
-    nombre_alertes_urgentes = alertes_queryset.filter(niveau='urgent').count()
-    
-    # Maintenant on peut slicer pour l'affichage
-    alertes = alertes_queryset[:10]
-    
-    # Machines actives
-    machines_actives = Machine.objects.filter(etat='actif').order_by('score_sante_global')
-    
-    context = {
-        'stats_parc': stats_parc,
-        'machines_critiques': machines_critiques,
-        'machines_risque_eleve': machines_risque_eleve,
-        'alertes': alertes,
-        'machines_actives': machines_actives,
-        'nombre_alertes_critiques': nombre_alertes_critiques,
-        'nombre_alertes_urgentes': nombre_alertes_urgentes,
-    }
-    
-    return render(request, 'dashboard_ia.html', context)
-    """Dashboard principal de maintenance prédictive"""
-    
-    # Permissions
-    if request.user.role not in ['superviseur', 'admin', 'direction']:
-        messages.error(request, 'Accès refusé.')
-        return redirect('dashboard')
-    
-    # Statistiques du parc machines
-    stats_parc = statistiques_parc_machines()
-    
-    # Machines à risque - CORRECTION ICI
-    machines_critiques = obtenir_machines_a_risque(seuil_probabilite=70)
-    
-    # Récupérer les IDs AVANT de slicer
-    ids_critiques = list(machines_critiques.values_list('id', flat=True))
-    
-    machines_risque_eleve = obtenir_machines_a_risque(seuil_probabilite=40).exclude(
-        id__in=ids_critiques
-    )
-    
-    # Alertes IA actives
-    alertes = obtenir_alertes_actives()[:10]
-    
-    # Machines actives
-    machines_actives = Machine.objects.filter(etat='actif').order_by('score_sante_global')
-    
-    context = {
-        'stats_parc': stats_parc,
-        'machines_critiques': machines_critiques,
-        'machines_risque_eleve': machines_risque_eleve,
-        'alertes': alertes,
-        'machines_actives': machines_actives,
-        'nombre_alertes_critiques': alertes.filter(niveau='critique').count(),
-        'nombre_alertes_urgentes': alertes.filter(niveau='urgent').count(),
-    }
-    
-    return render(request, 'dashboard_ia.html', context)
-    """Dashboard principal de maintenance prédictive"""
-    
-    # Permissions
-    if request.user.role not in ['superviseur', 'admin', 'direction']:
-        messages.error(request, 'Accès refusé.')
-        return redirect('dashboard')
-    
-    # Statistiques du parc machines
-    stats_parc = statistiques_parc_machines()
-    
-    # Machines à risque
-    machines_critiques = obtenir_machines_a_risque(seuil_probabilite=70)
-    machines_risque_eleve = obtenir_machines_a_risque(seuil_probabilite=40).exclude(
-        id__in=machines_critiques.values_list('id', flat=True)
-    )
-    
-    # Alertes IA actives
-    alertes = obtenir_alertes_actives()[:10]
-    
-    # Graphique évolution scores de santé
-    machines_actives = Machine.objects.filter(etat='actif').order_by('score_sante_global')
-    
-    context = {
-        'stats_parc': stats_parc,
-        'machines_critiques': machines_critiques,
-        'machines_risque_eleve': machines_risque_eleve,
-        'alertes': alertes,
-        'machines_actives': machines_actives,
-        'nombre_alertes_critiques': alertes.filter(niveau='critique').count(),
-        'nombre_alertes_urgentes': alertes.filter(niveau='urgent').count(),
-    }
-    
-    return render(request, 'dashboard_ia.html', context)
-
-
+    try:
+        # Récupérer toutes les machines avec gestion des erreurs
+        machines = Machine.objects.all()
+        
+        # Calculer les statistiques du parc avec valeurs par défaut
+        stats_parc = {
+            'score_sante_moyen': machines.aggregate(
+                avg=Avg('score_sante_global')
+            )['avg'] or 85.0,
+            'machines_risque_critique': machines.filter(
+                probabilite_panne_7_jours__gte=70
+            ).count(),
+            'machines_risque_eleve': machines.filter(
+                probabilite_panne_7_jours__gte=40,
+                probabilite_panne_7_jours__lt=70
+            ).count(),
+            'anomalies_detectees': machines.filter(
+                anomalie_detectee=True
+            ).count()
+        }
+        
+        # Machines critiques avec gestion des erreurs
+        machines_critiques = []
+        for machine in machines.filter(probabilite_panne_7_jours__gte=70):
+            try:
+                # Vérifier si la méthode est_en_surchauffe existe et fonctionne
+                if hasattr(machine, 'est_en_surchauffe'):
+                    machine_data = {
+                        'id': machine.id,
+                        'numero': machine.numero,
+                        'section': machine.section,
+                        'get_section_display': machine.get_section_display(),
+                        'probabilite_panne_7_jours': machine.probabilite_panne_7_jours or 0,
+                        'score_sante_global': machine.score_sante_global or 0,
+                        'temperature_actuelle': getattr(machine, 'temperature_actuelle', None),
+                        'heures_fonctionnement_totales': getattr(machine, 'heures_fonctionnement_totales', 0),
+                        'est_en_surchauffe': machine.est_en_surchauffe() if callable(getattr(machine, 'est_en_surchauffe', None)) else False,
+                        'facteurs_risque': getattr(machine, 'get_facteurs_risque', lambda: [])()
+                    }
+                    machines_critiques.append(machine_data)
+            except Exception as e:
+                logger.error(f"Erreur avec machine {machine.id}: {e}")
+                continue
+        
+        # Alertes IA actives
+        alertes = AlerteIA.objects.filter(
+            statut__in=['nouvelle', 'en_traitement']
+        ).select_related('machine')[:10]
+        
+        # Machines actives pour le tableau
+        machines_actives = []
+        for machine in machines:
+            try:
+                machine_data = {
+                    'id': machine.id,
+                    'numero': machine.numero,
+                    'section': machine.section,
+                    'get_section_display': machine.get_section_display(),
+                    'score_sante_global': machine.score_sante_global or 0,
+                    'probabilite_panne_7_jours': machine.probabilite_panne_7_jours or 0,
+                    'temperature_actuelle': getattr(machine, 'temperature_actuelle', None),
+                    'consommation_electrique_kwh': getattr(machine, 'consommation_electrique_kwh', 0),
+                    'est_en_surchauffe': machine.est_en_surchauffe() if callable(getattr(machine, 'est_en_surchauffe', None)) else False,
+                    'est_en_surconsommation': getattr(machine, 'est_en_surconsommation', lambda: False)(),
+                    'anomalie_detectee': getattr(machine, 'anomalie_detectee', False)
+                }
+                machines_actives.append(machine_data)
+            except Exception as e:
+                logger.error(f"Erreur avec machine active {machine.id}: {e}")
+                continue
+        
+        context = {
+            'stats_parc': stats_parc,
+            'machines_critiques': machines_critiques,
+            'alertes': alertes,
+            'machines_actives': machines_actives,
+        }
+        
+        return render(request, 'dashboard_ia.html', context)
+        
+    except Exception as e:
+        logger.error(f"Erreur dans dashboard_ia_view: {e}")
+        # Retourner un contexte vide sécurisé
+        context = {
+            'stats_parc': {
+                'score_sante_moyen': 0,
+                'machines_risque_critique': 0,
+                'machines_risque_eleve': 0,
+                'anomalies_detectees': 0
+            },
+            'machines_critiques': [],
+            'alertes': [],
+            'machines_actives': [],
+        }
+        return render(request, 'ia/dashboard_ia.html', context)
 @login_required
 def machine_detail_ia_view(request, machine_id):
     """Vue détaillée d'une machine avec analyse IA"""

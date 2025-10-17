@@ -132,9 +132,9 @@
                     </div>
                     <div class="stat">
                         <span class="label">Température:</span>
-                        <span class="value {% if machine.est_en_surchauffe %}text-danger{% endif %}">
-                            {{ machine.temperature_actuelle|default:"--" }}°C
-                        </span>
+                        <span class="value {% if machine.est_en_surchauffe and machine.est_en_surchauffe %}text-danger{% endif %}">
+                        {{ machine.temperature_actuelle|default:"--" }}°C
+                    </span>
                     </div>
                     <div class="stat">
                         <span class="label">Heures fonct.:</span>
@@ -262,8 +262,8 @@
                                 {{ machine.probabilite_panne_7_jours|floatformat:0 }}%
                             </span>
                         </td>
-                        <td class="{% if machine.est_en_surchauffe %}text-danger{% endif %}">
-                            {{ machine.temperature_actuelle|default:"--" }}°C
+                        <td class="{% if machine.est_en_surchauffe and machine.est_en_surchauffe %}text-danger{% endif %}">
+                         {{ machine.temperature_actuelle|default:"--" }}°C
                         </td>
                         <td class="{% if machine.est_en_surconsommation %}text-warning{% endif %}">
                             {{ machine.consommation_electrique_kwh|floatformat:1 }} kWh
