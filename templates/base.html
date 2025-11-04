@@ -253,11 +253,6 @@
                         📋 Historique
                     </a>
                     
-                    {% if user.role in 'superviseur,admin,direction' %}
-                    <a href="{% url 'rapports' %}" class="nav-link {% if request.resolver_match.url_name == 'rapports' %}active{% endif %}">
-                        📈 Rapports
-                    </a>
-                    {% endif %}
                     
                     {% if user.role in 'direction,admin' %}
                     <a href="{% url 'dashboard_direction' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard_direction' %}active{% endif %}">

@@ -55,9 +55,7 @@ urlpatterns = [
     # HISTORIQUE ET RAPPORTS
     # ==========================================
     path('historique/', views.historique_view, name='historique'),
-    path('rapports/', views.rapports_view, name='rapports'),
-    #path('rapports/export/excel/', views.rapports_export_excel, name='rapports_export_excel'),
-    #path('rapports/export/pdf/', views.rapports_export_pdf, name='rapports_export_pdf'),    
+    
     # ==========================================
     # API POUR CALCULS TEMPS RÉEL
     # ==========================================

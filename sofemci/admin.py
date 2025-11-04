@@ -27,28 +27,6 @@ class CustomUserAdmin(UserAdmin):
 # ADMINISTRATION RAPPORTS
 # ==========================================
 
-@admin.register(RapportMensuel)
-class RapportMensuelAdmin(admin.ModelAdmin):
-    list_display = ['mois', 'total_production_kg', 'rendement_moyen', 'taux_dechet_moyen', 'genere_par', 'date_generation']
-    list_filter = ['mois', 'genere_par']
-    readonly_fields = ['date_generation']
-    ordering = ['-mois']
-    
-    fieldsets = (
-        ('Période', {
-            'fields': ('mois',)
-        }),
-        ('Statistiques Globales', {
-            'fields': ('total_production_kg', 'total_extrusion_kg', 'total_imprimerie_kg', 
-                      'total_soudure_kg', 'total_recyclage_kg', 'total_dechets_kg')
-        }),
-        ('Indicateurs', {
-            'fields': ('rendement_moyen', 'taux_dechet_moyen', 'nombre_jours_production')
-        }),
-        ('Fichiers', {
-            'fields': ('fichier_pdf', 'fichier_excel')
-        }),
-    )
 
 # ==========================================
 # ADMINISTRATION CONFIGURATION

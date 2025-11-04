@@ -271,33 +271,6 @@ def historique_view(request):
 # RAPPORTS
 # ==========================================
 
-@login_required
-def rapports_view(request):
-    if request.user.role not in ['superviseur', 'admin', 'direction']:
-        messages.error(request, 'Accès refusé.')
-        return redirect('dashboard')
-    
-    # Génération du rapport si demandé
-    mois_selectione = request.GET.get('mois', timezone.now().strftime('%m'))
-    annee_selectionnee = request.GET.get('annee', timezone.now().year)
-    section_selectionnee = request.GET.get('section', '')
-    
-    rapport = None
-    if request.GET.get('mois'):
-        rapport = generer_rapport_mensuel(int(annee_selectionnee), int(mois_selectione), section_selectionnee)
-    
-    context = {
-        'rapport': rapport,
-        'mois_disponibles': get_mois_disponibles(),
-        'annees_disponibles': range(2024, timezone.now().year + 1),
-        'annee_courante': int(annee_selectionnee),
-        'mois_nom': get_nom_mois(int(mois_selectione)) if request.GET.get('mois') else '',
-        'section_selectionnee': section_selectionnee,
-        'labels_sections': json.dumps(['Extrusion', 'Imprimerie', 'Soudure', 'Recyclage']),
-        'data_sections': json.dumps([28400, 17200, 9800, 6800]) if rapport else json.dumps([]),
-    }
-    
-    return render(request, 'rapports.html', context)
 
 # ==========================================
 # API
@@ -907,48 +880,7 @@ def calculate_recyclage_metrics(data):
     })
 
 # Fonctions pour rapports
-def generer_rapport_mensuel(annee, mois, section=''):
-    """Générer rapport mensuel"""
-    debut = datetime(annee, mois, 1).date()
-    if mois == 12:
-        fin = datetime(annee + 1, 1, 1).date() - timedelta(days=1)
-    else:
-        fin = datetime(annee, mois + 1, 1).date() - timedelta(days=1)
-    
-    return {
-        'total_production': get_production_totale_periode(debut, fin),
-        'rendement_moyen': get_efficacite_globale_periode(debut, fin),
-        'taux_dechet_moyen': 3.2,  # À calculer
-        'evolution_production': 12.5,
-        'evolution_rendement': 3.2,
-        'evolution_dechets': -2.1,
-        'jours_production': (fin - debut).days + 1,
-        'taux_activite': 95,
-        'sections': get_sections_rapport(debut, fin, section),
-    }
 
-def get_sections_rapport(debut, fin, section_filtre=''):
-    """Détails sections pour rapport"""
-    sections_data = []
-    
-    sections_list = [section_filtre] if section_filtre else ['extrusion', 'imprimerie', 'soudure', 'recyclage']
-    
-    for section in sections_list:
-        production = get_production_section_periode(section, debut, fin)
-        
-        sections_data.append({
-            'nom': section.capitalize(),
-            'production': production,
-            'rendement': 87.5,  # À calculer
-            'dechets': 0,  # À calculer
-            'taux_dechet': 3.2,
-            'jours_actifs': 28,
-            'jours_total': (fin - debut).days + 1,
-            'production_jour': production / ((fin - debut).days + 1) if (fin - debut).days > 0 else 0,
-            'production_journaliere': [],  # À compléter si nécessaire
-        })
-    
-    return sections_data
 
 def get_mois_disponibles():
     """Liste des mois disponibles"""

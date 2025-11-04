@@ -53,7 +53,7 @@ urlpatterns = [
     # HISTORIQUE ET RAPPORTS
     # ==========================================
     path('historique/', views.historique_view, name='historique'),
-    path('rapports/', views.rapports_view, name='rapports'),
+    #path('rapports/', views.rapports_view, name='rapports'),
     
     # ==========================================
     # API POUR CALCULS TEMPS RÉEL

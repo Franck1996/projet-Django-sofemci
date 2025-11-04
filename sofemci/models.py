@@ -1528,42 +1528,6 @@ class Alerte(models.Model):
     def __str__(self):
         return f"{self.get_type_alerte_display()} - {self.titre}"
 
-class RapportMensuel(models.Model):
-    """Rapports mensuels automatiques"""
-    mois = models.DateField()  # Premier jour du mois
-    
-    # Totaux mensuels
-    total_production_kg = models.DecimalField(max_digits=12, decimal_places=2)
-    total_extrusion_kg = models.DecimalField(max_digits=12, decimal_places=2)
-    total_imprimerie_kg = models.DecimalField(max_digits=12, decimal_places=2)
-    total_soudure_kg = models.DecimalField(max_digits=12, decimal_places=2)
-    total_recyclage_kg = models.DecimalField(max_digits=12, decimal_places=2)
-    total_dechets_kg = models.DecimalField(max_digits=12, decimal_places=2)
-    
-    # Métriques
-    rendement_moyen = models.DecimalField(max_digits=5, decimal_places=2)
-    taux_dechet_moyen = models.DecimalField(max_digits=5, decimal_places=2)
-    nombre_jours_production = models.IntegerField()
-    
-    # Métadonnées
-    genere_par = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    date_generation = models.DateTimeField(auto_now_add=True)
-    fichier_pdf = models.FileField(upload_to='rapports/', null=True, blank=True)
-    fichier_excel = models.FileField(upload_to='rapports/', null=True, blank=True)
-    
-    class Meta:
-        unique_together = ['mois']
-        ordering = ['-mois']
-    
-    def __str__(self):
-        return f"Rapport {self.mois.strftime('%B %Y')}"
-
-
-        # ============================================
-# MODIFICATIONS POUR views.py
-# ============================================
-
-# Ajouter ces fonctions utilitaires dans views.py
 
 def get_extrusion_details_jour(date):
     """Obtenir tous les détails de l'extrusion pour un jour donné"""

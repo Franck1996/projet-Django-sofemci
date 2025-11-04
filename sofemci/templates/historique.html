@@ -58,6 +58,33 @@
         </form>
     </div>
 
+    <!-- Résumé des totaux -->
+    <div class="totals-section">
+        <h3>📊 Résumé des Totaux</h3>
+        <div class="totals-grid">
+            <div class="total-item">
+                <span class="total-label">Extrusion:</span>
+                <span class="total-value">{{ totaux.extrusion.total|default:0|floatformat:0 }} kg</span>
+                <small class="total-dechets">Déchets: {{ totaux.extrusion.dechets|default:0|floatformat:0 }} kg</small>
+            </div>
+            <div class="total-item">
+                <span class="total-label">Imprimerie:</span>
+                <span class="total-value">{{ totaux.imprimerie.total|default:0|floatformat:0 }} kg</span>
+                <small class="total-dechets">Déchets: {{ totaux.imprimerie.dechets|default:0|floatformat:0 }} kg</small>
+            </div>
+            <div class="total-item">
+                <span class="total-label">Soudure:</span>
+                <span class="total-value">{{ totaux.soudure.total|default:0|floatformat:0 }} kg</span>
+                <small class="total-dechets">Déchets: {{ totaux.soudure.dechets|default:0|floatformat:0 }} kg</small>
+            </div>
+            <div class="total-item">
+                <span class="total-label">Recyclage:</span>
+                <span class="total-value">{{ totaux.recyclage.total|default:0|floatformat:0 }} kg</span>
+                <small class="total-dechets">Pas de déchets</small>
+            </div>
+        </div>
+    </div>
+
     <!-- Résultats -->
     <div class="results-section">
         {% if productions %}
@@ -169,15 +196,27 @@ function afficherDetails(productionId, section) {
     fetch(`/api/production/${section}/${productionId}/`)
         .then(response => response.json())
         .then(data => {
-            document.getElementById('modal-body').innerHTML = `
+            let modalContent = `
                 <h3>Détails de la production</h3>
                 <div class="details-grid">
-                    ${Object.entries(data).map(([key, value]) => `
-                        <div class="detail-item">
-                            <strong>${key}:</strong> <span>${value}</span>
-                        </div>
-                    `).join('')}
-                </div>
+            `;
+            
+            for (const [key, value] of Object.entries(data)) {
+                modalContent += `
+                    <div class="detail-item">
+                        <strong>${key}:</strong> <span>${value}</span>
+                    </div>
+                `;
+            }
+            
+            modalContent += `</div>`;
+            document.getElementById('modal-body').innerHTML = modalContent;
+            document.getElementById('detailsModal').style.display = 'block';
+        })
+        .catch(error => {
+            document.getElementById('modal-body').innerHTML = `
+                <h3>Erreur</h3>
+                <p>Impossible de charger les détails: ${error}</p>
             `;
             document.getElementById('detailsModal').style.display = 'block';
         });
@@ -188,7 +227,7 @@ function validerProduction(productionId, section) {
         fetch(`/api/production/${section}/${productionId}/valider/`, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': window.SOFEMCI.csrf,
+                'X-CSRFToken': getCookie('csrftoken'),
                 'Content-Type': 'application/json'
             }
         })
@@ -199,13 +238,198 @@ function validerProduction(productionId, section) {
             } else {
                 alert('Erreur lors de la validation: ' + data.error);
             }
+        })
+        .catch(error => {
+            alert('Erreur: ' + error);
         });
     }
+}
+
+// Fonction utilitaire pour récupérer le cookie CSRF
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 
 // Fermer le modal
 document.querySelector('.close').addEventListener('click', function() {
     document.getElementById('detailsModal').style.display = 'none';
 });
+
+// Fermer le modal en cliquant en dehors
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('detailsModal');
+    if (event.target === modal) {
+        modal.style.display = 'none';
+    }
+});
 </script>
+
+<style>
+.totals-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.totals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.total-item {
+    background: white;
+    padding: 15px;
+    border-radius: 6px;
+    border-left: 4px solid #007bff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.total-label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.total-value {
+    font-size: 1.2em;
+    color: #007bff;
+    font-weight: bold;
+}
+
+.total-dechets {
+    color: #6c757d;
+    font-size: 0.9em;
+}
+
+.details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.detail-item {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.detail-item strong {
+    color: #333;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.status-valid {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.btn-view, .btn-validate {
+    padding: 4px 8px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8em;
+}
+
+.btn-view {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-validate {
+    background: #28a745;
+    color: white;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 600px;
+    border-radius: 8px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: black;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    gap: 10px;
+}
+
+.page-link {
+    padding: 8px 12px;
+    background: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+}
+
+.page-link:hover {
+    background: #0056b3;
+}
+
+.current-page {
+    padding: 8px 12px;
+    background: #6c757d;
+    color: white;
+    border-radius: 4px;
+}
+</style>
 {% endblock %}

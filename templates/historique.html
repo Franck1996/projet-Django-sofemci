@@ -35,118 +35,7 @@
     </div>
 
     <!-- Cartes de résumé -->
-    <div class="row mb-4" id="resume-cards">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card card-stats border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="stat-icon bg-primary bg-opacity-10 text-primary">
-                                <i class="fas fa-industry"></i>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h4 class="card-title text-primary mb-1">
-                                {% with total_general=totaux.extrusion.total|add:totaux.soudure.total|add:totaux.imprimerie.total|add:totaux.recyclage.total %}
-                                    {{ total_general|floatformat:0|intcomma }} kg
-                                {% endwith %}
-                            </h4>
-                            <p class="card-text text-muted mb-0">Production Totale</p>
-                            <small class="text-success">
-                                <i class="fas fa-calendar me-1"></i>
-                                {{ periode_debut|date:"d/m/Y" }} - {{ periode_fin|date:"d/m/Y" }}
-                            </small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card card-stats border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="stat-icon bg-success bg-opacity-10 text-success">
-                                <i class="fas fa-chart-line"></i>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h4 class="card-title text-success mb-1">
-                                {% with total_general=totaux.extrusion.total|add:totaux.soudure.total|add:totaux.imprimerie.total|add:totaux.recyclage.total %}
-                                    {% if productions.paginator.count > 0 %}
-                                        {{ total_general|div:productions.paginator.count|floatformat:0|intcomma }}
-                                    {% else %}
-                                        0
-                                    {% endif %} kg/j
-                                {% endwith %}
-                            </h4>
-                            <p class="card-text text-muted mb-0">Moyenne Journalière</p>
-                            <small class="text-success">
-                                <i class="fas fa-check me-1"></i>{{ productions.paginator.count }} jours
-                            </small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card card-stats border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="stat-icon bg-warning bg-opacity-10 text-warning">
-                                <i class="fas fa-cogs"></i>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h4 class="card-title text-warning mb-1">{{ productions.paginator.count|default:0 }}</h4>
-                            <p class="card-text text-muted mb-0">Jours de Production</p>
-                            <small class="text-muted">
-                                Période analysée
-                            </small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card card-stats border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="stat-icon bg-info bg-opacity-10 text-info">
-                                <i class="fas fa-tachometer-alt"></i>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            {% with total_dechets=totaux.extrusion.dechets|add:totaux.soudure.dechets|add:totaux.imprimerie.dechets|add:totaux.recyclage.dechets %}
-                            {% with total_production=totaux.extrusion.total|add:totaux.soudure.total|add:totaux.imprimerie.total|add:totaux.recyclage.total %}
-                                {% if total_production > 0 %}
-                                    {% with taux_dechets=total_dechets|percentage:total_production %}
-                                        <h4 class="card-title text-info mb-1">{{ taux_dechets|floatformat:1 }}%</h4>
-                                        <p class="card-text text-muted mb-0">Taux de Déchets</p>
-                                        <small class="{% if taux_dechets > 5 %}text-danger{% else %}text-success{% endif %}">
-                                            <i class="fas fa-{% if taux_dechets > 5 %}exclamation-triangle{% else %}check{% endif %} me-1"></i>
-                                            {{ total_dechets|floatformat:0|intcomma }} kg de déchets
-                                        </small>
-                                    {% endwith %}
-                                {% else %}
-                                    <h4 class="card-title text-info mb-1">0.0%</h4>
-                                    <p class="card-text text-muted mb-0">Taux de Déchets</p>
-                                    <small class="text-muted">Aucune production</small>
-                                {% endif %}
-                            {% endwith %}
-                            {% endwith %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
+   
     <!-- Filtres avancés -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white py-3">
@@ -514,7 +403,7 @@
                 <h4 class="text-muted mb-3">Aucune donnée de production</h4>
                 <p class="text-muted mb-4">Aucune production ne correspond aux critères de recherche sélectionnés.</p>
                 <div class="d-flex gap-2 justify-content-center">
-                    <a href="{% url 'saisie_production' %}" class="btn btn-primary">
+                    <a href="{% url 'saisie_extrusion' %}" class="btn btn-primary">
                         <i class="fas fa-plus me-2"></i>Saisir une Production
                     </a>
                     <a href="{% url 'historique' %}" class="btn btn-outline-secondary">
@@ -752,11 +641,6 @@ function telechargerFiche(dateProduction) {
     showNotification(`Téléchargement de la fiche du ${dateProduction}`, 'success');
 }
 
-function toggleVueResume() {
-    const resumeCards = document.getElementById('resume-cards');
-    resumeCards.style.display = resumeCards.style.display === 'none' ? 'flex' : 'none';
-    showNotification('Vue résumé ' + (resumeCards.style.display === 'none' ? 'masquée' : 'affichée'), 'info');
-}
 
 function showNotification(message, type) {
     const toast = document.createElement('div');

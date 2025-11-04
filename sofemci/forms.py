@@ -176,6 +176,37 @@ class ProductionExtrusionForm(forms.ModelForm):
 # FORMULAIRES AUTRES SECTIONS
 # ==========================================
 
+
+class FiltreHistoriqueForm(forms.Form):
+    """Formulaire de filtres pour l'historique"""
+    section = forms.ChoiceField(
+        choices=[
+            ('', 'Toutes les sections'),
+            ('extrusion', 'Extrusion'),
+            ('imprimerie', 'Imprimerie'),
+            ('soudure', 'Soudure'),
+            ('recyclage', 'Recyclage'),
+        ],
+        required=False,
+        label='Section'
+    )
+    date_debut = forms.DateField(
+        required=False,
+        label='Date début',
+        widget=forms.DateInput(attrs={'type': 'date'})
+    )
+    date_fin = forms.DateField(
+        required=False,
+        label='Date fin',
+        widget=forms.DateInput(attrs={'type': 'date'})
+    )
+    equipe = forms.ModelChoiceField(
+        queryset=Equipe.objects.all(),
+        required=False,
+        label='Équipe'
+    )
+
+
 class ProductionImprimerieForm(forms.ModelForm):
     """Formulaire saisie production Imprimerie - EXACTEMENT comme dans votre maquette"""
     
