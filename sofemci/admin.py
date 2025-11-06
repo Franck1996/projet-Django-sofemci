@@ -3,8 +3,11 @@
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import *
-from .models import HistoriqueMachine, AlerteIA
+from .models.users import CustomUser
+from .models.base import Equipe, ZoneExtrusion
+from .models.machines import Machine, HistoriqueMachine
+from .models.production import ProductionExtrusion, ProductionImprimerie, ProductionSoudure, ProductionRecyclage
+from .models.alerts import Alerte, AlerteIA
 
 # ==========================================
 # ADMINISTRATION UTILISATEURS

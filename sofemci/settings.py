@@ -1,25 +1,32 @@
 # ==========================================
 # sofemci/settings.py - Configuration Django
+# VERSION RÉORGANISÉE POUR STRUCTURE MODULAIRE
 # ==========================================
 
 import os
+import sys
 from pathlib import Path
 from decouple import config
 
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key')
+# ==========================================
+# SECURITY CONFIGURATION
+# ==========================================
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-in-production')
 DEBUG = config('DEBUG', cast=bool, default=True)
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
     cast=lambda v: [s.strip() for s in v.split(',')],
-    default='127.0.0.1,localhost'
+    default='127.0.0.1,localhost,0.0.0.0'
 )
 
-# Application definition
+# ==========================================
+# APPLICATION DEFINITION
+# ==========================================
 INSTALLED_APPS = [
+    # Django core apps
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -27,9 +34,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',  # Pour formater les nombres
-    'sofemci',  # Notre app unique
+    
+    # Our main application
+    'sofemci',
 ]
 
+# Custom User Model
 AUTH_USER_MODEL = 'sofemci.CustomUser'
 
 MIDDLEWARE = [
@@ -44,11 +54,16 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'sofemci.urls'
 
-# Templates
+# ==========================================
+# TEMPLATES CONFIGURATION
+# ==========================================
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [
+            BASE_DIR / 'templates',
+            BASE_DIR / 'sofemci' / 'templates',
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -56,7 +71,12 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                # Custom context processors
+                'sofemci.context_processors.sofemci_config',
             ],
+            'libraries': {
+                'custom_filters': 'sofemci.templatetags.custom_filters',
+            },
         },
     },
 ]
@@ -64,8 +84,11 @@ TEMPLATES = [
 WSGI_APPLICATION = 'sofemci.wsgi.application'
 
 # ==========================================
-# Base de données - Dev avec SQLite
+# DATABASE CONFIGURATION
 # ==========================================
+# Décommenter la configuration souhaitée
+
+# SQLite (Développement)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -73,59 +96,109 @@ DATABASES = {
     }
 }
 
-# ==========================================
-# Base de données - MySQL
-# ==========================================
+"""
+# MySQL (Production)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'sofemci_db',
-        'USER': 'root',
-        'PASSWORD': '',  # Mot de passe vide
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'NAME': config('DB_NAME', default='sofemci_db'),
+        'USER': config('DB_USER', default='root'),
+        'PASSWORD': config('DB_PASSWORD', default=''),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='3306'),
         'OPTIONS': {
             'charset': 'utf8mb4',
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
         },
     }
 }
 
-# Password validation
+# PostgreSQL (Production avancée)
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DB_NAME', default='sofemci_db'),
+        'USER': config('DB_USER', default='postgres'),
+        'PASSWORD': config('DB_PASSWORD', default=''),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
+    }
+}
+"""
+
+# ==========================================
+# PASSWORD VALIDATION
+# ==========================================
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8,
+        }
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
 ]
 
-# Internationalization
+# ==========================================
+# INTERNATIONALIZATION
+# ==========================================
 LANGUAGE_CODE = 'fr-fr'
 TIME_ZONE = 'Africa/Abidjan'
 USE_I18N = True
+USE_L10N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
+# ==========================================
+# STATIC FILES & MEDIA
+# ==========================================
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 STATICFILES_DIRS = [
-     BASE_DIR / 'sofemci' / 'static',
-     ]
+    BASE_DIR / 'sofemci' / 'static',
+    BASE_DIR / 'static',
+]
 
-
-# Media files
+# Media files configuration
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Default primary key field type
+# Static files finders
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+]
+
+# ==========================================
+# DEFAULT PRIMARY KEY
+# ==========================================
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Login/Logout
+# ==========================================
+# AUTHENTICATION & SESSIONS
+# ==========================================
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/login/'
 
-# Messages framework
+# Session configuration
+SESSION_COOKIE_AGE = 3600  # 1 hour
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+# ==========================================
+# MESSAGES FRAMEWORK
+# ==========================================
 from django.contrib.messages import constants as messages
+
 MESSAGE_TAGS = {
     messages.DEBUG: 'alert-secondary',
     messages.INFO: 'alert-info',
@@ -134,23 +207,143 @@ MESSAGE_TAGS = {
     messages.ERROR: 'alert-danger',
 }
 
-# Configuration SOFEM-CI
+# ==========================================
+# LOGGING CONFIGURATION
+# ==========================================
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'sofemci.log',
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+            'stream': sys.stdout,
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'sofemci': {
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
+
+# ==========================================
+# SOFEM-CI CUSTOM CONFIGURATION
+# ==========================================
 SOFEMCI_CONFIG = {
     'COMPANY_NAME': 'SOFEM-CI Industries',
-    'VERSION': '1.0.0',
+    'VERSION': '2.0.0',
     'MAX_ZONES_EXTRUSION': 5,
     'MAX_MACHINES_PAR_ZONE': 4,
+    'OBJECTIF_PRODUCTION_QUOTIDIEN': 75000,  # kg
+    'SECTIONS_ACTIVES': ['extrusion', 'imprimerie', 'soudure', 'recyclage'],
+    'EQUIPES': ['A', 'B', 'C'],
+    'IA_ENABLED': True,
+    'MAINTENANCE_PREDICTIVE': True,
 }
-# Static files (CSS, JavaScript, Images)
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-]
 
-# DEBUG TEMPORAIRE - À SUPPRIMER APRÈS
-print("=== DEBUG STATIC ===")
-print("BASE_DIR:", BASE_DIR)
-print("Static path:", BASE_DIR / 'static')
-print("Static exists:", (BASE_DIR / 'static').exists())
-print("=== FIN DEBUG ===")
+# ==========================================
+# SECURITY SETTINGS FOR PRODUCTION
+# ==========================================
+if not DEBUG:
+    # Security settings
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    X_FRAME_OPTIONS = 'DENY'
+    
+    # HSTS settings
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+# ==========================================
+# EMAIL CONFIGURATION
+# ==========================================
+EMAIL_BACKEND = config(
+    'EMAIL_BACKEND', 
+    default='django.core.mail.backends.console.EmailBackend'
+)
+EMAIL_HOST = config('EMAIL_HOST', default='localhost')
+EMAIL_PORT = config('EMAIL_PORT', cast=int, default=587)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool, default=True)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@sofemci.ci')
+
+# ==========================================
+# CACHE CONFIGURATION
+# ==========================================
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'sofemci-cache',
+    }
+}
+
+# Cache time to live is 15 minutes for production data
+CACHE_TTL = 60 * 15
+
+# ==========================================
+
+# DEBUG TOOLBAR (Development only)
+# ==========================================
+if DEBUG:
+    INSTALLED_APPS += [
+        'debug_toolbar',
+    ]
+    MIDDLEWARE += [
+        'debug_toolbar.middleware.DebugToolbarMiddleware',
+    ]
+    INTERNAL_IPS = [
+        '127.0.0.1',
+        'localhost',
+    ]
+    
+    # Debug toolbar configuration
+    DEBUG_TOOLBAR_CONFIG = {
+        'SHOW_TOOLBAR_CALLBACK': lambda request: True,
+    }
+
+# ==========================================
+# INITIALIZATION CHECKS
+# ==========================================
+# Create necessary directories
+for directory in ['logs', 'media', 'static']:
+    dir_path = BASE_DIR / directory
+    dir_path.mkdir(exist_ok=True)
+
+# Debug information
+if DEBUG:
+    print("=== SOFEM-CI CONFIGURATION ===")
+    print(f"Version: {SOFEMCI_CONFIG['VERSION']}")
+    print(f"Debug Mode: {DEBUG}")
+    print(f"Database: {DATABASES['default']['ENGINE']}")
+    print(f"Static Dirs: {[str(d) for d in STATICFILES_DIRS]}")
+    print("=== CONFIGURATION LOADED ===")
