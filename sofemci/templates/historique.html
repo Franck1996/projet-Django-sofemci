@@ -6,6 +6,13 @@
 
 {% block content %}
 <div class="container">
+    <!-- Message d'erreur -->
+    {% if error_message %}
+    <div class="alert alert-danger">
+        <strong>⚠️ Erreur :</strong> {{ error_message }}
+    </div>
+    {% endif %}
+    
     <div class="page-header">
         <h1>📋 Historique de Production</h1>
         <p>Consultation des données de production historiques</p>
@@ -156,20 +163,28 @@
             </table>
         </div>
 
-        <!-- Pagination -->
-        {% if productions.has_other_pages %}
+        <!-- Pagination - MODIFIÉ pour 4 éléments par page -->
+        {% if productions.paginator.count > 4 %}
         <div class="pagination">
-            {% if productions.has_previous %}
-                <a href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">« Première</a>
-                <a href="?page={{ productions.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">‹ Précédente</a>
-            {% endif %}
+            <div class="pagination-info">
+                Affichage de {{ productions.start_index }} à {{ productions.end_index }} sur {{ productions.paginator.count }} résultats
+            </div>
+            
+            <div class="pagination-controls">
+                {% if productions.has_previous %}
+                    <a href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">« Première</a>
+                    <a href="?page={{ productions.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">‹ Précédente</a>
+                {% endif %}
 
-            <span class="current-page">Page {{ productions.number }} sur {{ productions.paginator.num_pages }}</span>
+                <span class="current-page">
+                    Page {{ productions.number }} sur {{ productions.paginator.num_pages }}
+                </span>
 
-            {% if productions.has_next %}
-                <a href="?page={{ productions.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Suivante ›</a>
-                <a href="?page={{ productions.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Dernière »</a>
-            {% endif %}
+                {% if productions.has_next %}
+                    <a href="?page={{ productions.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Suivante ›</a>
+                    <a href="?page={{ productions.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Dernière »</a>
+                {% endif %}
+            </div>
         </div>
         {% endif %}
 
@@ -405,12 +420,30 @@ window.addEventListener('click', function(event) {
     color: black;
 }
 
+/* Styles améliorés pour la pagination */
 .pagination {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
     margin-top: 20px;
     gap: 10px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.pagination-info {
+    color: #6c757d;
+    font-size: 0.9em;
+    font-weight: 600;
+}
+
+.pagination-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .page-link {
@@ -419,17 +452,54 @@ window.addEventListener('click', function(event) {
     color: white;
     text-decoration: none;
     border-radius: 4px;
+    font-size: 0.9em;
+    font-weight: 600;
+    transition: all 0.3s ease;
 }
 
 .page-link:hover {
     background: #0056b3;
+    transform: translateY(-1px);
 }
 
 .current-page {
-    padding: 8px 12px;
+    padding: 8px 16px;
     background: #6c757d;
     color: white;
     border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.9em;
+}
+
+.alert-danger {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #dc3545;
+    margin-bottom: 20px;
+}
+
+.no-data {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .pagination-controls {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .page-link, .current-page {
+        padding: 6px 10px;
+        font-size: 0.8em;
+    }
 }
 </style>
 {% endblock %}
