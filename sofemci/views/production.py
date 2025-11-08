@@ -143,174 +143,205 @@ def saisie_sections_view(request):
     
     return render(request, 'saisie_sections.html', context)
 
+
+try:
+    from ..utils.statistiques import get_productions_filtrees
+except ImportError:
+    try:
+        from ..utils import get_productions_filtrees
+    except ImportError:
+        # Fallback : on définit la fonction ici
+        from django.db.models import Sum
+        from ..models import ProductionExtrusion, ProductionImprimerie, ProductionSoudure, ProductionRecyclage
+        
+        def get_productions_filtrees(filters):
+            date_filters = {}
+            if filters.get('date_debut'):
+                date_filters['date_production__gte'] = filters['date_debut']
+            if filters.get('date_fin'):
+                date_filters['date_production__lte'] = filters['date_fin']
+            
+            section_filter = filters.get('section')
+            equipe_filter = filters.get('equipe')
+            
+            # Extrusion
+            if not section_filter or section_filter == 'extrusion':
+                extrusion_query = ProductionExtrusion.objects.filter(**date_filters)
+                if equipe_filter:
+                    extrusion_query = extrusion_query.filter(equipe_id=equipe_filter)
+            else:
+                extrusion_query = ProductionExtrusion.objects.none()
+            
+            # Imprimerie
+            if not section_filter or section_filter == 'imprimerie':
+                imprimerie_query = ProductionImprimerie.objects.filter(**date_filters)
+            else:
+                imprimerie_query = ProductionImprimerie.objects.none()
+            
+            # Soudure
+            if not section_filter or section_filter == 'soudure':
+                soudure_query = ProductionSoudure.objects.filter(**date_filters)
+            else:
+                soudure_query = ProductionSoudure.objects.none()
+            
+            # Recyclage
+            if not section_filter or section_filter == 'recyclage':
+                recyclage_query = ProductionRecyclage.objects.filter(**date_filters)
+                if equipe_filter:
+                    recyclage_query = recyclage_query.filter(equipe_id=equipe_filter)
+            else:
+                recyclage_query = ProductionRecyclage.objects.none()
+            
+            productions_data = {
+                'extrusion': extrusion_query.select_related('zone', 'equipe', 'cree_par'),
+                'imprimerie': imprimerie_query.select_related('cree_par'),
+                'soudure': soudure_query.select_related('cree_par'),
+                'recyclage': recyclage_query.select_related('equipe', 'cree_par'),
+            }
+            
+            totaux = {
+                'extrusion': {
+                    'total': extrusion_query.aggregate(total=Sum('total_production_kg'))['total'] or 0,
+                    'dechets': extrusion_query.aggregate(dechets=Sum('dechets_kg'))['dechets'] or 0,
+                },
+                'imprimerie': {
+                    'total': imprimerie_query.aggregate(total=Sum('total_production_kg'))['total'] or 0,
+                    'dechets': imprimerie_query.aggregate(dechets=Sum('dechets_kg'))['dechets'] or 0,
+                },
+                'soudure': {
+                    'total': soudure_query.aggregate(total=Sum('total_production_kg'))['total'] or 0,
+                    'dechets': soudure_query.aggregate(dechets=Sum('dechets_kg'))['dechets'] or 0,
+                },
+                'recyclage': {
+                    'total': recyclage_query.aggregate(total=Sum('total_production_kg'))['total'] or 0,
+                    'dechets': 0,
+                },
+            }
+            return productions_data, totaux
+
 @login_required
 def historique_view(request):
+    """Vue pour l'historique des productions"""
+    
+    # Récupération des filtres depuis la requête GET
+    filters = {
+        'section': request.GET.get('section', ''),
+        'date_debut': request.GET.get('date_debut', ''),
+        'date_fin': request.GET.get('date_fin', ''),
+        'equipe': request.GET.get('equipe', ''),
+    }
+    
     try:
-        form = FiltreHistoriqueForm(request.GET or None)
+        # Utilisation de la fonction utils pour récupérer les productions
+        productions_data, totaux = get_productions_filtrees(filters)
         
-        # Variables par défaut
-        periode_debut = None
-        periode_fin = None
-        
-        # Appliquer les filtres
-        if form.is_valid():
-            filters = form.cleaned_data
-            from .dashboard import get_productions_filtrees
-            productions_data, totaux = get_productions_filtrees(filters)
-            periode_debut = filters.get('date_debut')
-            periode_fin = filters.get('date_fin')
-        else:
-            # Filtres par défaut (mois en cours)
-            today = timezone.now().date()
-            debut_mois = today.replace(day=1)
-            default_filters = {
-                'date_debut': debut_mois,
-                'date_fin': today,
-            }
-            from .dashboard import get_productions_filtrees
-            productions_data, totaux = get_productions_filtrees(default_filters)
-            periode_debut = debut_mois
-            periode_fin = today
-        
-        # CORRECTION : Initialiser les totaux avec des valeurs par défaut SÉCURISÉES
-        totaux_securises = {
-            'extrusion': {'total': 0, 'dechets': 0},
-            'imprimerie': {'total': 0, 'dechets': 0},
-            'soudure': {'total': 0, 'dechets': 0},
-            'recyclage': {'total': 0, 'dechets': 0}
-        }
-        
-        # CORRECTION : Mettre à jour avec les vraies valeurs si elles existent
-        if totaux:
-            for section in totaux_securises.keys():
-                if section in totaux:
-                    # Vérification sécurisée pour éviter l'erreur "Failed lookup for key"
-                    section_data = totaux.get(section, {})
-                    if isinstance(section_data, dict):
-                        totaux_securises[section]['total'] = section_data.get('total', 0)
-                        totaux_securises[section]['dechets'] = section_data.get('dechets', 0)
-        
-        # Combiner toutes les productions pour l'affichage unifié
+        # Convertir les QuerySets en liste unique avec dictionnaires
         all_productions = []
         
-        # Extrusion - avec vérification de l'existence
-        if 'extrusion' in productions_data:
-            for prod in productions_data['extrusion']:
-                if prod:  # Vérifier que l'objet existe
-                    all_productions.append({
-                        'id': getattr(prod, 'id', None),
-                        'date_production': getattr(prod, 'date_production', None),
-                        'section': 'extrusion',
-                        'equipe': getattr(prod, 'equipe', None),
-                        'zone': getattr(prod, 'zone', None),
-                        'total_production_kg': getattr(prod, 'total_production_kg', 0),
-                        'dechets_kg': getattr(prod, 'dechets_kg', 0),
-                        'rendement_pourcentage': getattr(prod, 'rendement_pourcentage', None),
-                        'valide': getattr(prod, 'valide', False),
-                        'cree_par': getattr(prod, 'cree_par', None),
-                        'heure_debut': getattr(prod, 'heure_debut', None),
-                        'heure_fin': getattr(prod, 'heure_fin', None),
-                    })
+        # EXTRUSION
+        for prod in productions_data['extrusion']:
+            all_productions.append({
+                'id': prod.id,
+                'date_production': prod.date_production,
+                'section': 'extrusion',
+                'equipe': prod.equipe,
+                'zone': prod.zone if hasattr(prod, 'zone') else None,
+                'total_production_kg': float(prod.total_production_kg) if prod.total_production_kg else 0.0,
+                'dechets_kg': float(prod.dechets_kg) if prod.dechets_kg else 0.0,
+                'rendement_pourcentage': float(prod.rendement_pourcentage) if hasattr(prod, 'rendement_pourcentage') and prod.rendement_pourcentage else None,
+                'valide': prod.valide if hasattr(prod, 'valide') else False,
+                'cree_par': prod.cree_par if hasattr(prod, 'cree_par') else None,
+            })
         
-        # Imprimerie - avec vérification de l'existence
-        if 'imprimerie' in productions_data:
-            for prod in productions_data['imprimerie']:
-                if prod:  # Vérifier que l'objet existe
-                    all_productions.append({
-                        'id': getattr(prod, 'id', None),
-                        'date_production': getattr(prod, 'date_production', None),
-                        'section': 'imprimerie',
-                        'equipe': None,
-                        'zone': None,
-                        'total_production_kg': getattr(prod, 'total_production_kg', 0),
-                        'dechets_kg': getattr(prod, 'dechets_kg', 0),
-                        'rendement_pourcentage': None,
-                        'valide': getattr(prod, 'valide', False),
-                        'cree_par': getattr(prod, 'cree_par', None),
-                        'heure_debut': getattr(prod, 'heure_debut', None),
-                        'heure_fin': getattr(prod, 'heure_fin', None),
-                    })
+        # IMPRIMERIE
+        for prod in productions_data['imprimerie']:
+            all_productions.append({
+                'id': prod.id,
+                'date_production': prod.date_production,
+                'section': 'imprimerie',
+                'equipe': None,
+                'zone': None,
+                'total_production_kg': float(prod.total_production_kg) if prod.total_production_kg else 0.0,
+                'dechets_kg': float(prod.dechets_kg) if prod.dechets_kg else 0.0,
+                'rendement_pourcentage': None,
+                'valide': prod.valide if hasattr(prod, 'valide') else False,
+                'cree_par': prod.cree_par if hasattr(prod, 'cree_par') else None,
+            })
         
-        # Soudure - avec vérification de l'existence
-        if 'soudure' in productions_data:
-            for prod in productions_data['soudure']:
-                if prod:  # Vérifier que l'objet existe
-                    all_productions.append({
-                        'id': getattr(prod, 'id', None),
-                        'date_production': getattr(prod, 'date_production', None),
-                        'section': 'soudure',
-                        'equipe': None,
-                        'zone': None,
-                        'total_production_kg': getattr(prod, 'total_production_kg', 0),
-                        'dechets_kg': getattr(prod, 'dechets_kg', 0),
-                        'rendement_pourcentage': None,
-                        'valide': getattr(prod, 'valide', False),
-                        'cree_par': getattr(prod, 'cree_par', None),
-                        'heure_debut': getattr(prod, 'heure_debut', None),
-                        'heure_fin': getattr(prod, 'heure_fin', None),
-                    })
+        # SOUDURE
+        for prod in productions_data['soudure']:
+            all_productions.append({
+                'id': prod.id,
+                'date_production': prod.date_production,
+                'section': 'soudure',
+                'equipe': None,
+                'zone': None,
+                'total_production_kg': float(prod.total_production_kg) if prod.total_production_kg else 0.0,
+                'dechets_kg': float(prod.dechets_kg) if prod.dechets_kg else 0.0,
+                'rendement_pourcentage': None,
+                'valide': prod.valide if hasattr(prod, 'valide') else False,
+                'cree_par': prod.cree_par if hasattr(prod, 'cree_par') else None,
+            })
         
-        # Recyclage - avec vérification de l'existence
-        if 'recyclage' in productions_data:
-            for prod in productions_data['recyclage']:
-                if prod:  # Vérifier que l'objet existe
-                    all_productions.append({
-                        'id': getattr(prod, 'id', None),
-                        'date_production': getattr(prod, 'date_production', None),
-                        'section': 'recyclage',
-                        'equipe': getattr(prod, 'equipe', None),
-                        'zone': None,
-                        'total_production_kg': getattr(prod, 'total_production_kg', 0),
-                        'dechets_kg': 0,
-                        'rendement_pourcentage': None,
-                        'valide': getattr(prod, 'valide', False),
-                        'cree_par': getattr(prod, 'cree_par', None),
-                        'heure_debut': None,
-                        'heure_fin': None,
-                    })
+        # RECYCLAGE
+        for prod in productions_data['recyclage']:
+            all_productions.append({
+                'id': prod.id,
+                'date_production': prod.date_production,
+                'section': 'recyclage',
+                'equipe': prod.equipe,
+                'zone': None,
+                'total_production_kg': float(prod.total_production_kg) if prod.total_production_kg else 0.0,
+                'dechets_kg': 0.0,
+                'rendement_pourcentage': None,
+                'valide': prod.valide if hasattr(prod, 'valide') else False,
+                'cree_par': prod.cree_par if hasattr(prod, 'cree_par') else None,
+            })
         
-        # Trier par date décroissante (avec gestion des dates None)
-        all_productions.sort(key=lambda x: x['date_production'] or date(1970, 1, 1), reverse=True)
+        # Trier par date (plus récent en premier)
+        all_productions.sort(key=lambda x: x['date_production'], reverse=True)
         
-        # Pagination avec gestion d'erreur
-        try:
-            paginator = Paginator(all_productions, 5)
-            page_number = request.GET.get('page')
-            productions_page = paginator.get_page(page_number)
-        except Exception as pagination_error:
-            # En cas d'erreur de pagination, utiliser la liste complète
-            productions_page = all_productions
+        # Pagination - 20 productions par page
+        paginator = Paginator(all_productions, 20)
+        page_number = request.GET.get('page', 1)
+        productions = paginator.get_page(page_number)
         
+        # Liste des équipes pour le filtre
+        equipes = Equipe.objects.all().order_by('nom')
+        
+        # Context final
         context = {
-            'form': form,
-            'productions': productions_page,
-            'equipes': Equipe.objects.all(),
-            'totaux': totaux_securises,  # Utiliser les totaux sécurisés
-            'periode_debut': periode_debut,
-            'periode_fin': periode_fin,
+            'productions': productions,
+            'equipes': equipes,
+            'totaux': totaux,
+            'error_message': None,
+            'periode_debut': timezone.now().date() - timedelta(days=7),
+            'periode_fin': timezone.now().date(),
         }
         
         return render(request, 'historique.html', context)
         
     except Exception as e:
-        # Fallback complet en cas d'erreur critique
-        print(f"Erreur dans historique_view: {str(e)}")
+        print(f"❌ Erreur historique: {e}")
+        import traceback
+        traceback.print_exc()
         
+        # Fallback en cas d'erreur
         context = {
-            'form': FiltreHistoriqueForm(),
             'productions': [],
-            'equipes': Equipe.objects.all(),
+            'equipes': Equipe.objects.all().order_by('nom'),
             'totaux': {
                 'extrusion': {'total': 0, 'dechets': 0},
                 'imprimerie': {'total': 0, 'dechets': 0},
                 'soudure': {'total': 0, 'dechets': 0},
                 'recyclage': {'total': 0, 'dechets': 0}
             },
-            'periode_debut': timezone.now().date().replace(day=1),
+            'error_message': f"Erreur lors du chargement des données: {str(e)}",
+            'periode_debut': timezone.now().date(),
             'periode_fin': timezone.now().date(),
-            'error_message': f"Une erreur est survenue: {str(e)}"
         }
         return render(request, 'historique.html', context)
+
 @login_required
 def saisie_imprimerie_ajax(request):
     if request.method == 'POST':

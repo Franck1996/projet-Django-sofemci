@@ -66,136 +66,193 @@
     </div>
 
     <!-- Résumé des totaux -->
-    <div class="totals-section">
-        <h3>📊 Résumé des Totaux</h3>
-        <div class="totals-grid">
-            <div class="total-item">
-                <span class="total-label">Extrusion:</span>
-                <span class="total-value">{{ totaux.extrusion.total|default:0|floatformat:0 }} kg</span>
-                <small class="total-dechets">Déchets: {{ totaux.extrusion.dechets|default:0|floatformat:0 }} kg</small>
-            </div>
-            <div class="total-item">
-                <span class="total-label">Imprimerie:</span>
-                <span class="total-value">{{ totaux.imprimerie.total|default:0|floatformat:0 }} kg</span>
-                <small class="total-dechets">Déchets: {{ totaux.imprimerie.dechets|default:0|floatformat:0 }} kg</small>
-            </div>
-            <div class="total-item">
-                <span class="total-label">Soudure:</span>
-                <span class="total-value">{{ totaux.soudure.total|default:0|floatformat:0 }} kg</span>
-                <small class="total-dechets">Déchets: {{ totaux.soudure.dechets|default:0|floatformat:0 }} kg</small>
-            </div>
-            <div class="total-item">
-                <span class="total-label">Recyclage:</span>
-                <span class="total-value">{{ totaux.recyclage.total|default:0|floatformat:0 }} kg</span>
-                <small class="total-dechets">Pas de déchets</small>
-            </div>
-        </div>
-    </div>
-
-    <!-- Résultats -->
-    <div class="results-section">
-        {% if productions %}
-        <div class="table-responsive">
-            <table class="production-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Section</th>
-                        <th>Équipe</th>
-                        <th>Production (kg)</th>
-                        <th>Déchets (kg)</th>
-                        <th>Rendement</th>
-                        <th>Statut</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for production in productions %}
-                    <tr>
-                        <td>{{ production.date_production|date:"d/m/Y" }}</td>
-                        <td>
-                            {% if production.section == 'extrusion' %}
-                                🏭 Extrusion
-                            {% elif production.section == 'imprimerie' %}
-                                🖨️ Imprimerie
-                            {% elif production.section == 'soudure' %}
-                                🔌 Soudure
-                            {% elif production.section == 'recyclage' %}
-                                ♻️ Recyclage
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if production.equipe %}
-                                {{ production.equipe.get_nom_display }}
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                        <td class="text-right">{{ production.total_production_kg|floatformat:1 }}</td>
-                        <td class="text-right">{{ production.dechets_kg|default:0|floatformat:1 }}</td>
-                        <td class="text-right">
-                            {% if production.rendement_pourcentage %}
-                                {{ production.rendement_pourcentage|floatformat:1 }}%
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="status-badge {% if production.valide %}status-valid{% else %}status-pending{% endif %}">
-                                {% if production.valide %}✅ Validé{% else %}⏳ En attente{% endif %}
-                            </span>
-                        </td>
-                        <td>
-                            <div class="action-buttons">
-                                <button class="btn-view" onclick="afficherDetails({{ production.id }}, '{{ production.section }}')">
-                                    👁️ Voir
-                                </button>
-                                {% if not production.valide and user.role in 'superviseur,admin' %}
-                                <button class="btn-validate" onclick="validerProduction({{ production.id }}, '{{ production.section }}')">
-                                    ✅ Valider
-                                </button>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Pagination - MODIFIÉ pour 4 éléments par page -->
-        {% if productions.paginator.count > 4 %}
-        <div class="pagination">
-            <div class="pagination-info">
-                Affichage de {{ productions.start_index }} à {{ productions.end_index }} sur {{ productions.paginator.count }} résultats
-            </div>
-            
-            <div class="pagination-controls">
-                {% if productions.has_previous %}
-                    <a href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">« Première</a>
-                    <a href="?page={{ productions.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">‹ Précédente</a>
+    <!-- Résumé des totaux - VERSION CORRIGÉE -->
+<div class="totals-section">
+    <h3>📊 Résumé des Totaux</h3>
+    <div class="totals-grid">
+        <div class="total-item">
+            <span class="total-label">Extrusion:</span>
+            <span class="total-value">
+                {% if totaux.extrusion.total %}
+                    {{ totaux.extrusion.total|floatformat:0 }} kg
+                {% else %}
+                    0 kg
                 {% endif %}
-
-                <span class="current-page">
-                    Page {{ productions.number }} sur {{ productions.paginator.num_pages }}
-                </span>
-
-                {% if productions.has_next %}
-                    <a href="?page={{ productions.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Suivante ›</a>
-                    <a href="?page={{ productions.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Dernière »</a>
+            </span>
+            <small class="total-dechets">
+                Déchets: 
+                {% if totaux.extrusion.dechets %}
+                    {{ totaux.extrusion.dechets|floatformat:0 }} kg
+                {% else %}
+                    0 kg
                 {% endif %}
-            </div>
+            </small>
         </div>
-        {% endif %}
-
-        {% else %}
-        <div class="no-data">
-            <p>📊 Aucune donnée de production trouvée pour les critères sélectionnés.</p>
+        <div class="total-item">
+            <span class="total-label">Imprimerie:</span>
+            <span class="total-value">
+                {% if totaux.imprimerie.total %}
+                    {{ totaux.imprimerie.total|floatformat:0 }} kg
+                {% else %}
+                    0 kg
+                {% endif %}
+            </span>
+            <small class="total-dechets">
+                Déchets: 
+                {% if totaux.imprimerie.dechets %}
+                    {{ totaux.imprimerie.dechets|floatformat:0 }} kg
+                {% else %}
+                    0 kg
+                {% endif %}
+            </small>
         </div>
-        {% endif %}
+        <div class="total-item">
+            <span class="total-label">Soudure:</span>
+            <span class="total-value">
+                {% if totaux.soudure.total %}
+                    {{ totaux.soudure.total|floatformat:0 }} kg
+                {% else %}
+                    0 kg
+                {% endif %}
+            </span>
+            <small class="total-dechets">
+                Déchets: 
+                {% if totaux.soudure.dechets %}
+                    {{ totaux.soudure.dechets|floatformat:0 }} kg
+                {% else %}
+                    0 kg
+                {% endif %}
+            </small>
+        </div>
+        <div class="total-item">
+            <span class="total-label">Recyclage:</span>
+            <span class="total-value">
+                {% if totaux.recyclage.total %}
+                    {{ totaux.recyclage.total|floatformat:0 }} kg
+                {% else %}
+                    0 kg
+                {% endif %}
+            </span>
+            <small class="total-dechets">Pas de déchets</small>
+        </div>
     </div>
 </div>
+    <!-- Résultats -->
+    <!-- Résultats -->
+<div class="results-section">
+    {% if productions %}
+    <div class="table-responsive">
+        <table class="production-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Section</th>
+                    <th>Équipe</th>
+                    <th>Production (kg)</th>
+                    <th>Déchets (kg)</th>
+                    <th>Rendement</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for production in productions %}
+                <tr>
+                    <td>{{ production.date_production|date:"d/m/Y" }}</td>
+                    <td>
+                        {% if production.section == 'extrusion' %}
+                            🏭 Extrusion
+                        {% elif production.section == 'imprimerie' %}
+                            🖨️ Imprimerie
+                        {% elif production.section == 'soudure' %}
+                            🔌 Soudure
+                        {% elif production.section == 'recyclage' %}
+                            ♻️ Recyclage
+                        {% else %}
+                            {{ production.section }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if production.equipe %}
+                            {{ production.equipe.get_nom_display }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td class="text-right">
+                        {% if production.total_production_kg %}
+                            {{ production.total_production_kg|floatformat:1 }}
+                        {% else %}
+                            0.0
+                        {% endif %}
+                    </td>
+                    <td class="text-right">
+                        {% if production.dechets_kg %}
+                            {{ production.dechets_kg|floatformat:1 }}
+                        {% else %}
+                            0.0
+                        {% endif %}
+                    </td>
+                    <td class="text-right">
+                        {% if production.rendement_pourcentage %}
+                            {{ production.rendement_pourcentage|floatformat:1 }}%
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="status-badge {% if production.valide %}status-valid{% else %}status-pending{% endif %}">
+                            {% if production.valide %}✅ Validé{% else %}⏳ En attente{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-view" onclick="afficherDetails({{ production.id }}, '{{ production.section }}')">
+                                👁️ Voir
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center">Aucune production trouvée</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
+    <!-- Pagination -->
+    {% if productions.paginator.num_pages > 1 %}
+    <div class="pagination">
+        <div class="pagination-info">
+            Affichage de {{ productions.start_index }} à {{ productions.end_index }} sur {{ productions.paginator.count }} résultats
+        </div>
+        
+        <div class="pagination-controls">
+            {% if productions.has_previous %}
+                <a href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">« Première</a>
+                <a href="?page={{ productions.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">‹ Précédente</a>
+            {% endif %}
+
+            <span class="current-page">
+                Page {{ productions.number }} sur {{ productions.paginator.num_pages }}
+            </span>
+
+            {% if productions.has_next %}
+                <a href="?page={{ productions.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Suivante ›</a>
+                <a href="?page={{ productions.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Dernière »</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="no-data">
+        <p>📊 Aucune donnée de production trouvée pour les critères sélectionnés.</p>
+    </div>
+    {% endif %}
+</div>
 <!-- Modal pour afficher les détails -->
 <div id="detailsModal" class="modal">
     <div class="modal-content">

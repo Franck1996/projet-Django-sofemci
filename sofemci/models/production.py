@@ -68,7 +68,6 @@ class ProductionExtrusion(models.Model):
     valide = models.BooleanField(default=False)
     
     class Meta:
-        unique_together = ['date_production', 'zone', 'equipe']
         verbose_name = "Production Extrusion"
         verbose_name_plural = "Productions Extrusion"
         ordering = ['-date_production', 'zone']
@@ -134,7 +133,6 @@ class ProductionImprimerie(models.Model):
     valide = models.BooleanField(default=False)
     
     class Meta:
-        unique_together = ['date_production']
         verbose_name = "Production Imprimerie"
         verbose_name_plural = "Productions Imprimerie"
         ordering = ['-date_production']
@@ -234,7 +232,6 @@ class ProductionSoudure(models.Model):
     valide = models.BooleanField(default=False)
     
     class Meta:
-        unique_together = ['date_production']
         verbose_name = "Production Soudure"
         verbose_name_plural = "Productions Soudure"
         ordering = ['-date_production']
@@ -305,7 +302,6 @@ class ProductionRecyclage(models.Model):
     valide = models.BooleanField(default=False)
     
     class Meta:
-        unique_together = ['date_production', 'equipe']
         verbose_name = "Production Recyclage"
         verbose_name_plural = "Productions Recyclage"
         ordering = ['-date_production']

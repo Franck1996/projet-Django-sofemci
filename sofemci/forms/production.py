@@ -5,8 +5,9 @@ from decimal import Decimal
 
 from ..models import ProductionExtrusion, ProductionImprimerie, ProductionSoudure, ProductionRecyclage, Equipe, ZoneExtrusion
 
+
 class ProductionExtrusionForm(forms.ModelForm):
-    """Formulaire saisie production Extrusion - EXACTEMENT comme dans votre maquette"""
+    """Formulaire saisie production Extrusion - Version SANS validation d'unicité"""
     
     class Meta:
         model = ProductionExtrusion
@@ -21,69 +22,59 @@ class ProductionExtrusionForm(forms.ModelForm):
             'date_production': forms.DateInput(attrs={
                 'type': 'date',
                 'class': 'form-control',
-                'value': timezone.now().date()
             }),
             'zone': forms.Select(attrs={'class': 'form-control'}),
             'equipe': forms.Select(attrs={'class': 'form-control'}),
             'heure_debut': forms.TimeInput(attrs={
                 'type': 'time',
                 'class': 'form-control',
-                'value': '14:00'
             }),
             'heure_fin': forms.TimeInput(attrs={
                 'type': 'time',
                 'class': 'form-control',
-                'value': '22:00'
             }),
             'matiere_premiere_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
                 'min': '0',
                 'placeholder': '0.00',
-                'id': 'matiere_premiere'
             }),
             'nombre_machines_actives': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '0',
                 'max': '4',
-                'id': 'nb_machines'
             }),
             'nombre_machinistes': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '0',
-                'id': 'nb_machinistes'
             }),
             'nombre_bobines_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
                 'min': '0',
-                'placeholder': '0.00'
+                'placeholder': '0.00',
             }),
             'production_finis_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
                 'min': '0',
                 'placeholder': '0.00',
-                'id': 'prod_finis'
             }),
             'production_semi_finis_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
                 'min': '0',
                 'placeholder': '0.00',
-                'id': 'prod_semi_finis'
             }),
             'dechets_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
                 'min': '0',
                 'placeholder': '0.00',
-                'id': 'dechets'
             }),
             'chef_zone': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Nom du chef de zone',
-                'id': 'chef_zone'
             }),
             'observations': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -106,7 +97,8 @@ class ProductionExtrusionForm(forms.ModelForm):
         
         # Pré-remplir le chef de zone
         if self.user and not self.instance.pk:
-            self.fields['chef_zone'].initial = f"{self.user.first_name} {self.user.last_name}"
+            full_name = f"{self.user.first_name} {self.user.last_name}".strip()
+            self.fields['chef_zone'].initial = full_name if full_name else self.user.username
     
     def clean_date_production(self):
         date = self.cleaned_data['date_production']
@@ -123,24 +115,32 @@ class ProductionExtrusionForm(forms.ModelForm):
         return date
     
     def clean(self):
+        """Validation SANS vérification d'unicité - Autorise tous les enregistrements"""
         cleaned_data = super().clean()
+        
+        # OPTIONNEL : Avertissement seulement (non bloquant)
         date = cleaned_data.get('date_production')
         zone = cleaned_data.get('zone')
         equipe = cleaned_data.get('equipe')
         
-        # Vérifier unicité
         if date and zone and equipe:
             existing = ProductionExtrusion.objects.filter(
-                date_production=date, zone=zone, equipe=equipe
+                date_production=date, 
+                zone=zone, 
+                equipe=equipe
             )
-            if self.instance.pk:
+            
+            if self.instance and self.instance.pk:
                 existing = existing.exclude(pk=self.instance.pk)
             
             if existing.exists():
-                raise ValidationError("Production existe déjà pour cette zone, équipe et date.")
+                # Juste un avertissement dans la console, PAS d'erreur de validation
+                existing_prod = existing.first()
+                print(f"⚠️ Attention: Production existe déjà pour {date} - Zone {zone.numero} - {equipe.get_nom_display()}")
+                # NE PAS lever d'exception ValidationError
         
         return cleaned_data
-
+    
 class ProductionImprimerieForm(forms.ModelForm):
     """Formulaire saisie production Imprimerie - EXACTEMENT comme dans votre maquette"""
     
