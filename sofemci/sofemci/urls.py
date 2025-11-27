@@ -51,8 +51,6 @@ urlpatterns = [
     path('api/zones/create/', views.api_create_zone, name='api_create_zone'),
     # ==========================================
     # HISTORIQUE ET RAPPORTS
-    # ==========================================
-    path('historique/', views.historique_view, name='historique'),
     #path('rapports/', views.rapports_view, name='rapports'),
     
     # ==========================================

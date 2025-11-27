@@ -249,9 +249,7 @@
                     </a>
                     {% endif %}
                     
-                    <a href="{% url 'historique' %}" class="nav-link {% if request.resolver_match.url_name == 'historique' %}active{% endif %}">
-                        📋 Historique
-                    </a>
+                
                     
                     
                     {% if user.role in 'direction,admin' %}

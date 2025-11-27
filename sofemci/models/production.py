@@ -56,8 +56,8 @@ class ProductionExtrusion(models.Model):
     
     # Champs calculés automatiquement
     total_production_kg = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    rendement_pourcentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    taux_dechet_pourcentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    rendement_pourcentage = models.DecimalField(max_digits=5, decimal_places=5, null=True, blank=True)
+    taux_dechet_pourcentage = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     production_par_machine = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     
     # Observations et métadonnées

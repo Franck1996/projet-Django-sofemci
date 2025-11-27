@@ -14,7 +14,7 @@ from ..utils import (
     get_extrusion_details_jour, get_imprimerie_details_jour, get_soudure_details_jour,
     get_recyclage_details_jour, get_chart_data_for_dashboard, get_analytics_kpis,
     get_analytics_table_data, calculer_pourcentage_production, calculer_pourcentage_section,
-    get_objectif_section, get_productions_filtrees
+    get_objectif_section,
 )
 
 

@@ -218,63 +218,8 @@ def saisie_recyclage_ajax(request):
         return JsonResponse({'success': False, 'errors': form.errors})
     return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
 
-# ==========================================
-# HISTORIQUE
-# ==========================================
-
-@login_required
-def historique_view(request):
-    form = FiltreHistoriqueForm(request.GET or None)
-    
-    if form.is_valid():
-        filters = form.cleaned_data
-        productions_data, totaux = get_productions_filtrees(filters)
-    else:
-        today = timezone.now().date()
-        debut_mois = today.replace(day=1)
-        default_filters = {
-            'date_debut': debut_mois,
-            'date_fin': today,
-        }
-        productions_data, totaux = get_productions_filtrees(default_filters)
-    
-    # Combiner toutes les productions pour l'affichage unifié
-    all_productions = []
-    for section, prods in productions_data.items():
-        for prod in prods:
-            all_productions.append({
-                'id': prod.id,
-                'date_production': prod.date_production,
-                'section': section,
-                'equipe': getattr(prod, 'equipe', None),
-                'total_production_kg': prod.total_production_kg,
-                'dechets_kg': getattr(prod, 'dechets_kg', 0),
-                'rendement_pourcentage': getattr(prod, 'rendement_pourcentage', None),
-                'valide': prod.valide,
-            })
-    
-    # Pagination
-    paginator = Paginator(all_productions, 20)
-    page_number = request.GET.get('page')
-    productions = paginator.get_page(page_number)
-    
-    context = {
-        'form': form,
-        'productions': productions,
-        'equipes': Equipe.objects.all(),
-        'totaux': totaux,
-    }
-    
-    return render(request, 'historique.html', context)
-
-# ==========================================
-# RAPPORTS
-# ==========================================
 
 
-# ==========================================
-# API
-# ==========================================
 
 @login_required
 def api_calculs_production(request):
@@ -598,36 +543,6 @@ def get_recyclage_details_jour(date):
         'temps_travail': 8,  # Valeur par défaut
     }
 
-def get_productions_filtrees(filters):
-    """Obtenir productions filtrées pour l'historique"""
-    date_filters = {}
-    
-    if filters.get('mois'):
-        year, month = filters['mois'].split('-')
-        date_filters['date_production__year'] = int(year)
-        date_filters['date_production__month'] = int(month)
-    
-    if filters.get('date_debut'):
-        date_filters['date_production__gte'] = filters['date_debut']
-    
-    if filters.get('date_fin'):
-        date_filters['date_production__lte'] = filters['date_fin']
-    
-    productions_data = {
-        'extrusion': ProductionExtrusion.objects.filter(**date_filters).select_related('zone', 'equipe', 'cree_par'),
-        'imprimerie': ProductionImprimerie.objects.filter(**date_filters).select_related('cree_par'),
-        'soudure': ProductionSoudure.objects.filter(**date_filters).select_related('cree_par'),
-        'recyclage': ProductionRecyclage.objects.filter(**date_filters).select_related('equipe', 'cree_par'),
-    }
-    
-    totaux = {
-        'extrusion': productions_data['extrusion'].aggregate(total=Sum('total_production_kg'), dechets=Sum('dechets_kg')),
-        'imprimerie': productions_data['imprimerie'].aggregate(total=Sum('total_production_kg'), dechets=Sum('dechets_kg')),
-        'soudure': productions_data['soudure'].aggregate(total=Sum('total_production_kg'), dechets=Sum('dechets_kg')),
-        'recyclage': productions_data['recyclage'].aggregate(total=Sum('total_production_kg')),
-    }
-    
-    return productions_data, totaux
 
 # Fonctions pour Dashboard Direction
 def get_ca_mensuel(debut, fin):

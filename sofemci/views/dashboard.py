@@ -19,7 +19,7 @@ from ..utils import (
     get_extrusion_details_jour, get_imprimerie_details_jour, get_soudure_details_jour,
     get_recyclage_details_jour, get_chart_data_for_dashboard, get_analytics_kpis,
     get_analytics_table_data, calculer_pourcentage_production, calculer_pourcentage_section,
-    get_objectif_section, get_productions_filtrees
+    get_objectif_section, 
 )
 
 # ==========================================
@@ -301,70 +301,6 @@ def get_recyclage_details_jour(date):
         'temps_travail': 8,
     }
 
-def get_productions_filtrees(filters):
-    """Obtenir productions filtrées pour l'historique"""
-    date_filters = {}
-    
-    if filters.get('date_debut'):
-        date_filters['date_production__gte'] = filters['date_debut']
-    
-    if filters.get('date_fin'):
-        date_filters['date_production__lte'] = filters['date_fin']
-    
-    # Filtre par section si spécifié
-    section_filter = filters.get('section')
-    equipe_filter = filters.get('equipe')
-    
-    # Extrusion
-    extrusion_query = ProductionExtrusion.objects.filter(**date_filters)
-    if section_filter == 'extrusion' or not section_filter:
-        if equipe_filter:
-            extrusion_query = extrusion_query.filter(equipe_id=equipe_filter)
-    
-    # Imprimerie
-    imprimerie_query = ProductionImprimerie.objects.filter(**date_filters)
-    if section_filter == 'imprimerie' or not section_filter:
-        pass
-    
-    # Soudure
-    soudure_query = ProductionSoudure.objects.filter(**date_filters)
-    if section_filter == 'soudure' or not section_filter:
-        pass
-    
-    # Recyclage
-    recyclage_query = ProductionRecyclage.objects.filter(**date_filters)
-    if section_filter == 'recyclage' or not section_filter:
-        if equipe_filter:
-            recyclage_query = recyclage_query.filter(equipe_id=equipe_filter)
-    
-    productions_data = {
-        'extrusion': extrusion_query.select_related('zone', 'equipe', 'cree_par'),
-        'imprimerie': imprimerie_query.select_related('cree_par'),
-        'soudure': soudure_query.select_related('cree_par'),
-        'recyclage': recyclage_query.select_related('equipe', 'cree_par'),
-    }
-    
-    # Calcul des totaux
-    totaux = {
-        'extrusion': {
-            'total': extrusion_query.aggregate(total=Sum('total_production_kg'))['total'] or 0,
-            'dechets': extrusion_query.aggregate(dechets=Sum('dechets_kg'))['dechets'] or 0,
-        },
-        'imprimerie': {
-            'total': imprimerie_query.aggregate(total=Sum('total_production_kg'))['total'] or 0,
-            'dechets': imprimerie_query.aggregate(dechets=Sum('dechets_kg'))['dechets'] or 0,
-        },
-        'soudure': {
-            'total': soudure_query.aggregate(total=Sum('total_production_kg'))['total'] or 0,
-            'dechets': soudure_query.aggregate(dechets=Sum('dechets_kg'))['dechets'] or 0,
-        },
-        'recyclage': {
-            'total': recyclage_query.aggregate(total=Sum('total_production_kg'))['total'] or 0,
-            'dechets': 0,
-        },
-    }
-    
-    return productions_data, totaux
 
 def get_chart_data_for_dashboard():
     """Données simplifiées pour graphiques"""

@@ -2,7 +2,6 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from decimal import Decimal
-
 from ..models import ProductionExtrusion, ProductionImprimerie, ProductionSoudure, ProductionRecyclage, Equipe, ZoneExtrusion
 
 
@@ -370,93 +369,3 @@ class ProductionRecyclageForm(forms.ModelForm):
         
         return cleaned_data
 
-class FiltreHistoriqueForm(forms.Form):
-    """Formulaire de filtrage pour l'historique - EXACTEMENT comme dans votre maquette"""
-    
-    MOIS_CHOICES = [
-        ('', 'Tous les mois'),
-        ('2025-01', 'Janvier 2025'),
-        ('2025-02', 'Février 2025'),
-        ('2025-03', 'Mars 2025'),
-        ('2025-04', 'Avril 2025'),
-        ('2025-05', 'Mai 2025'),
-        ('2025-06', 'Juin 2025'),
-        ('2025-07', 'Juillet 2025'),
-        ('2025-08', 'Août 2025'),
-        ('2025-09', 'Septembre 2025'),
-        ('2025-10', 'Octobre 2025'),
-        ('2025-11', 'Novembre 2025'),
-        ('2025-12', 'Décembre 2025'),
-    ]
-    
-    SECTION_CHOICES = [
-        ('', 'Toutes les sections'),
-        ('extrusion', 'Extrusion'),
-        ('imprimerie', 'Imprimerie'),
-        ('soudure', 'Soudure'),
-        ('recyclage', 'Recyclage'),
-    ]
-    
-    ZONE_CHOICES = [
-        ('', 'Toutes les zones'),
-        ('1', 'Zone 1'),
-        ('2', 'Zone 2'),
-        ('3', 'Zone 3'),
-        ('4', 'Zone 4'),
-        ('5', 'Zone 5'),
-    ]
-    
-    mois = forms.ChoiceField(
-        choices=MOIS_CHOICES,
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control', 'id': 'mois'}),
-        initial=f'{timezone.now().year}-{timezone.now().month:02d}'
-    )
-    
-    section = forms.ChoiceField(
-        choices=SECTION_CHOICES,
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control', 'id': 'section'})
-    )
-    
-    zone = forms.ChoiceField(
-        choices=ZONE_CHOICES,
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control', 'id': 'zone'})
-    )
-    
-    equipe = forms.ModelChoiceField(
-        queryset=Equipe.objects.all(),
-        required=False,
-        empty_label='Toutes les équipes',
-        widget=forms.Select(attrs={'class': 'form-control', 'id': 'equipe'})
-    )
-    
-    date_debut = forms.DateField(
-        required=False,
-        widget=forms.DateInput(attrs={
-            'type': 'date',
-            'class': 'form-control'
-        }),
-        label='Date de début'
-    )
-    
-    date_fin = forms.DateField(
-        required=False,
-        widget=forms.DateInput(attrs={
-            'type': 'date',
-            'class': 'form-control'
-        }),
-        label='Date de fin'
-    )
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        date_debut = cleaned_data.get('date_debut')
-        date_fin = cleaned_data.get('date_fin')
-        
-        if date_debut and date_fin:
-            if date_fin < date_debut:
-                raise ValidationError("Date de fin doit être après date de début.")
-        
-        return cleaned_data

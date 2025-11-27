@@ -11,7 +11,7 @@ from django.views.generic import RedirectView
 from .views.auth import login_view, logout_view
 from .views.dashboard import dashboard_view, dashboard_ia_view, dashboard_direction_view
 from .views.production import (
-    saisie_extrusion_view, saisie_sections_view, historique_view,
+    saisie_extrusion_view, saisie_sections_view, 
     saisie_imprimerie_ajax, saisie_soudure_ajax, saisie_recyclage_ajax,
     api_production_details, api_valider_production
 )
@@ -50,7 +50,6 @@ urlpatterns = [
     # ==========================================
     path('saisie/extrusion/', saisie_extrusion_view, name='saisie_extrusion'),
     path('saisie/sections/', saisie_sections_view, name='saisie_sections'),
-    path('historique/', historique_view, name='historique'),
     
     # AJAX pour saisie sections
     path('ajax/saisie/imprimerie/', saisie_imprimerie_ajax, name='ajax_imprimerie'),

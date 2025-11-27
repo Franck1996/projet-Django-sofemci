@@ -1,7 +1,7 @@
 from .auth import LoginForm
 from .production import (
     ProductionExtrusionForm, ProductionImprimerieForm, 
-    ProductionSoudureForm, ProductionRecyclageForm, FiltreHistoriqueForm
+    ProductionSoudureForm, ProductionRecyclageForm, 
 )
 from .machines import MachineForm
 from .alerts import AlerteForm
@@ -12,7 +12,6 @@ __all__ = [
     'ProductionImprimerieForm', 
     'ProductionSoudureForm',
     'ProductionRecyclageForm',
-    'FiltreHistoriqueForm',
     'MachineForm',
     'AlerteForm',
 ]
