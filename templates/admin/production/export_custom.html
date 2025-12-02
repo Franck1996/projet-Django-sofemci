@@ -1,0 +1,156 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div id="content-main">
+    <div class="module">
+        <h2>{{ title }}</h2>
+        
+        <form method="post" id="export-form">
+            {% csrf_token %}
+            
+            <fieldset class="module aligned">
+                <h3>Sélection des dates</h3>
+                
+                <div class="form-row">
+                    <div>
+                        <label for="start_date">Date de début:</label>
+                        <input type="date" name="start_date" id="start_date" required 
+                               style="padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div>
+                        <label for="end_date">Date de fin:</label>
+                        <input type="date" name="end_date" id="end_date" required
+                               style="padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div>
+                        <label for="format">Format d'export:</label>
+                        <select name="format" id="format" 
+                                style="padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+                            <option value="pdf">PDF (pour impression)</option>
+                            <option value="excel">Excel (pour analyse)</option>
+                        </select>
+                    </div>
+                </div>
+            </fieldset>
+            
+            <div class="submit-row" style="margin-top: 20px;">
+                <input type="submit" value="📥 Exporter" class="default" 
+                       style="background-color: #4CAF50; color: white; padding: 10px 20px; 
+                              border: none; border-radius: 4px; cursor: pointer;">
+                <a href="{% url 'admin:sofemci_productionextrusion_changelist' %}" 
+                   class="button" 
+                   style="background-color: #f44336; color: white; padding: 10px 20px; 
+                          text-decoration: none; border-radius: 4px; display: inline-block;">
+                   Annuler
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Définir les dates par défaut (du 1er du mois à aujourd'hui)
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    // Formater pour input type="date"
+    const formatDate = (date) => {
+        const d = new Date(date);
+        let month = '' + (d.getMonth() + 1);
+        let day = '' + d.getDate();
+        const year = d.getFullYear();
+        
+        if (month.length < 2) month = '0' + month;
+        if (day.length < 2) day = '0' + day;
+        
+        return [year, month, day].join('-');
+    };
+    
+    document.getElementById('start_date').value = formatDate(firstDayOfMonth);
+    document.getElementById('end_date').value = formatDate(today);
+    
+    // Validation
+    document.getElementById('export-form').addEventListener('submit', function(e) {
+        const startDate = new Date(document.getElementById('start_date').value);
+        const endDate = new Date(document.getElementById('end_date').value);
+        
+        if (startDate > endDate) {
+            alert('La date de début doit être antérieure à la date de fin.');
+            e.preventDefault();
+            return false;
+        }
+        
+        return true;
+    });
+});
+</script>
+
+<style>
+.module {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.module h2 {
+    color: #666;
+    font-size: 20px;
+    margin-top: 0;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.module h3 {
+    color: #333;
+    font-size: 16px;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.form-row {
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.form-row:last-child {
+    border-bottom: none;
+}
+
+.form-row label {
+    display: inline-block;
+    width: 150px;
+    font-weight: bold;
+    vertical-align: top;
+    padding-top: 5px;
+}
+
+.form-row input, .form-row select {
+    width: 250px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+}
+
+.form-row input:focus, .form-row select:focus {
+    outline: none;
+    border-color: #79aec8;
+    box-shadow: 0 0 0 2px rgba(121, 174, 200, 0.25);
+}
+
+.submit-row {
+    text-align: right;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+</style>
+{% endblock %}

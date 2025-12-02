@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Rapport Production Imprimerie</title>
+    <style>
+        /* CSS INTÉGRÉ (Identique au modèle Extrusion pour la cohérence) */
+        @page {
+            size: A4;
+            margin: 1.5cm 1cm;
+            @top-center { 
+                content: "RAPPORT DE PRODUCTION SOFEM-CI | IMPRIMERIE"; 
+                font-size: 9pt;
+                color: #555;
+            }
+            @bottom-right { 
+                content: "Page " counter(page) " sur " counter(pages); 
+                font-size: 8pt;
+                color: #555;
+            }
+        }
+        body { font-family: Arial, sans-serif; font-size: 10pt; color: #333; }
+        h1 { color: #004d99; border-bottom: 2px solid #004d99; padding-bottom: 5px; font-size: 18pt; margin-bottom: 15px; text-transform: uppercase; }
+        h2 { color: #555; font-size: 14pt; margin-top: 25px; border-bottom: 1px dashed #ccc; padding-bottom: 5px; }
+        h3 { color: #004d99; font-size: 11pt; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
+        th { background-color: #e6f7ff; font-weight: bold; color: #000; font-size: 9pt; text-transform: uppercase; }
+        .summary { margin-bottom: 20px; padding: 15px; background-color: #f0f8ff; border: 1px solid #b3e0ff; border-radius: 5px; overflow: auto; }
+        .summary p { margin: 5px 0; font-size: 10pt; }
+        .metric { font-weight: bold; color: #cc0000; }
+        .observation-details { border-left: 3px solid #004d99; padding-left: 10px; margin-bottom: 15px; }
+        .page-break { page-break-before: always; }
+    </style>
+</head>
+<body>
+    
+    <h1>Rapport de Production - Imprimerie</h1>
+    
+    <div class="summary">
+        <p style="float: left; width: 50%;"><strong>Période Analysée :</strong> Du {{ production_list.first.date_production|date:"d/m/Y" }} au {{ production_list.last.date_production|date:"d/m/Y" }}</p>
+        <p style="float: right; width: 45%; text-align: right;"><strong>Généré par :</strong> {{ user.get_full_name }} ({{ user.username }})</p>
+        <p style="clear: both; margin: 0;"></p>
+    </div>
+
+    <h2>Synthèse des Enregistrements ({{ production_list|length }} Jours)</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th width="15%">Date</th>
+                <th width="20%">Prod. Finis (kg)</th>
+                <th width="20%">Prod. Semi-Finis (kg)</th>
+                <th width="15%">Prod. Totale (kg)</th>
+                <th width="15%">Déchets (kg)</th>
+                <th width="15%">Taux Déchets (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in production_list %}
+            <tr>
+                <td>{{ item.date_production|date:"d/m/Y" }}</td>
+                <td>{{ item.production_bobines_finies_kg|floatformat:2 }}</td>
+                <td>{{ item.production_bobines_semi_finies_kg|floatformat:2 }}</td>
+                <td><span class="metric">{{ item.total_production_kg|default:"-"|floatformat:2 }}</span></td>
+                <td>{{ item.dechets_kg|floatformat:2 }}</td>
+                <td><span class="metric">{{ item.taux_dechet_pourcentage|default:"0.00"|floatformat:2 }}%</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="page-break"></div>
+    
+    <h2>Détails et Observations</h2>
+    
+    {% for item in production_list %}
+        <div class="observation-details">
+            <h3>&#x27A1; Production du {{ item.date_production|date:"d/m/Y" }}</h3>
+            <p><strong>Heures:</strong> De {{ item.heure_debut|time:"H:i" }} à {{ item.heure_fin|time:"H:i" }}</p>
+            <p><strong>Machines Actives:</strong> {{ item.nombre_machines_actives }}</p>
+            <p><strong>Statut:</strong> {% if item.valide %}Validé{% else %}En attente de validation{% endif %}</p>
+            <p><strong>Observations du jour:</strong> {{ item.observations|default:"Aucune observation spécifique enregistrée." }}</p>
+        </div>
+    {% endfor %}
+
+</body>
+</html>
