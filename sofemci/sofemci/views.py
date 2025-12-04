@@ -157,30 +157,60 @@ def saisie_extrusion_view(request):
     
     return render(request, 'saisie_extrusion.html', context)
 
+# Dans votre vue saisie_sections_view
 @login_required
 def saisie_sections_view(request):
-    user_sections = []
-    if request.user.role == 'chef_imprimerie' or request.user.role in ['superviseur', 'admin']:
-        user_sections.append('imprimerie')
-    if request.user.role == 'chef_soudure' or request.user.role in ['superviseur', 'admin']:
-        user_sections.append('soudure')
-    if request.user.role == 'chef_recyclage' or request.user.role in ['superviseur', 'admin']:
-        user_sections.append('recyclage')
+    if request.method == 'POST':
+        section = request.POST.get('section')
+        print(f"Section reçue: {section}")  # Débogage
+        
+        try:
+            if section == 'soudure':
+                # Créer une instance du formulaire pour validation
+                form_data = request.POST.copy()
+                form = ProductionSoudureForm(form_data)
+                
+                if not form.is_valid():
+                    print("Erreurs de formulaire:", form.errors)  # Débogage
+                    messages.error(request, f"Erreur dans le formulaire: {form.errors}")
+                    return redirect('saisie_sections')
+                
+                # Créer l'objet
+                production = ProductionSoudure.objects.create(
+                    date_production=request.POST.get('date_production'),
+                    heure_debut=request.POST.get('heure_debut'),
+                    heure_fin=request.POST.get('heure_fin'),
+                    nombre_machines_actives=int(request.POST.get('nombre_machines_actives', 0)),
+                    production_bobines_finies_kg=Decimal(request.POST.get('production_bobines_finies_kg', 0)),
+                    production_bretelles_kg=Decimal(request.POST.get('production_bretelles_kg', 0)),
+                    production_rema_kg=Decimal(request.POST.get('production_rema_kg', 0)),
+                    production_batta_kg=Decimal(request.POST.get('production_batta_kg', 0)),
+                    production_sac_emballage_kg=Decimal(request.POST.get('production_sac_emballage_kg', 0)),
+                    dechets_kg=Decimal(request.POST.get('dechets_kg', 0)),
+                    observations=request.POST.get('observations', ''),
+                    cree_par=request.user,
+                    valide=False
+                )
+                messages.success(request, 'Production soudure enregistrée avec succès!')
+            
+            # ... autres sections ...
+            
+        except Exception as e:
+            print(f"Exception: {str(e)}")  # Débogage
+            messages.error(request, f'Erreur lors de l\'enregistrement: {str(e)}')
+        
+        return redirect('saisie_sections')
     
-    if not user_sections:
-        messages.error(request, 'Accès refusé.')
-        return redirect('dashboard')
+    # GET request
+    today = timezone.now().date()
+    equipes = Equipe.objects.all()
     
     context = {
-        'today': timezone.now().date(),
-        'user_sections': user_sections,
-        'form_imprimerie': ProductionImprimerieForm() if 'imprimerie' in user_sections else None,
-        'form_soudure': ProductionSoudureForm() if 'soudure' in user_sections else None,
-        'form_recyclage': ProductionRecyclageForm() if 'recyclage' in user_sections else None,
-        'equipes': Equipe.objects.all(),
+        'today': today,
+        'equipes': equipes,
     }
     
-    return render(request, 'saisie_sections.html', context)
+    return render(request, 'production/saisie_sections.html', context)
 
 @login_required
 def saisie_imprimerie_ajax(request):

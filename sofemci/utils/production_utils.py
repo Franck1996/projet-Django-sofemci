@@ -202,20 +202,25 @@ def get_soudure_details_jour(date):
         'taux_dechet': round(taux_dechet, 1),
     }
 
-def get_recyclage_details_jour(date):
-    """Détails recyclage du jour - Version simplifiée"""
+def get_recyclage_details_jour(date=None):
+    """Détails recyclage du jour - Version corrigée avec Decimal"""
+    # Si pas de date fournie, utiliser aujourd'hui
+    if date is None:
+        date = timezone.now().date()
+    
     productions = ProductionRecyclage.objects.filter(date_production=date)
     
     if not productions.exists():
         return {
             'moulinex_actifs': 0,
             'moulinex_totaux': Machine.objects.filter(section='recyclage').count(),
-            'total_broyage': 0,
-            'total_bache_noir': 0,
-            'production_totale': 0,
-            'taux_transformation': 0,
-            'rendement': 0,
-            'productivite_par_moulinex': 0,
+            'total_broyage': Decimal('0.00'),
+            'total_bache_noir': Decimal('0.00'),
+            'production_totale': Decimal('0.00'),
+            'taux_transformation': Decimal('0.00'),
+            'rendement': Decimal('0.00'),
+            'productivite_par_moulinex': Decimal('0.00'),
+            'temps_travail': 8,
         }
     
     aggregats = productions.aggregate(
@@ -225,23 +230,38 @@ def get_recyclage_details_jour(date):
         total=Sum('total_production_kg')
     )
     
-    broyage = aggregats['broyage'] or 0
-    bache = aggregats['bache'] or 0
-    total = aggregats['total'] or 0
-    moulinex_avg = aggregats['moulinex'] or 1
+    # Utiliser Decimal explicitement
+    broyage = Decimal(str(aggregats['broyage'] or '0'))
+    bache = Decimal(str(aggregats['bache'] or '0'))
+    total = Decimal(str(aggregats['total'] or '0'))
+    moulinex_avg = Decimal(str(aggregats['moulinex'] or '1'))
     
-    taux_transformation = (bache / broyage * 100) if broyage > 0 else 0
-    productivite = (total / moulinex_avg) if moulinex_avg > 0 else 0
+    # Calculs sécurisés avec Decimal
+    try:
+        if broyage > Decimal('0'):
+            taux_transformation = (bache / broyage) * Decimal('100')
+        else:
+            taux_transformation = Decimal('0')
+    except Exception:
+        taux_transformation = Decimal('0')
+    
+    try:
+        if moulinex_avg > Decimal('0'):
+            productivite = total / moulinex_avg
+        else:
+            productivite = Decimal('0')
+    except Exception:
+        productivite = Decimal('0')
     
     return {
-        'moulinex_actifs': round(moulinex_avg, 0),
+        'moulinex_actifs': int(round(float(moulinex_avg), 0)),
         'moulinex_totaux': Machine.objects.filter(section='recyclage').count(),
-        'total_broyage': broyage,
-        'total_bache_noir': bache,
-        'production_totale': total,
-        'taux_transformation': round(taux_transformation, 1),
-        'rendement': round(taux_transformation, 1),
-        'productivite_par_moulinex': round(productivite, 1),
+        'total_broyage': broyage.quantize(Decimal('0.01')),
+        'total_bache_noir': bache.quantize(Decimal('0.01')),
+        'production_totale': total.quantize(Decimal('0.01')),
+        'taux_transformation': taux_transformation.quantize(Decimal('0.01')),
+        'rendement': taux_transformation.quantize(Decimal('0.01')),
+        'productivite_par_moulinex': productivite.quantize(Decimal('0.01')),
         'temps_travail': 8,
     }
 # def get_productions_filtrees(filters):

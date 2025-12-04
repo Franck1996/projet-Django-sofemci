@@ -148,6 +148,7 @@ class ProductionImprimerie(models.Model):
     
     def __str__(self):
         return f"Imprimerie - {self.date_production}"
+    
 class ProductionSoudure(models.Model):
     """Production journalière section Soudure - EXACTEMENT comme dans vos maquettes"""
     

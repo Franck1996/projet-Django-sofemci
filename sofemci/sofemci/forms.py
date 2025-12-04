@@ -37,7 +37,7 @@ class LoginForm(AuthenticationForm):
 # ==========================================
 
 class ProductionExtrusionForm(forms.ModelForm):
-    """Formulaire saisie production Extrusion - EXACTEMENT comme dans votre maquette"""
+    """Formulaire saisie production Extrusion"""
     
     class Meta:
         model = ProductionExtrusion
@@ -177,7 +177,7 @@ class ProductionExtrusionForm(forms.ModelForm):
 # ==========================================
 
 class ProductionImprimerieForm(forms.ModelForm):
-    """Formulaire saisie production Imprimerie - EXACTEMENT comme dans votre maquette"""
+    """Formulaire saisie production Imprimerie"""
     
     class Meta:
         model = ProductionImprimerie
@@ -253,6 +253,8 @@ class ProductionImprimerieForm(forms.ModelForm):
         return date
 
 class ProductionSoudureForm(forms.ModelForm):
+    """Formulaire saisie production Soudure"""
+    
     class Meta:
         model = ProductionSoudure
         fields = [
@@ -264,73 +266,9 @@ class ProductionSoudureForm(forms.ModelForm):
             'production_bretelles_kg',
             'production_rema_kg',
             'production_batta_kg',
-            'production_sac_emballage_kg',  # NOUVEAU
+            'production_sac_emballage_kg',
             'dechets_kg',
             'observations',
-        ]
-        widgets = {
-            'date_production': forms.DateInput(attrs={
-                'type': 'date',
-                'class': 'form-control'
-            }),
-            'heure_debut': forms.TimeInput(attrs={
-                'type': 'time',
-                'class': 'form-control'
-            }),
-            'heure_fin': forms.TimeInput(attrs={
-                'type': 'time',
-                'class': 'form-control'
-            }),
-            'nombre_machines_actives': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': '0',
-                'max': '8'
-            }),
-            'production_bobines_finies_kg': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01',
-                'min': '0'
-            }),
-            'production_bretelles_kg': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01',
-                'min': '0'
-            }),
-            'production_rema_kg': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01',
-                'min': '0'
-            }),
-            'production_batta_kg': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01',
-                'min': '0'
-            }),
-            'production_sac_emballage_kg': forms.NumberInput(attrs={  # NOUVEAU
-                'class': 'form-control',
-                'step': '0.01',
-                'min': '0',
-                'placeholder': 'Sacs imprimés'
-            }),
-            'dechets_kg': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01',
-                'min': '0'
-            }),
-            'observations': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3
-            }),
-        }
-             """Formulaire saisie production Soudure - EXACTEMENT comme dans votre maquette"""
-    
-    class Meta:
-        model = ProductionSoudure
-        fields = [
-            'date_production', 'heure_debut', 'heure_fin',
-            'nombre_machines_actives', 'production_bobines_finies_kg',
-            'production_bretelles_kg', 'production_rema_kg', 'production_batta_kg',
-            'dechets_kg', 'observations'
         ]
         
         widgets = {
@@ -342,55 +280,53 @@ class ProductionSoudureForm(forms.ModelForm):
             'heure_debut': forms.TimeInput(attrs={
                 'type': 'time',
                 'class': 'form-control',
-                'value': '14:00',
-                'id': 'sou_heure_debut'
+                'value': '14:00'
             }),
             'heure_fin': forms.TimeInput(attrs={
                 'type': 'time',
                 'class': 'form-control',
-                'value': '22:00',
-                'id': 'sou_heure_fin'
+                'value': '22:00'
             }),
             'nombre_machines_actives': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '0',
-                'max': '8',
-                'id': 'sou_nb_machines'
+                'max': '8'
             }),
             'production_bobines_finies_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
                 'min': '0',
-                'placeholder': '0.00',
-                'id': 'sou_bobines_finies'
+                'placeholder': '0.00'
             }),
             'production_bretelles_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
                 'min': '0',
-                'placeholder': '0.00',
-                'id': 'sou_bretelles'
+                'placeholder': '0.00'
             }),
             'production_rema_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
                 'min': '0',
-                'placeholder': '0.00',
-                'id': 'sou_rema'
+                'placeholder': '0.00'
             }),
             'production_batta_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
                 'min': '0',
-                'placeholder': '0.00',
-                'id': 'sou_batta'
+                'placeholder': '0.00'
+            }),
+            'production_sac_emballage_kg': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0',
+                'placeholder': '0.00'
             }),
             'dechets_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
                 'min': '0',
-                'placeholder': '0.00',
-                'id': 'sou_dechets'
+                'placeholder': '0.00'
             }),
             'observations': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -398,9 +334,18 @@ class ProductionSoudureForm(forms.ModelForm):
                 'placeholder': 'Observations...'
             }),
         }
+    
+    def clean_date_production(self):
+        date = self.cleaned_data['date_production']
+        
+        # Pas de date future
+        if date > timezone.now().date():
+            raise ValidationError("Impossible de saisir pour le futur.")
+        
+        return date
 
 class ProductionRecyclageForm(forms.ModelForm):
-    """Formulaire saisie production Recyclage - EXACTEMENT comme dans votre maquette"""
+    """Formulaire saisie production Recyclage"""
     
     class Meta:
         model = ProductionRecyclage
@@ -466,15 +411,6 @@ class ProductionRecyclageForm(forms.ModelForm):
         
         return cleaned_data
 
-# ==========================================
-# FORMULAIRE DE FILTRAGE HISTORIQUE
-# ==========================================
-
-
-# ==========================================
-# FORMULAIRES GESTION UTILISATEURS
-# ==========================================
-
 class CustomUserForm(forms.ModelForm):
     """Formulaire création/modification utilisateur"""
     
@@ -497,10 +433,10 @@ class CustomUserForm(forms.ModelForm):
 # FORMULAIRES MACHINES
 # ==========================================
 
-# sofemci/forms.py
-
 class MachineForm(forms.ModelForm):
-    # Ajouter un champ personnalisé pour la zone
+    """Formulaire gestion machines"""
+    
+    # Champs personnalisés pour la zone d'extrusion
     zone_numero = forms.IntegerField(
         required=False,
         widget=forms.NumberInput(attrs={
@@ -524,14 +460,38 @@ class MachineForm(forms.ModelForm):
     class Meta:
         model = Machine
         fields = [
-            'numero', 'type_machine', 'section', 
-            'etat', 'capacite_horaire', 'date_installation', 
+            'numero', 'type_machine', 'section', 'etat', 
+            'capacite_horaire', 'date_installation', 
             'derniere_maintenance', 'observations'
         ]
-        # Ne pas inclure zone_extrusion dans fields
         
         widgets = {
-            # ... vos widgets existants ...
+            'numero': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ex: EXT-Z1-M1, IMP-05, SOU-03'
+            }),
+            'type_machine': forms.Select(attrs={'class': 'form-control'}),
+            'section': forms.Select(attrs={'class': 'form-control'}),
+            'etat': forms.Select(attrs={'class': 'form-control'}),
+            'capacite_horaire': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0',
+                'placeholder': 'Ex: 150'
+            }),
+            'date_installation': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'derniere_maintenance': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'observations': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Particularités, historique, recommandations...'
+            }),
         }
     
     def __init__(self, *args, **kwargs):
@@ -564,6 +524,8 @@ class MachineForm(forms.ModelForm):
                 defaults={'nom': zone_nom, 'nombre_machines_max': 4}
             )
             cleaned_data['zone_extrusion'] = zone
+        else:
+            cleaned_data['zone_extrusion'] = None
         
         return cleaned_data
     
@@ -573,120 +535,6 @@ class MachineForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
-    """Formulaire gestion machines"""
-    
-    class Meta:
-        model = Machine
-        fields = [
-            'numero', 'type_machine', 'section', 'zone_extrusion', 'etat', 
-            'capacite_horaire', 'date_installation', 'derniere_maintenance', 'observations'
-        ]
-        
-        widgets = {
-            'numero': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Ex: EXT-Z1-M1, IMP-05, SOU-03'
-            }),
-            'type_machine': forms.Select(attrs={
-                'class': 'form-control'
-            }),
-            'section': forms.Select(attrs={
-                'class': 'form-control'
-            }),
-            'zone_extrusion': forms.Select(attrs={
-                'class': 'form-control'
-            }),
-            'etat': forms.Select(attrs={
-                'class': 'form-control'
-            }),
-            'capacite_horaire': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01',
-                'min': '0',
-                'placeholder': 'Ex: 150'
-            }),
-            'date_installation': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
-            }),
-            'derniere_maintenance': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
-            }),
-            'observations': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': 'Particularités, historique, recommandations...'
-            }),
-        }
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        
-        # Rendre la zone optionnelle par défaut
-        self.fields['zone_extrusion'].required = False
-        
-        # Si on modifie une machine non-extrusion, cacher le champ zone
-        if self.instance and self.instance.pk and self.instance.section != 'extrusion':
-            self.fields['zone_extrusion'].widget = forms.HiddenInput()
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        section = cleaned_data.get('section')
-        zone_extrusion = cleaned_data.get('zone_extrusion')
-        
-        # VALIDATION : Zone obligatoire pour Extrusion
-        if section == 'extrusion':
-            if not zone_extrusion:
-                raise forms.ValidationError({
-                    'zone_extrusion': 'Une zone d\'extrusion doit être sélectionnée pour une machine d\'extrusion.'
-                })
-        
-        # NETTOYAGE : Supprimer la zone pour les autres sections
-        if section != 'extrusion':
-            cleaned_data['zone_extrusion'] = None
-        
-        return cleaned_data
-    """Formulaire gestion machines"""
-    
-    class Meta:
-        model = Machine
-        fields = ['numero', 'type_machine', 'section', 'zone_extrusion', 'etat', 
-                  'capacite_horaire', 'date_installation', 'derniere_maintenance', 'observations']
-        
-        widgets = {
-            'numero': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: EXT-Z1-M1'}),
-            'type_machine': forms.Select(attrs={'class': 'form-control'}),
-            'section': forms.Select(attrs={'class': 'form-control'}),
-            'zone_extrusion': forms.Select(attrs={'class': 'form-control'}),
-            'etat': forms.Select(attrs={'class': 'form-control'}),
-            'capacite_horaire': forms.NumberInput(attrs={
-                'class': 'form-control', 
-                'step': '0.01',
-                'placeholder': 'Ex: 150'
-            }),
-            # AJOUTEZ CES LIGNES IMPORTANTES :
-            'date_installation': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'  # Widget HTML5 pour date
-            }),
-            'derniere_maintenance': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'  # Widget HTML5 pour date
-            }),
-            'observations': forms.Textarea(attrs={
-                'class': 'form-control', 
-                'rows': 3,
-                'placeholder': 'Notes sur la machine...'
-            }),
-        
-        }
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Zone seulement pour section extrusion
-        if self.instance and self.instance.section != 'extrusion':
-            self.fields['zone_extrusion'].widget = forms.HiddenInput()
 
 # ==========================================
 # FORMULAIRES ALERTES

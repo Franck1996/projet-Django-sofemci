@@ -6,6 +6,13 @@ from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
 from django.contrib import messages
 from datetime import datetime
+from decimal import Decimal
+import io
+from django.http import HttpResponse
+from reportlab.lib.pagesizes import letter, landscape
+from reportlab.pdfgen import canvas
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill
 from .models.users import CustomUser
 from .models.base import Equipe, ZoneExtrusion
 from .models.machines import Machine, HistoriqueMachine
@@ -126,7 +133,113 @@ class MachineAdmin(admin.ModelAdmin):
     readonly_fields = ['derniere_mise_a_jour_donnees']
 
 # ==========================================
-# ADMINISTRATION PRODUCTION AVEC EXPORTS
+# FONCTIONS UTILITAIRES POUR EXPORTS
+# ==========================================
+
+def create_pdf_export(title, headers, data, filename):
+    """Crée un PDF pour l'export"""
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=landscape(letter))
+    width, height = landscape(letter)
+    
+    # Titre
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(50, height - 50, title)
+    
+    # Date
+    p.setFont("Helvetica", 10)
+    p.drawString(50, height - 80, f"Date d'export: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    p.drawString(50, height - 100, f"Nombre d'enregistrements: {len(data)}")
+    
+    # En-têtes
+    p.setFont("Helvetica-Bold", 10)
+    col_width = (width - 100) / len(headers)
+    x_positions = [50 + i * col_width for i in range(len(headers))]
+    
+    y = height - 130
+    for i, header in enumerate(headers):
+        p.drawString(x_positions[i], y, header[:20])  # Limiter à 20 caractères
+    
+    # Ligne de séparation
+    p.line(50, y - 5, width - 50, y - 5)
+    
+    # Données
+    p.setFont("Helvetica", 9)
+    y -= 25
+    
+    for row in data:
+        if y < 100:  # Nouvelle page
+            p.showPage()
+            y = height - 50
+            p.setFont("Helvetica-Bold", 10)
+            p.drawString(50, y, f"{title} - Suite")
+            y -= 80
+        
+        for i, value in enumerate(row):
+            p.drawString(x_positions[i], y, str(value)[:20])  # Limiter à 20 caractères
+        
+        y -= 20
+    
+    # Pied de page
+    p.setFont("Helvetica-Oblique", 8)
+    p.drawString(50, 30, "Généré par SOFEM-CI - Système de gestion d'usine")
+    
+    p.save()
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}.pdf"'
+    return response
+
+def create_excel_export(title, headers, data, filename):
+    """Crée un fichier Excel pour l'export"""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = title[:31]  # Limite Excel
+    
+    # Styles
+    header_font = Font(bold=True, color="FFFFFF", size=12)
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    center_alignment = Alignment(horizontal="center", vertical="center")
+    
+    # En-têtes
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center_alignment
+    
+    # Données
+    for row_num, row_data in enumerate(data, 2):
+        for col_num, cell_value in enumerate(row_data, 1):
+            ws.cell(row=row_num, column=col_num, value=cell_value)
+    
+    # Ajuster la largeur
+    for column in ws.columns:
+        max_length = 0
+        column_letter = column[0].column_letter
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 30)
+        ws.column_dimensions[column_letter].width = adjusted_width
+    
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    response = HttpResponse(
+        buffer,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}.xlsx"'
+    return response
+
+# ==========================================
+# ADMINISTRATION PRODUCTION EXTRUSION
 # ==========================================
 
 @admin.register(ProductionExtrusion)
@@ -140,7 +253,7 @@ class ProductionExtrusionAdmin(admin.ModelAdmin):
                       'date_creation', 'date_modification', 'cree_par']
     ordering = ['-date_production']
     
-    # ACTIONS - DOIT ÊTRE UNE LISTE
+    # ACTIONS POUR EXTRUSION
     actions = ['valider_production', 'invalider_production', 
                'export_pdf_action', 'export_excel_action']
     
@@ -149,187 +262,77 @@ class ProductionExtrusionAdmin(admin.ModelAdmin):
             obj.cree_par = request.user
         super().save_model(request, obj, form, change)
     
-    # Action 1: Valider
     def valider_production(self, request, queryset):
         updated = queryset.update(valide=True)
         self.message_user(request, f'{updated} productions validées avec succès.', messages.SUCCESS)
     valider_production.short_description = "✅ Valider"
     
-    # Action 2: Invalider
     def invalider_production(self, request, queryset):
         updated = queryset.update(valide=False)
         self.message_user(request, f'{updated} productions invalidées.', messages.WARNING)
     invalider_production.short_description = "❌ Invalider"
     
-    # Action 3: Export PDF
     def export_pdf_action(self, request, queryset):
         """Export PDF de la production extrusion"""
-        from django.http import HttpResponse
-        from reportlab.lib.pagesizes import letter, landscape
-        from reportlab.pdfgen import canvas
-        import io
-        
-        # Créer un buffer pour le PDF
-        buffer = io.BytesIO()
-        
-        # Créer le PDF
-        p = canvas.Canvas(buffer, pagesize=landscape(letter))
-        width, height = landscape(letter)
-        
-        # Titre
-        p.setFont("Helvetica-Bold", 16)
-        p.drawString(50, height - 50, "RAPPORT PRODUCTION EXTRUSION - SOFEM-CI")
-        
-        # Informations
-        p.setFont("Helvetica", 10)
-        p.drawString(50, height - 80, f"Date d'export: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-        p.drawString(50, height - 100, f"Nombre d'enregistrements: {queryset.count()}")
-        
-        # En-têtes du tableau
-        p.setFont("Helvetica-Bold", 10)
         headers = ['Date', 'Zone', 'Équipe', 'Matière (kg)', 'Production (kg)', 'Rendement %', 'Déchets (kg)', 'Statut']
-        x_positions = [50, 120, 200, 280, 360, 440, 520, 600]
         
-        y = height - 130
-        for i, header in enumerate(headers):
-            p.drawString(x_positions[i], y, header)
-        
-        # Ligne de séparation
-        p.line(50, y - 5, width - 50, y - 5)
-        
-        # Données
-        p.setFont("Helvetica", 9)
-        y -= 25
-        
+        data = []
         for obj in queryset:
-            if y < 100:  # Nouvelle page si nécessaire
-                p.showPage()
-                y = height - 50
-                p.setFont("Helvetica-Bold", 10)
-                p.drawString(50, y, "RAPPORT PRODUCTION EXTRUSION - Suite")
-                y -= 80
-            
-            # Données formatées
-            data = [
+            data.append([
                 obj.date_production.strftime('%d/%m/%Y'),
-                str(obj.zone)[:15],  # Limiter la taille
-                str(obj.equipe)[:10],
+                str(obj.zone),
+                str(obj.equipe),
                 f"{obj.matiere_premiere_kg:.2f}",
                 f"{obj.total_production_kg:.2f}" if obj.total_production_kg else "0.00",
                 f"{obj.rendement_pourcentage:.2f}%" if obj.rendement_pourcentage else "0.00%",
                 f"{obj.dechets_kg:.2f}",
                 "✓ Validé" if obj.valide else "✗ En attente"
-            ]
-            
-            for i, value in enumerate(data):
-                p.drawString(x_positions[i], y, str(value))
-            
-            y -= 20
+            ])
         
-        # Pied de page
-        p.setFont("Helvetica-Oblique", 8)
-        p.drawString(50, 30, f"Généré automatiquement par le système SOFEM-CI - Page 1")
+        title = "RAPPORT PRODUCTION EXTRUSION - SOFEM-CI"
+        filename = f"production_extrusion_{datetime.now().strftime('%Y%m%d_%H%M')}"
         
-        p.save()
-        buffer.seek(0)
-        
-        # Retourner le PDF
-        response = HttpResponse(buffer, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="production_extrusion_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"'
-        return response
+        return create_pdf_export(title, headers, data, filename)
     export_pdf_action.short_description = "📄 Exporter en PDF"
     
-    # Action 4: Export Excel
     def export_excel_action(self, request, queryset):
         """Export Excel de la production extrusion"""
-        import openpyxl
-        from openpyxl.styles import Font, Alignment, PatternFill
-        from django.http import HttpResponse
-        import io
-        
-        # Créer un workbook
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "Production Extrusion"
-        
-        # Styles
-        header_font = Font(bold=True, color="FFFFFF", size=12)
-        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-        center_alignment = Alignment(horizontal="center", vertical="center")
-        
-        # En-têtes
         headers = ['Date', 'Zone', 'Équipe', 'Heure Début', 'Heure Fin', 
                   'Chef Zone', 'Matière (kg)', 'Machines', 'Machinistes',
                   'Bobines (kg)', 'Finis (kg)', 'Semi-Finis (kg)', 'Déchets (kg)',
-                  'Total Prod (kg)', 'Rendement %', 'Taux Déchet %', 
-                  'Prod/Machine', 'Observations', 'Statut']
+                  'Total Prod (kg)', 'Rendement %', 'Taux Déchet %', 'Statut']
         
-        for col_num, header in enumerate(headers, 1):
-            cell = ws.cell(row=1, column=col_num, value=header)
-            cell.font = header_font
-            cell.fill = header_fill
-            cell.alignment = center_alignment
+        data = []
+        for obj in queryset:
+            data.append([
+                obj.date_production,
+                str(obj.zone),
+                str(obj.equipe),
+                obj.heure_debut.strftime('%H:%M') if obj.heure_debut else '',
+                obj.heure_fin.strftime('%H:%M') if obj.heure_fin else '',
+                obj.chef_zone,
+                float(obj.matiere_premiere_kg),
+                obj.nombre_machines_actives,
+                obj.nombre_machinistes,
+                float(obj.nombre_bobines_kg),
+                float(obj.production_finis_kg),
+                float(obj.production_semi_finis_kg),
+                float(obj.dechets_kg),
+                float(obj.total_production_kg) if obj.total_production_kg else 0,
+                float(obj.rendement_pourcentage) if obj.rendement_pourcentage else 0,
+                float(obj.taux_dechet_pourcentage) if obj.taux_dechet_pourcentage else 0,
+                "Validé" if obj.valide else "En attente"
+            ])
         
-        # Données
-        for row_num, obj in enumerate(queryset, 2):
-            ws.cell(row=row_num, column=1, value=obj.date_production)
-            ws.cell(row=row_num, column=2, value=str(obj.zone))
-            ws.cell(row=row_num, column=3, value=str(obj.equipe))
-            ws.cell(row=row_num, column=4, value=obj.heure_debut.strftime('%H:%M') if obj.heure_debut else '')
-            ws.cell(row=row_num, column=5, value=obj.heure_fin.strftime('%H:%M') if obj.heure_fin else '')
-            ws.cell(row=row_num, column=6, value=obj.chef_zone)
-            ws.cell(row=row_num, column=7, value=float(obj.matiere_premiere_kg))
-            ws.cell(row=row_num, column=8, value=obj.nombre_machines_actives)
-            ws.cell(row=row_num, column=9, value=obj.nombre_machinistes)
-            ws.cell(row=row_num, column=10, value=float(obj.nombre_bobines_kg))
-            ws.cell(row=row_num, column=11, value=float(obj.production_finis_kg))
-            ws.cell(row=row_num, column=12, value=float(obj.production_semi_finis_kg))
-            ws.cell(row=row_num, column=13, value=float(obj.dechets_kg))
-            ws.cell(row=row_num, column=14, value=float(obj.total_production_kg) if obj.total_production_kg else 0)
-            ws.cell(row=row_num, column=15, value=float(obj.rendement_pourcentage) if obj.rendement_pourcentage else 0)
-            ws.cell(row=row_num, column=16, value=float(obj.taux_dechet_pourcentage) if obj.taux_dechet_pourcentage else 0)
-            ws.cell(row=row_num, column=17, value=float(obj.production_par_machine) if obj.production_par_machine else 0)
-            ws.cell(row=row_num, column=18, value=obj.observations[:100] if obj.observations else '')
-            ws.cell(row=row_num, column=19, value="Validé" if obj.valide else "En attente")
+        title = "Production Extrusion"
+        filename = f"production_extrusion_{datetime.now().strftime('%Y%m%d_%H%M')}"
         
-        # Formater les colonnes numériques
-        for col in ['G', 'J', 'K', 'L', 'M', 'N']:  # Colonnes avec valeurs numériques
-            for row in range(2, len(queryset) + 2):
-                cell = ws[f'{col}{row}']
-                cell.number_format = '#,##0.00'
-        
-        for col in ['O', 'P']:  # Pourcentages
-            for row in range(2, len(queryset) + 2):
-                cell = ws[f'{col}{row}']
-                cell.number_format = '0.00%'
-        
-        # Ajuster la largeur des colonnes
-        for column in ws.columns:
-            max_length = 0
-            column_letter = column[0].column_letter
-            for cell in column:
-                try:
-                    cell_value = str(cell.value) if cell.value else ''
-                    if len(cell_value) > max_length:
-                        max_length = len(cell_value)
-                except:
-                    pass
-            adjusted_width = min(max_length + 2, 50)
-            ws.column_dimensions[column_letter].width = adjusted_width
-        
-        # Sauvegarder dans le buffer
-        buffer = io.BytesIO()
-        wb.save(buffer)
-        buffer.seek(0)
-        
-        # Retourner le fichier Excel
-        response = HttpResponse(
-            buffer,
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-        response['Content-Disposition'] = f'attachment; filename="production_extrusion_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"'
-        return response
+        return create_excel_export(title, headers, data, filename)
     export_excel_action.short_description = "📊 Exporter en Excel"
+
+# ==========================================
+# ADMINISTRATION PRODUCTION IMPRIMERIE
+# ==========================================
 
 @admin.register(ProductionImprimerie)
 class ProductionImprimerieAdmin(admin.ModelAdmin):
@@ -340,7 +343,7 @@ class ProductionImprimerieAdmin(admin.ModelAdmin):
                       'date_creation', 'date_modification']
     ordering = ['-date_production']
     
-    # ACTIONS
+    # ACTIONS POUR IMPRIMERIE - MÊME STRUCTURE
     actions = ['valider_production', 'invalider_production', 
                'export_pdf_action', 'export_excel_action']
     
@@ -361,87 +364,63 @@ class ProductionImprimerieAdmin(admin.ModelAdmin):
     
     def export_pdf_action(self, request, queryset):
         """Export PDF de la production imprimerie"""
-        from django.http import HttpResponse
-        from reportlab.lib.pagesizes import letter, landscape
-        from reportlab.pdfgen import canvas
-        import io
+        headers = ['Date', 'Heure Début', 'Heure Fin', 'Machines', 
+                  'Bobines Finies (kg)', 'Bobines Semi (kg)', 'Déchets (kg)', 
+                  'Total Prod (kg)', 'Taux Déchet %', 'Statut']
         
-        buffer = io.BytesIO()
-        p = canvas.Canvas(buffer, pagesize=landscape(letter))
-        width, height = landscape(letter)
-        
-        # Titre
-        p.setFont("Helvetica-Bold", 16)
-        p.drawString(50, height - 50, "RAPPORT PRODUCTION IMPRIMERIE - SOFEM-CI")
-        
-        # Données
-        p.setFont("Helvetica", 10)
-        y = height - 100
-        
+        data = []
         for obj in queryset:
-            if y < 100:
-                p.showPage()
-                y = height - 50
-            
-            p.drawString(50, y, f"Date: {obj.date_production.strftime('%d/%m/%Y')}")
-            p.drawString(200, y, f"Production: {obj.total_production_kg:.2f} kg")
-            p.drawString(350, y, f"Déchets: {obj.dechets_kg:.2f} kg")
-            p.drawString(500, y, f"Statut: {'Validé' if obj.valide else 'En attente'}")
-            
-            y -= 25
+            data.append([
+                obj.date_production.strftime('%d/%m/%Y'),
+                obj.heure_debut.strftime('%H:%M') if obj.heure_debut else '',
+                obj.heure_fin.strftime('%H:%M') if obj.heure_fin else '',
+                obj.nombre_machines_actives,
+                f"{obj.production_bobines_finies_kg:.2f}",
+                f"{obj.production_bobines_semi_finies_kg:.2f}",
+                f"{obj.dechets_kg:.2f}",
+                f"{obj.total_production_kg:.2f}" if obj.total_production_kg else "0.00",
+                f"{obj.taux_dechet_pourcentage:.2f}%" if obj.taux_dechet_pourcentage else "0.00%",
+                "✓ Validé" if obj.valide else "✗ En attente"
+            ])
         
-        p.save()
-        buffer.seek(0)
+        title = "RAPPORT PRODUCTION IMPRIMERIE - SOFEM-CI"
+        filename = f"production_imprimerie_{datetime.now().strftime('%Y%m%d_%H%M')}"
         
-        response = HttpResponse(buffer, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="production_imprimerie_{datetime.now().strftime('%Y%m%d')}.pdf"'
-        return response
+        return create_pdf_export(title, headers, data, filename)
     export_pdf_action.short_description = "📄 Exporter en PDF"
     
     def export_excel_action(self, request, queryset):
         """Export Excel de la production imprimerie"""
-        import openpyxl
-        from django.http import HttpResponse
-        import io
-        
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "Production Imprimerie"
-        
-        # En-têtes
         headers = ['Date', 'Heure Début', 'Heure Fin', 'Machines Actives',
                   'Bobines Finies (kg)', 'Bobines Semi-Finies (kg)', 
                   'Déchets (kg)', 'Total Production (kg)', 'Taux Déchet %', 
                   'Observations', 'Statut']
         
-        for col_num, header in enumerate(headers, 1):
-            ws.cell(row=1, column=col_num, value=header)
+        data = []
+        for obj in queryset:
+            data.append([
+                obj.date_production,
+                obj.heure_debut.strftime('%H:%M') if obj.heure_debut else '',
+                obj.heure_fin.strftime('%H:%M') if obj.heure_fin else '',
+                obj.nombre_machines_actives,
+                float(obj.production_bobines_finies_kg),
+                float(obj.production_bobines_semi_finies_kg),
+                float(obj.dechets_kg),
+                float(obj.total_production_kg) if obj.total_production_kg else 0,
+                float(obj.taux_dechet_pourcentage) if obj.taux_dechet_pourcentage else 0,
+                obj.observations[:100] if obj.observations else '',
+                "Validé" if obj.valide else "En attente"
+            ])
         
-        # Données
-        for row_num, obj in enumerate(queryset, 2):
-            ws.cell(row=row_num, column=1, value=obj.date_production)
-            ws.cell(row=row_num, column=2, value=obj.heure_debut.strftime('%H:%M') if obj.heure_debut else '')
-            ws.cell(row=row_num, column=3, value=obj.heure_fin.strftime('%H:%M') if obj.heure_fin else '')
-            ws.cell(row=row_num, column=4, value=obj.nombre_machines_actives)
-            ws.cell(row=row_num, column=5, value=float(obj.production_bobines_finies_kg))
-            ws.cell(row=row_num, column=6, value=float(obj.production_bobines_semi_finies_kg))
-            ws.cell(row=row_num, column=7, value=float(obj.dechets_kg))
-            ws.cell(row=row_num, column=8, value=float(obj.total_production_kg) if obj.total_production_kg else 0)
-            ws.cell(row=row_num, column=9, value=float(obj.taux_dechet_pourcentage) if obj.taux_dechet_pourcentage else 0)
-            ws.cell(row=row_num, column=10, value=obj.observations[:100] if obj.observations else '')
-            ws.cell(row=row_num, column=11, value="Validé" if obj.valide else "En attente")
+        title = "Production Imprimerie"
+        filename = f"production_imprimerie_{datetime.now().strftime('%Y%m%d_%H%M')}"
         
-        buffer = io.BytesIO()
-        wb.save(buffer)
-        buffer.seek(0)
-        
-        response = HttpResponse(
-            buffer,
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-        response['Content-Disposition'] = f'attachment; filename="production_imprimerie_{datetime.now().strftime('%Y%m%d')}.xlsx"'
-        return response
+        return create_excel_export(title, headers, data, filename)
     export_excel_action.short_description = "📊 Exporter en Excel"
+
+# ==========================================
+# ADMINISTRATION PRODUCTION SOUDURE
+# ==========================================
 
 @admin.register(ProductionSoudure)
 class ProductionSoudureAdmin(admin.ModelAdmin):
@@ -452,7 +431,7 @@ class ProductionSoudureAdmin(admin.ModelAdmin):
                       'taux_dechet_pourcentage', 'date_creation', 'date_modification']
     ordering = ['-date_production']
     
-    # ACTIONS
+    # ACTIONS POUR SOUDURE - MÊME STRUCTURE
     actions = ['valider_production', 'invalider_production', 
                'export_pdf_action', 'export_excel_action']
     
@@ -472,20 +451,72 @@ class ProductionSoudureAdmin(admin.ModelAdmin):
     invalider_production.short_description = "❌ Invalider"
     
     def export_pdf_action(self, request, queryset):
-        from django.http import HttpResponse
-        response = HttpResponse("Export PDF Soudure", content_type='text/plain')
-        response['Content-Disposition'] = 'attachment; filename="soudure.txt"'
-        self.message_user(request, "Export PDF test pour soudure")
-        return response
+        """Export PDF de la production soudure"""
+        headers = ['Date', 'Heure Début', 'Heure Fin', 'Machines',
+                  'Bobines Finies (kg)', 'Bretelles (kg)', 'Rema (kg)', 
+                  'Batta (kg)', 'Sac Emballage (kg)', 'Déchets (kg)', 
+                  'Total Prod (kg)', 'Taux Déchet %', 'Statut']
+        
+        data = []
+        for obj in queryset:
+            data.append([
+                obj.date_production.strftime('%d/%m/%Y'),
+                obj.heure_debut.strftime('%H:%M') if obj.heure_debut else '',
+                obj.heure_fin.strftime('%H:%M') if obj.heure_fin else '',
+                obj.nombre_machines_actives,
+                f"{obj.production_bobines_finies_kg:.2f}",
+                f"{obj.production_bretelles_kg:.2f}",
+                f"{obj.production_rema_kg:.2f}",
+                f"{obj.production_batta_kg:.2f}",
+                f"{obj.production_sac_emballage_kg:.2f}",
+                f"{obj.dechets_kg:.2f}",
+                f"{obj.total_production_kg:.2f}" if obj.total_production_kg else "0.00",
+                f"{obj.taux_dechet_pourcentage:.2f}%" if obj.taux_dechet_pourcentage else "0.00%",
+                "✓ Validé" if obj.valide else "✗ En attente"
+            ])
+        
+        title = "RAPPORT PRODUCTION SOUDURE - SOFEM-CI"
+        filename = f"production_soudure_{datetime.now().strftime('%Y%m%d_%H%M')}"
+        
+        return create_pdf_export(title, headers, data, filename)
     export_pdf_action.short_description = "📄 Exporter en PDF"
     
     def export_excel_action(self, request, queryset):
-        from django.http import HttpResponse
-        response = HttpResponse("Export Excel Soudure", content_type='text/plain')
-        response['Content-Disposition'] = 'attachment; filename="soudure.csv"'
-        self.message_user(request, "Export Excel test pour soudure")
-        return response
+        """Export Excel de la production soudure"""
+        headers = ['Date', 'Heure Début', 'Heure Fin', 'Machines Actives',
+                  'Bobines Finies (kg)', 'Bretelles (kg)', 'Rema (kg)', 
+                  'Batta (kg)', 'Sac Emballage (kg)', 'Déchets (kg)',
+                  'Total Production (kg)', 'Taux Déchet %', 
+                  'Observations', 'Statut']
+        
+        data = []
+        for obj in queryset:
+            data.append([
+                obj.date_production,
+                obj.heure_debut.strftime('%H:%M') if obj.heure_debut else '',
+                obj.heure_fin.strftime('%H:%M') if obj.heure_fin else '',
+                obj.nombre_machines_actives,
+                float(obj.production_bobines_finies_kg),
+                float(obj.production_bretelles_kg),
+                float(obj.production_rema_kg),
+                float(obj.production_batta_kg),
+                float(obj.production_sac_emballage_kg),
+                float(obj.dechets_kg),
+                float(obj.total_production_kg) if obj.total_production_kg else 0,
+                float(obj.taux_dechet_pourcentage) if obj.taux_dechet_pourcentage else 0,
+                obj.observations[:100] if obj.observations else '',
+                "Validé" if obj.valide else "En attente"
+            ])
+        
+        title = "Production Soudure"
+        filename = f"production_soudure_{datetime.now().strftime('%Y%m%d_%H%M')}"
+        
+        return create_excel_export(title, headers, data, filename)
     export_excel_action.short_description = "📊 Exporter en Excel"
+
+# ==========================================
+# ADMINISTRATION PRODUCTION RECYCLAGE
+# ==========================================
 
 @admin.register(ProductionRecyclage)
 class ProductionRecyclageAdmin(admin.ModelAdmin):
@@ -496,7 +527,7 @@ class ProductionRecyclageAdmin(admin.ModelAdmin):
                       'taux_transformation_pourcentage', 'date_creation', 'date_modification']
     ordering = ['-date_production']
     
-    # ACTIONS
+    # ACTIONS POUR RECYCLAGE - MÊME STRUCTURE
     actions = ['valider_production', 'invalider_production', 
                'export_pdf_action', 'export_excel_action']
     
@@ -516,19 +547,57 @@ class ProductionRecyclageAdmin(admin.ModelAdmin):
     invalider_production.short_description = "❌ Invalider"
     
     def export_pdf_action(self, request, queryset):
-        from django.http import HttpResponse
-        response = HttpResponse("Export PDF Recyclage", content_type='text/plain')
-        response['Content-Disposition'] = 'attachment; filename="recyclage.txt"'
-        self.message_user(request, "Export PDF test pour recyclage")
-        return response
+        """Export PDF de la production recyclage"""
+        headers = ['Date', 'Équipe', 'Moulinex', 'Broyage (kg)', 
+                  'Bâche Noire (kg)', 'Total Prod (kg)', 
+                  'Prod/Moulinex', 'Taux Transfo %', 'Statut']
+        
+        data = []
+        for obj in queryset:
+            data.append([
+                obj.date_production.strftime('%d/%m/%Y'),
+                str(obj.equipe),
+                obj.nombre_moulinex,
+                f"{obj.production_broyage_kg:.2f}",
+                f"{obj.production_bache_noir_kg:.2f}",
+                f"{obj.total_production_kg:.2f}" if obj.total_production_kg else "0.00",
+                f"{obj.production_par_moulinex:.2f}" if obj.production_par_moulinex else "0.00",
+                f"{obj.taux_transformation_pourcentage:.2f}%" if obj.taux_transformation_pourcentage else "0.00%",
+                "✓ Validé" if obj.valide else "✗ En attente"
+            ])
+        
+        title = "RAPPORT PRODUCTION RECYCLAGE - SOFEM-CI"
+        filename = f"production_recyclage_{datetime.now().strftime('%Y%m%d_%H%M')}"
+        
+        return create_pdf_export(title, headers, data, filename)
     export_pdf_action.short_description = "📄 Exporter en PDF"
     
     def export_excel_action(self, request, queryset):
-        from django.http import HttpResponse
-        response = HttpResponse("Export Excel Recyclage", content_type='text/plain')
-        response['Content-Disposition'] = 'attachment; filename="recyclage.csv"'
-        self.message_user(request, "Export Excel test pour recyclage")
-        return response
+        """Export Excel de la production recyclage"""
+        headers = ['Date', 'Équipe', 'Nombre Moulinex',
+                  'Broyage (kg)', 'Bâche Noire (kg)', 'Total Production (kg)',
+                  'Production/Moulinex', 'Taux Transformation %', 
+                  'Observations', 'Statut']
+        
+        data = []
+        for obj in queryset:
+            data.append([
+                obj.date_production,
+                str(obj.equipe),
+                obj.nombre_moulinex,
+                float(obj.production_broyage_kg),
+                float(obj.production_bache_noir_kg),
+                float(obj.total_production_kg) if obj.total_production_kg else 0,
+                float(obj.production_par_moulinex) if obj.production_par_moulinex else 0,
+                float(obj.taux_transformation_pourcentage) if obj.taux_transformation_pourcentage else 0,
+                obj.observations[:100] if obj.observations else '',
+                "Validé" if obj.valide else "En attente"
+            ])
+        
+        title = "Production Recyclage"
+        filename = f"production_recyclage_{datetime.now().strftime('%Y%m%d_%H%M')}"
+        
+        return create_excel_export(title, headers, data, filename)
     export_excel_action.short_description = "📊 Exporter en Excel"
 
 # ==========================================

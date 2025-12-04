@@ -1,3 +1,5 @@
+# productions/views.py
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -5,7 +7,7 @@ from django.http import JsonResponse
 from django.core.paginator import Paginator
 from django.utils import timezone
 from django.db.models import Q, Sum
-from decimal import Decimal  
+from decimal import Decimal
 from datetime import date, timedelta, datetime
 from ..models import ProductionExtrusion, ProductionSoudure, ProductionImprimerie, ProductionRecyclage, Equipe, ZoneExtrusion
 from ..forms import ProductionExtrusionForm, ProductionImprimerieForm, ProductionSoudureForm, ProductionRecyclageForm
@@ -20,17 +22,20 @@ from ..utils import (
 @login_required
 def saisie_extrusion_view(request):
     # Initialisation des variables
-    form = ProductionExtrusionForm()
+    # Passer l'utilisateur à l'initialisation du formulaire pour le filtrage des zones/pré-remplissage du chef de zone
+    form = ProductionExtrusionForm(user=request.user) 
     zones = ZoneExtrusion.objects.filter(active=True)
     equipes = Equipe.objects.all()
     today = timezone.now().date()
     
     try:
         if request.method == 'POST':
-            form = ProductionExtrusionForm(request.POST)
+            # Repasser l'utilisateur pour la validation POST également
+            form = ProductionExtrusionForm(request.POST, user=request.user)
             if form.is_valid():
                 try:
                     production = form.save(commit=False)
+                    # Récupérer les heures de l'équipe et les assigner (logique de votre code)
                     equipe = production.equipe
                     production.heure_debut = equipe.heure_debut
                     production.heure_fin = equipe.heure_fin
@@ -44,7 +49,9 @@ def saisie_extrusion_view(request):
                     print(f"Erreur sauvegarde: {save_error}")
                     messages.error(request, f"❌ Erreur sauvegarde: {str(save_error)}")
             else:
-                messages.error(request, "❌ Veuillez corriger les erreurs dans le formulaire.")
+                # Afficher les erreurs détaillées du formulaire si la validation échoue
+                error_list = [f"{form.fields[k].label}: {v[0]}" for k, v in form.errors.items()]
+                messages.error(request, f"❌ Veuillez corriger les erreurs dans le formulaire: {', '.join(error_list)}")
         
         # Si GET ou après erreur POST
         context = {
@@ -82,8 +89,14 @@ def saisie_sections_view(request):
         messages.error(request, 'Accès refusé.')
         return redirect('dashboard')
     
-    # Gestion des formulaires POST
+    # --- CORRECTION: Initialisation des variables à None pour éviter UnboundLocalError ---
+    form_imprimerie = None
+    form_soudure = None
+    form_recyclage = None
     success_message = None
+    # -----------------------------------------------------------------------------------
+    
+    # Gestion des formulaires POST
     if request.method == 'POST':
         section = request.POST.get('section')
         
@@ -94,8 +107,11 @@ def saisie_sections_view(request):
                 production.cree_par = request.user
                 production.save()
                 success_message = '✅ Production imprimerie enregistrée avec succès !'
+                form_imprimerie = None # Réinitialiser le formulaire en cas de succès
             else:
-                messages.error(request, 'Erreur dans le formulaire imprimerie')
+                # DÉBOGAGE AJOUTÉ (Suggestion 2)
+                error_list = [f"{form_imprimerie.fields.get(k, k)}: {v[0]}" for k, v in form_imprimerie.errors.items()]
+                messages.error(request, f"❌ Erreur dans le formulaire imprimerie: {', '.join(error_list)}")
         
         elif section == 'soudure' and 'soudure' in user_sections:
             form_soudure = ProductionSoudureForm(request.POST)
@@ -104,8 +120,12 @@ def saisie_sections_view(request):
                 production.cree_par = request.user
                 production.save()
                 success_message = '✅ Production soudure enregistrée avec succès !'
+                form_soudure = None # Réinitialiser le formulaire en cas de succès
             else:
-                messages.error(request, 'Erreur dans le formulaire soudure')
+                # DÉBOGAGE AJOUTÉ (Suggestion 2)
+                print(f"Erreurs Soudure: {form_soudure.errors}") # Affichage console
+                error_list = [f"{form_soudure.fields.get(k, k)}: {v[0]}" for k, v in form_soudure.errors.items()]
+                messages.error(request, f"❌ Erreur dans le formulaire soudure: {', '.join(error_list)}")
         
         elif section == 'recyclage' and 'recyclage' in user_sections:
             form_recyclage = ProductionRecyclageForm(request.POST)
@@ -114,17 +134,27 @@ def saisie_sections_view(request):
                 production.cree_par = request.user
                 production.save()
                 success_message = '✅ Production recyclage enregistrée avec succès !'
+                form_recyclage = None # Réinitialiser le formulaire en cas de succès
             else:
-                messages.error(request, 'Erreur dans le formulaire recyclage')
+                # DÉBOGAGE AJOUTÉ (Suggestion 2)
+                error_list = [f"{form_recyclage.fields.get(k, k)}: {v[0]}" for k, v in form_recyclage.errors.items()]
+                messages.error(request, f"❌ Erreur dans le formulaire recyclage: {', '.join(error_list)}")
         
         if success_message:
             messages.success(request, success_message)
-            return redirect('historique')
     
-    # Initialisation des formulaires
-    form_imprimerie = ProductionImprimerieForm() if 'imprimerie' in user_sections else None
-    form_soudure = ProductionSoudureForm() if 'soudure' in user_sections else None
-    form_recyclage = ProductionRecyclageForm() if 'recyclage' in user_sections else None
+    # --- Rendu GET/Initialisation des formulaires pour le contexte ---
+    
+    # On initialise un nouveau formulaire seulement si la variable est None 
+    # (i.e. : GET initial ou POST réussi)
+    if form_imprimerie is None and 'imprimerie' in user_sections:
+        form_imprimerie = ProductionImprimerieForm()
+        
+    if form_soudure is None and 'soudure' in user_sections:
+        form_soudure = ProductionSoudureForm()
+        
+    if form_recyclage is None and 'recyclage' in user_sections:
+        form_recyclage = ProductionRecyclageForm()
     
     context = {
         'today': timezone.now().date(),
@@ -136,8 +166,6 @@ def saisie_sections_view(request):
     }
     
     return render(request, 'saisie_sections.html', context)
-
-
 
 
 @login_required
@@ -152,6 +180,8 @@ def saisie_imprimerie_ajax(request):
                 'success': True, 
                 'message': '✅ Production imprimerie enregistrée !'
             })
+        
+        # Retour détaillé des erreurs pour AJAX
         return JsonResponse({
             'success': False, 
             'errors': form.errors,
@@ -172,6 +202,8 @@ def saisie_soudure_ajax(request):
                 'success': True, 
                 'message': '✅ Production soudure enregistrée !'
             })
+            
+        # Retour détaillé des erreurs pour AJAX
         return JsonResponse({
             'success': False, 
             'errors': form.errors,
@@ -192,6 +224,8 @@ def saisie_recyclage_ajax(request):
                 'success': True, 
                 'message': '✅ Production recyclage enregistrée !'
             })
+        
+        # Retour détaillé des erreurs pour AJAX
         return JsonResponse({
             'success': False, 
             'errors': form.errors,

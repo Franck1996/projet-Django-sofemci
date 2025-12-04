@@ -164,7 +164,9 @@ def get_extrusion_details_jour(date):
     
     total_prod = aggregats['total_prod'] or 0
     dechets = aggregats['dechets'] or 0
-    taux_dechet = (dechets / (total_prod + dechets) * 100) if (total_prod + dechets) > 0 else 0
+    # S'assurer que les opérations sont effectuées entre types compatibles (Decimal / Decimal)
+    denominateur = total_prod + dechets
+    taux_dechet = (dechets / denominateur * Decimal('100')) if denominateur > 0 else 0
     
     return {
         'temps_travail': 8,
@@ -203,7 +205,9 @@ def get_imprimerie_details_jour(date):
     
     total = aggregats['total'] or 0
     dechets = aggregats['dechets'] or 0
-    taux_dechet = (dechets / (total + dechets) * 100) if (total + dechets) > 0 else 0
+    denominateur = total + dechets
+    # Correction: Utilisation de Decimal('100')
+    taux_dechet = (dechets / denominateur * Decimal('100')) if denominateur > 0 else 0
     
     return {
         'temps_travail': 8,
@@ -244,7 +248,9 @@ def get_soudure_details_jour(date):
     
     total = aggregats['total'] or 0
     dechets = aggregats['dechets'] or 0
-    taux_dechet = (dechets / (total + dechets) * 100) if (total + dechets) > 0 else 0
+    denominateur = total + dechets
+    # Correction: Utilisation de Decimal('100')
+    taux_dechet = (dechets / denominateur * Decimal('100')) if denominateur > 0 else 0
     
     return {
         'temps_travail': 8,
@@ -272,6 +278,7 @@ def get_recyclage_details_jour(date):
             'taux_transformation': 0,
             'rendement': 0,
             'productivite_par_moulinex': 0,
+            'temps_travail': 0, # Ajout pour être complet
         }
     
     aggregats = productions.aggregate(
@@ -281,16 +288,27 @@ def get_recyclage_details_jour(date):
         total=Sum('total_production_kg')
     )
     
-    broyage = aggregats['broyage'] or 0
-    bache = aggregats['bache'] or 0
-    total = aggregats['total'] or 0
-    moulinex_avg = aggregats['moulinex'] or 1
+    # Assurer que les totaux sont des Decimals
+    broyage = aggregats['broyage'] or Decimal('0')
+    bache = aggregats['bache'] or Decimal('0')
+    total = aggregats['total'] or Decimal('0')
     
-    taux_transformation = (bache / broyage * 100) if broyage > 0 else 0
-    productivite = (total / moulinex_avg) if moulinex_avg > 0 else 0
+    # Gérer la moyenne qui peut être None ou float
+    moulinex_avg_float = aggregats['moulinex']
+    moulinex_avg = Decimal(str(moulinex_avg_float)) if moulinex_avg_float is not None else Decimal('1')
+    
+    # CORRECTION DE L'ERREUR Type : Utilisation de Decimal('100') pour la multiplication
+    # L'erreur se produisait ici : (bache / broyage * 100)
+    taux_transformation = (bache / broyage * Decimal('100')) if broyage > 0 else 0
+    
+    # S'assurer que moulinex_avg est >= 1 pour la division, sinon on utilise 1 (représenté par Decimal('1') ci-dessus)
+    productivite = (total / moulinex_avg) if moulinex_avg >= Decimal('1') else Decimal('0')
+    
+    # Utilisation de la valeur float pour l'affichage 'moulinex_actifs' si elle est disponible
+    moulinex_actifs_display = round(moulinex_avg_float or 0, 0)
     
     return {
-        'moulinex_actifs': round(moulinex_avg, 0),
+        'moulinex_actifs': moulinex_actifs_display,
         'moulinex_totaux': Machine.objects.filter(section='recyclage').count(),
         'total_broyage': broyage,
         'total_bache_noir': bache,
@@ -361,7 +379,7 @@ def calculer_pourcentage_production(production_actuelle, production_reference=No
     if production_reference == 0:
         return 0
     
-    pourcentage = (production_actuelle / production_reference) * 100
+    pourcentage = (production_actuelle / production_reference) * Decimal('100')
     return round(pourcentage, 1)
 
 def calculer_pourcentage_section(section, production_actuelle):
@@ -378,7 +396,7 @@ def calculer_pourcentage_section(section, production_actuelle):
     if objectif == 0:
         return 0
     
-    return round((production_actuelle / objectif) * 100, 1)
+    return round((production_actuelle / objectif) * Decimal('100'), 1)
 
 def get_objectif_section(section):
     """Retourne l'objectif journalier d'une section"""

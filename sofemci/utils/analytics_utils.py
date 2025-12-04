@@ -132,33 +132,61 @@ def get_soudure_details_jour_complet(date):
         'total_dechets': aggregats['dechets'] or 0,
     }
 
-def get_recyclage_details_jour_complet(date):
-    """Détails complets recyclage du jour"""
-    productions = ProductionRecyclage.objects.filter(date_production=date)
-    
-    if not productions.exists():
+def get_recyclage_details_jour():
+    """Détails production recyclage aujourd'hui"""
+    try:
+        today = timezone.now().date()
+        
+        # Récupérer les données
+        productions = ProductionRecyclage.objects.filter(date_production=today)
+        
+        if not productions.exists():
+            return {
+                'total_production_kg': Decimal('0.00'),
+                'production_par_moulinex': Decimal('0.00'),
+                'taux_transformation': Decimal('0.00'),
+                'count': 0
+            }
+        
+        # Initialiser avec Decimal
+        total_production = Decimal('0.00')
+        total_broyage = Decimal('0.00')
+        total_bache = Decimal('0.00')
+        total_moulinex = 0
+        
+        # Calculer les totaux
+        for prod in productions:
+            total_production += (prod.total_production_kg or Decimal('0.00'))
+            total_broyage += (prod.production_broyage_kg or Decimal('0.00'))
+            total_bache += (prod.production_bache_noir_kg or Decimal('0.00'))
+            total_moulinex += (prod.nombre_moulinex or 0)
+        
+        # Calcul production par moulinex
+        if total_moulinex > 0:
+            # Convertir total_moulinex en Decimal pour la division
+            production_par_moulinex = total_production / Decimal(str(total_moulinex))
+        else:
+            production_par_moulinex = Decimal('0.00')
+        
+        # Calcul taux transformation
+        if total_broyage > Decimal('0'):
+            taux_transformation = (total_bache / total_broyage) * Decimal('100')
+        else:
+            taux_transformation = Decimal('0.00')
+        
+        # Formater pour l'affichage
         return {
-            'nombre_moulinex': 0,
-            'production_broyage': 0,
-            'production_bache_noir': 0,
-            'total_production': 0,
-            'equipes_actives': [],
+            'total_production_kg': total_production.quantize(Decimal('0.01')),
+            'production_par_moulinex': production_par_moulinex.quantize(Decimal('0.01')),
+            'taux_transformation': taux_transformation.quantize(Decimal('0.01')),
+            'count': productions.count()
         }
-    
-    aggregats = productions.aggregate(
-        moulinex=Avg('nombre_moulinex'),
-        broyage=Sum('production_broyage_kg'),
-        bache=Sum('production_bache_noir_kg'),
-        total=Sum('total_production_kg')
-    )
-    
-    # Équipes qui ont travaillé
-    equipes = productions.values_list('equipe__nom', flat=True).distinct()
-    
-    return {
-        'nombre_moulinex': round(aggregats['moulinex'] or 0, 0),
-        'production_broyage': aggregats['broyage'] or 0,
-        'production_bache_noir': aggregats['bache'] or 0,
-        'total_production': aggregats['total'] or 0,
-        'equipes_actives': list(equipes),
-    }
+        
+    except Exception as e:
+        print(f"Erreur dans get_recyclage_details_jour: {e}")
+        return {
+            'total_production_kg': Decimal('0.00'),
+            'production_par_moulinex': Decimal('0.00'),
+            'taux_transformation': Decimal('0.00'),
+            'count': 0
+        }
