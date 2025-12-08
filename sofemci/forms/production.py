@@ -6,11 +6,18 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from decimal import Decimal
-from ..models import ProductionExtrusion, ProductionImprimerie, ProductionSoudure, ProductionRecyclage, Equipe, ZoneExtrusion
+from ..models import (
+    ProductionExtrusion,
+    ProductionImprimerie,
+    ProductionSoudure,
+    ProductionRecyclage,
+    Equipe,
+    ZoneExtrusion
+)
 
 
 class ProductionExtrusionForm(forms.ModelForm):
-    """Formulaire saisie production Extrusion - VERSION PROFESSIONNELLE"""
+    """Formulaire saisie production Extrusion - VERSION PROFESSIONNELLE (SANS validation d'unicité stricte)"""
     
     class Meta:
         model = ProductionExtrusion
@@ -20,7 +27,7 @@ class ProductionExtrusionForm(forms.ModelForm):
             'nombre_bobines_kg', 'production_finis_kg', 'production_semi_finis_kg',
             'dechets_kg', 'chef_zone', 'observations'
         ]
-        
+
         widgets = {
             'date_production': forms.DateInput(attrs={
                 'type': 'date',
@@ -103,7 +110,7 @@ class ProductionExtrusionForm(forms.ModelForm):
                 'id': 'extrusion_observations'
             }),
         }
-    
+
     def __init__(self, *args, **kwargs):
         """Initialisation avec gestion de l'utilisateur"""
         self.user = kwargs.pop('user', None)
@@ -112,23 +119,23 @@ class ProductionExtrusionForm(forms.ModelForm):
         if self.user:
             self.personnaliser_selon_utilisateur()
             self.pre_remplir_champs()
-    
+
     def personnaliser_selon_utilisateur(self):
-        """Personnalise le formulaire selon le rôle"""
-        if self.user.role == 'chef_extrusion':
+        """Personnalise le queryset du champ zone selon le rôle de l'utilisateur"""
+        if self.user and self.user.role == 'chef_extrusion':
             self.fields['zone'].queryset = ZoneExtrusion.objects.filter(
                 chef_zone=self.user, active=True
             )
         else:
             self.fields['zone'].queryset = ZoneExtrusion.objects.filter(active=True)
-    
+
     def pre_remplir_champs(self):
-        """Pré-remplit automatiquement"""
+        """Pré-remplit automatiquement le chef de zone et la date"""
         if self.user and not self.instance.pk:
             full_name = f"{self.user.first_name} {self.user.last_name}".strip()
             self.fields['chef_zone'].initial = full_name if full_name else self.user.username
             self.fields['date_production'].initial = timezone.now().date()
-    
+
     def clean_date_production(self):
         date = self.cleaned_data['date_production']
         
@@ -141,11 +148,11 @@ class ProductionExtrusionForm(forms.ModelForm):
         limite = timezone.now().date() - timezone.timedelta(days=30)
         if date < limite:
             raise ValidationError("Impossible de saisir plus de 30 jours.")
-        
+
         return date
-    
+
     def clean(self):
-        """Validation globale SANS vérification d'unicité"""
+        """Validation globale SANS vérification d'unicité (avec avertissement)"""
         cleaned_data = super().clean()
         
         # Avertissement pour doublons (non bloquant)
@@ -179,7 +186,7 @@ class ProductionImprimerieForm(forms.ModelForm):
             'nombre_machines_actives', 'production_bobines_finies_kg',
             'production_bobines_semi_finies_kg', 'dechets_kg', 'observations'
         ]
-        
+
         widgets = {
             'date_production': forms.DateInput(attrs={
                 'type': 'date',
@@ -269,9 +276,11 @@ class ProductionImprimerieForm(forms.ModelForm):
                 dt_debut = datetime.combine(datetime.min, heure_debut)
                 dt_fin = datetime.combine(datetime.min, heure_fin)
                 
-                if dt_fin < dt_debut and (dt_debut - dt_fin).seconds > 10 * 3600:
+                # J'ai ajusté la condition pour ne pas utiliser `(dt_debut - dt_fin).seconds > 10 * 3600` 
+                # car le sens de la comparaison est suffisant.
+                if dt_fin < dt_debut:
                     self.add_error('heure_fin', 
-                        "L'heure de fin doit être après l'heure de début.")
+                        "L'heure de fin doit être après l'heure de début, ou le lendemain (si l'heure de début est plus tard que l'heure de fin).")
             except Exception as e:
                 self.add_error(None, f"Erreur validation heures: {e}")
         
@@ -300,7 +309,7 @@ class ProductionSoudureForm(forms.ModelForm):
             'production_bretelles_kg', 'production_rema_kg', 'production_batta_kg',
             'production_sac_emballage_kg', 'dechets_kg', 'observations'
         ]
-        
+
         widgets = {
             'date_production': forms.DateInput(attrs={
                 'type': 'date',
@@ -411,9 +420,10 @@ class ProductionSoudureForm(forms.ModelForm):
                 dt_debut = datetime.combine(datetime.min, heure_debut)
                 dt_fin = datetime.combine(datetime.min, heure_fin)
                 
-                if dt_fin < dt_debut and (dt_debut - dt_fin).seconds > 10 * 3600:
+                # J'ai ajusté la condition
+                if dt_fin < dt_debut:
                     self.add_error('heure_fin', 
-                        "L'heure de fin doit être après l'heure de début.")
+                        "L'heure de fin doit être après l'heure de début, ou le lendemain.")
             except Exception as e:
                 self.add_error(None, f"Erreur validation heures: {e}")
         
@@ -440,7 +450,7 @@ class ProductionRecyclageForm(forms.ModelForm):
             'date_production', 'equipe', 'nombre_moulinex',
             'production_broyage_kg', 'production_bache_noir_kg', 'observations'
         ]
-        
+
         widgets = {
             'date_production': forms.DateInput(attrs={
                 'type': 'date',

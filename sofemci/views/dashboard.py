@@ -9,7 +9,7 @@ from decimal import Decimal
 import json
 
 from ..models import (
-    ProductionExtrusion, ProductionSoudure, ProductionImprimerie, 
+    ProductionExtrusion, ProductionSoudure, ProductionImprimerie,
     ProductionRecyclage, Equipe, Machine, ZoneExtrusion
 )
 
@@ -19,7 +19,7 @@ from ..utils import (
     get_extrusion_details_jour, get_imprimerie_details_jour, get_soudure_details_jour,
     get_recyclage_details_jour, get_chart_data_for_dashboard, get_analytics_kpis,
     get_analytics_table_data, calculer_pourcentage_production, calculer_pourcentage_section,
-    get_objectif_section, 
+    get_objectif_section,
 )
 
 # ==========================================
@@ -29,27 +29,27 @@ from ..utils import (
 def get_production_totale_jour(date):
     """Production totale d'un jour"""
     total = Decimal('0')
-    
+
     # Extrusion
     extrusion_total = ProductionExtrusion.objects.filter(date_production=date).aggregate(
         Sum('total_production_kg'))['total_production_kg__sum'] or Decimal('0')
     total += extrusion_total
-    
+
     # Imprimerie
     imprimerie_total = ProductionImprimerie.objects.filter(date_production=date).aggregate(
         Sum('total_production_kg'))['total_production_kg__sum'] or Decimal('0')
     total += imprimerie_total
-    
+
     # Soudure
     soudure_total = ProductionSoudure.objects.filter(date_production=date).aggregate(
         Sum('total_production_kg'))['total_production_kg__sum'] or Decimal('0')
     total += soudure_total
-    
+
     # Recyclage
     recyclage_total = ProductionRecyclage.objects.filter(date_production=date).aggregate(
         Sum('total_production_kg'))['total_production_kg__sum'] or Decimal('0')
     total += recyclage_total
-    
+
     return total
 
 def get_production_section_jour(section, date):
@@ -60,11 +60,11 @@ def get_production_section_jour(section, date):
         'soudure': ProductionSoudure,
         'recyclage': ProductionRecyclage,
     }
-    
+
     model = models_map.get(section)
     if not model:
         return Decimal('0')
-    
+
     result = model.objects.filter(date_production=date).aggregate(
         Sum('total_production_kg'))['total_production_kg__sum'] or Decimal('0')
     return result
@@ -72,30 +72,36 @@ def get_production_section_jour(section, date):
 def get_dechets_totaux_jour(date):
     """Total des déchets d'un jour"""
     total = Decimal('0')
-    
+
     # Extrusion
     extrusion_dechets = ProductionExtrusion.objects.filter(date_production=date).aggregate(
         Sum('dechets_kg'))['dechets_kg__sum'] or Decimal('0')
     total += extrusion_dechets
-    
+
     # Imprimerie
     imprimerie_dechets = ProductionImprimerie.objects.filter(date_production=date).aggregate(
         Sum('dechets_kg'))['dechets_kg__sum'] or Decimal('0')
     total += imprimerie_dechets
-    
+
     # Soudure
     soudure_dechets = ProductionSoudure.objects.filter(date_production=date).aggregate(
         Sum('dechets_kg'))['dechets_kg__sum'] or Decimal('0')
     total += soudure_dechets
-    
+
     return total
 
 def get_efficacite_moyenne_jour(date):
     """Efficacité moyenne d'un jour"""
-    efficacite = ProductionExtrusion.objects.filter(date_production=date).aggregate(
-        Avg('rendement_pourcentage'))['rendement_pourcentage__avg'] or Decimal('0')
-    
-    return round(efficacite, 1) if efficacite else 0
+    # L'Avg() renvoie un float, mais nous devons le traiter pour la compatibilité
+    efficacite_float = ProductionExtrusion.objects.filter(date_production=date).aggregate(
+        Avg('rendement_pourcentage'))['rendement_pourcentage__avg']
+
+    # Convertir en Decimal si ce n'est pas None, puis arrondir
+    if efficacite_float is not None:
+        # Conversion du float au Decimal pour le round éventuel, puis au type de retour attendu
+        return round(Decimal(str(efficacite_float)), 1)
+
+    return Decimal('0')
 
 def get_machines_stats():
     """Statistiques des machines"""
@@ -118,14 +124,21 @@ def get_zones_performance(date):
             machines=Avg('nombre_machines_actives'),
             efficacite=Avg('rendement_pourcentage')
         )
-        
+
+        # Les résultats de l'agrégation Avg() sont des floats, on les convertit en Decimal pour l'affichage
+        machines_avg = prod_zone['machines']
+        efficacite_avg = prod_zone['efficacite']
+
+        machines_actives = int(round(Decimal(str(machines_avg)), 0)) if machines_avg is not None else 0
+        efficacite = round(Decimal(str(efficacite_avg)), 1) if efficacite_avg is not None else 0
+
         zones_performance.append({
             'zone': zone,
             'production': prod_zone['total'] or 0,
-            'machines_actives': int(prod_zone['machines'] or 0),
-            'efficacite': round(prod_zone['efficacite'] or 0, 1)
+            'machines_actives': machines_actives,
+            'efficacite': efficacite
         })
-    
+
     return zones_performance
 
 def get_zones_utilisateur(user):
@@ -137,7 +150,7 @@ def get_zones_utilisateur(user):
 def get_extrusion_details_jour(date):
     """Détails extrusion du jour"""
     productions = ProductionExtrusion.objects.filter(date_production=date)
-    
+
     if not productions.exists():
         return {
             'temps_travail': 0,
@@ -149,7 +162,7 @@ def get_extrusion_details_jour(date):
             'dechets_totaux': 0,
             'taux_dechet': 0,
         }
-    
+
     aggregats = productions.aggregate(
         matiere_premiere=Sum('matiere_premiere_kg'),
         prod_finis=Sum('production_finis_kg'),
@@ -159,15 +172,16 @@ def get_extrusion_details_jour(date):
         machinistes_total=Sum('nombre_machinistes'),
         count_productions=Count('id')
     )
-    
+
     nombre_moyen_machinistes = (aggregats['machinistes_total'] / aggregats['count_productions']) if aggregats['count_productions'] > 0 else 0
-    
+
     total_prod = aggregats['total_prod'] or 0
     dechets = aggregats['dechets'] or 0
-    # S'assurer que les opérations sont effectuées entre types compatibles (Decimal / Decimal)
-    denominateur = total_prod + dechets
-    taux_dechet = (dechets / denominateur * Decimal('100')) if denominateur > 0 else 0
-    
+
+    # S'assurer que les calculs de taux se font entre Decimals
+    somme_total = total_prod + dechets
+    taux_dechet = (dechets / somme_total * Decimal('100')) if somme_total > 0 else 0
+
     return {
         'temps_travail': 8,
         'machinistes_moyen': round(nombre_moyen_machinistes, 0),
@@ -182,7 +196,7 @@ def get_extrusion_details_jour(date):
 def get_imprimerie_details_jour(date):
     """Détails imprimerie du jour"""
     productions = ProductionImprimerie.objects.filter(date_production=date)
-    
+
     if not productions.exists():
         return {
             'temps_travail': 0,
@@ -194,27 +208,37 @@ def get_imprimerie_details_jour(date):
             'dechets_totaux': 0,
             'taux_dechet': 0,
         }
-    
+
+    # Correction: Nommer explicitement les clés pour qu'elles correspondent à l'accès ci-dessous
     aggregats = productions.aggregate(
         machines=Avg('nombre_machines_actives'),
-        bobines_finis=Sum('production_bobines_finies_kg'),
-        bobines_semi_finis=Sum('production_bobines_semi_finies_kg'),
+        bobines_finies=Sum('production_bobines_finies_kg'), # Clé 'bobines_finies'
+        bobines_semi_finies=Sum('production_bobines_semi_finies_kg'), # Clé 'bobines_semi_finies'
         total=Sum('total_production_kg'),
         dechets=Sum('dechets_kg')
     )
-    
-    total = aggregats['total'] or 0
-    dechets = aggregats['dechets'] or 0
-    denominateur = total + dechets
-    # Correction: Utilisation de Decimal('100')
-    taux_dechet = (dechets / denominateur * Decimal('100')) if denominateur > 0 else 0
-    
+
+    # Gérer la possibilité que l'Avg (machines) soit None (float)
+    machines_avg_float = aggregats.get('machines')
+    machines_actives = round(Decimal(str(machines_avg_float)), 0) if machines_avg_float is not None else 0
+
+    # Utiliser .get(key) ou l'opérateur 'or' pour fournir une valeur par défaut Decimal('0') si la clé est présente mais None
+    bobines_finis = aggregats.get('bobines_finies') or Decimal('0')
+    bobines_semi_finies = aggregats.get('bobines_semi_finies') or Decimal('0')
+
+    total = aggregats.get('total') or Decimal('0')
+    dechets = aggregats.get('dechets') or Decimal('0')
+
+    # S'assurer que les calculs de taux se font entre Decimals
+    somme_total = total + dechets
+    taux_dechet = (dechets / somme_total * Decimal('100')) if somme_total > 0 else 0
+
     return {
         'temps_travail': 8,
-        'machines_actives': round(aggregats['machines'] or 0, 0),
+        'machines_actives': machines_actives,
         'machines_totales': Machine.objects.filter(section='imprimerie').count(),
-        'bobines_finies': aggregats['bobines_finis'] or 0,
-        'bobines_semi_finies': aggregats['bobines_semi_finis'] or 0,
+        'bobines_finies': bobines_finis,
+        'bobines_semi_finies': bobines_semi_finies,
         'production_totale': total,
         'dechets_totaux': dechets,
         'taux_dechet': round(taux_dechet, 1),
@@ -223,7 +247,7 @@ def get_imprimerie_details_jour(date):
 def get_soudure_details_jour(date):
     """Détails soudure du jour"""
     productions = ProductionSoudure.objects.filter(date_production=date)
-    
+
     if not productions.exists():
         return {
             'temps_travail': 0,
@@ -236,7 +260,7 @@ def get_soudure_details_jour(date):
             'dechets_totaux': 0,
             'taux_dechet': 0,
         }
-    
+
     aggregats = productions.aggregate(
         machines=Avg('nombre_machines_actives'),
         bretelles=Sum('production_bretelles_kg'),
@@ -245,16 +269,21 @@ def get_soudure_details_jour(date):
         total=Sum('total_production_kg'),
         dechets=Sum('dechets_kg')
     )
-    
+
+    # Conversion de l'Avg() en Decimal
+    machines_avg = aggregats['machines']
+    machines_actives = round(Decimal(str(machines_avg)), 0) if machines_avg is not None else 0
+
     total = aggregats['total'] or 0
     dechets = aggregats['dechets'] or 0
-    denominateur = total + dechets
-    # Correction: Utilisation de Decimal('100')
-    taux_dechet = (dechets / denominateur * Decimal('100')) if denominateur > 0 else 0
-    
+
+    # S'assurer que les calculs de taux se font entre Decimals
+    somme_total = total + dechets
+    taux_dechet = (dechets / somme_total * Decimal('100')) if somme_total > 0 else 0
+
     return {
         'temps_travail': 8,
-        'machines_actives': round(aggregats['machines'] or 0, 0),
+        'machines_actives': machines_actives,
         'machines_totales': Machine.objects.filter(section='soudure').count(),
         'production_bretelles': aggregats['bretelles'] or 0,
         'production_rema': aggregats['rema'] or 0,
@@ -267,7 +296,7 @@ def get_soudure_details_jour(date):
 def get_recyclage_details_jour(date):
     """Détails recyclage du jour"""
     productions = ProductionRecyclage.objects.filter(date_production=date)
-    
+
     if not productions.exists():
         return {
             'moulinex_actifs': 0,
@@ -280,35 +309,34 @@ def get_recyclage_details_jour(date):
             'productivite_par_moulinex': 0,
             'temps_travail': 0, # Ajout pour être complet
         }
-    
+
     aggregats = productions.aggregate(
         moulinex=Avg('nombre_moulinex'),
         broyage=Sum('production_broyage_kg'),
         bache=Sum('production_bache_noir_kg'),
         total=Sum('total_production_kg')
     )
-    
-    # Assurer que les totaux sont des Decimals
-    broyage = aggregats['broyage'] or Decimal('0')
-    bache = aggregats['bache'] or Decimal('0')
-    total = aggregats['total'] or Decimal('0')
-    
-    # Gérer la moyenne qui peut être None ou float
+
+    broyage = aggregats['broyage'] or 0
+    bache = aggregats['bache'] or 0
+    total = aggregats['total'] or 0
+
+    # CORRECTION DE L'ERREUR Decimal/float:
+    # L'agrégation Avg() (moulinex_avg) retourne un float. Il faut le convertir en Decimal.
     moulinex_avg_float = aggregats['moulinex']
-    moulinex_avg = Decimal(str(moulinex_avg_float)) if moulinex_avg_float is not None else Decimal('1')
-    
-    # CORRECTION DE L'ERREUR Type : Utilisation de Decimal('100') pour la multiplication
-    # L'erreur se produisait ici : (bache / broyage * 100)
+    moulinex_avg_decimal = Decimal(str(moulinex_avg_float)) if moulinex_avg_float is not None else Decimal('1') # Convertir float en Decimal
+
+    # Correction pour le cas où l'agrégation retourne None (si aucune production)
+    moulinex_avg = moulinex_avg_decimal if moulinex_avg_decimal > 0 else Decimal('1')
+
+    # Calcul du taux de transformation (Decimal / Decimal)
     taux_transformation = (bache / broyage * Decimal('100')) if broyage > 0 else 0
-    
-    # S'assurer que moulinex_avg est >= 1 pour la division, sinon on utilise 1 (représenté par Decimal('1') ci-dessus)
-    productivite = (total / moulinex_avg) if moulinex_avg >= Decimal('1') else Decimal('0')
-    
-    # Utilisation de la valeur float pour l'affichage 'moulinex_actifs' si elle est disponible
-    moulinex_actifs_display = round(moulinex_avg_float or 0, 0)
-    
+
+    # Calcul de la productivité (Decimal / Decimal)
+    productivite = (total / moulinex_avg) if moulinex_avg > 0 else 0
+
     return {
-        'moulinex_actifs': moulinex_actifs_display,
+        'moulinex_actifs': round(moulinex_avg_decimal, 0) if moulinex_avg_float is not None else 0, # Utiliser le float converti pour l'arrondi
         'moulinex_totaux': Machine.objects.filter(section='recyclage').count(),
         'total_broyage': broyage,
         'total_bache_noir': bache,
@@ -375,10 +403,10 @@ def calculer_pourcentage_production(production_actuelle, production_reference=No
     """Calcule le pourcentage de production"""
     if production_reference is None:
         production_reference = Decimal('75000')
-    
+
     if production_reference == 0:
         return 0
-    
+
     pourcentage = (production_actuelle / production_reference) * Decimal('100')
     return round(pourcentage, 1)
 
@@ -390,12 +418,12 @@ def calculer_pourcentage_section(section, production_actuelle):
         'soudure': Decimal('12000'),
         'recyclage': Decimal('8000'),
     }
-    
+
     objectif = objectifs.get(section, Decimal('10000'))
-    
+
     if objectif == 0:
         return 0
-    
+
     return round((production_actuelle / objectif) * Decimal('100'), 1)
 
 def get_objectif_section(section):
@@ -422,48 +450,48 @@ def dashboard_view(request):
             selected_date = timezone.now().date()
     else:
         selected_date = timezone.now().date()
-    
+
     # Calculs de production
     production_totale = get_production_totale_jour(selected_date)
     production_extrusion = get_production_section_jour('extrusion', selected_date)
     production_imprimerie = get_production_section_jour('imprimerie', selected_date)
     production_soudure = get_production_section_jour('soudure', selected_date)
     production_recyclage = get_production_section_jour('recyclage', selected_date)
-    
+
     # Objectif journalier total
     objectif_total = Decimal('75000')
-    
+
     context = {
         'today': selected_date,
         'selected_date': selected_date,
         'is_today': selected_date == timezone.now().date(),
-        
+
         # Productions avec pourcentages
         'production_totale': production_totale,
         'pourcentage_production_totale': calculer_pourcentage_production(production_totale, objectif_total),
         'objectif_total': objectif_total,
-        
+
         'production_extrusion': production_extrusion,
         'pourcentage_extrusion': calculer_pourcentage_section('extrusion', production_extrusion),
         'objectif_extrusion': get_objectif_section('extrusion'),
-        
+
         'production_imprimerie': production_imprimerie,
         'pourcentage_imprimerie': calculer_pourcentage_section('imprimerie', production_imprimerie),
         'objectif_imprimerie': get_objectif_section('imprimerie'),
-        
+
         'production_soudure': production_soudure,
         'pourcentage_soudure': calculer_pourcentage_section('soudure', production_soudure),
         'objectif_soudure': get_objectif_section('soudure'),
-        
+
         'production_recyclage': production_recyclage,
         'pourcentage_recyclage': calculer_pourcentage_section('recyclage', production_recyclage),
         'objectif_recyclage': get_objectif_section('recyclage'),
-        
+
         'total_dechets': get_dechets_totaux_jour(selected_date),
         'efficacite_moyenne': get_efficacite_moyenne_jour(selected_date),
         'machines_stats': get_machines_stats(),
         'zones_performance': get_zones_performance(selected_date),
-       
+
         'extrusion_stats': get_extrusion_details_jour(selected_date),
         'imprimerie_stats': get_imprimerie_details_jour(selected_date),
         'soudure_stats': get_soudure_details_jour(selected_date),
@@ -472,7 +500,7 @@ def dashboard_view(request):
         'analytics_kpis': get_analytics_kpis(),
         'analytics_table': get_analytics_table_data(),
     }
-    
+
     return render(request, 'dashboard.html', context)
 
 @login_required
@@ -481,7 +509,7 @@ def dashboard_ia_view(request):
     if request.user.role not in ['superviseur', 'admin', 'direction']:
         messages.error(request, 'Accès refusé.')
         return redirect('dashboard')
-    
+
     # Statistiques simplifiées
     stats_parc = {
         'score_sante_moyen': 85.0,
@@ -489,7 +517,7 @@ def dashboard_ia_view(request):
         'machines_risque_eleve': 5,
         'anomalies_detectees': 3,
     }
-    
+
     # Machines critiques simplifiées
     machines_critiques = []
     for machine in Machine.objects.filter(etat='actif')[:5]:
@@ -501,10 +529,10 @@ def dashboard_ia_view(request):
             'probabilite_panne_7_jours': getattr(machine, 'probabilite_panne_7_jours', 0) or 0,
             'score_sante_global': getattr(machine, 'score_sante_global', 0) or 0,
         })
-    
+
     # Alertes IA simplifiées
     alertes = []
-    
+
     # Machines actives simplifiées
     machines_actives = []
     for machine in Machine.objects.filter(etat='actif')[:10]:
@@ -516,14 +544,14 @@ def dashboard_ia_view(request):
             'score_sante_global': getattr(machine, 'score_sante_global', 0) or 0,
             'probabilite_panne_7_jours': getattr(machine, 'probabilite_panne_7_jours', 0) or 0,
         })
-    
+
     context = {
         'stats_parc': stats_parc,
         'machines_critiques': machines_critiques,
         'alertes': alertes,
         'machines_actives': machines_actives,
     }
-    
+
     return render(request, 'dashboard_ia.html', context)
 
 @login_required
@@ -532,7 +560,7 @@ def dashboard_direction_view(request):
     if request.user.role not in ['direction', 'admin']:
         messages.error(request, 'Accès refusé. Réservé à la direction.')
         return redirect('dashboard')
-    
+
     context = {
         'ca_mensuel': Decimal('45000000'),
         'objectif_ca': Decimal('50000000'),
@@ -551,5 +579,109 @@ def dashboard_direction_view(request):
         'labels_production': json.dumps(['Extrusion', 'Imprimerie', 'Soudure', 'Recyclage']),
         'data_production': json.dumps([80000, 35000, 25000, 10000]),
     }
-    
+
     return render(request, 'dashboard_direction.html', context)
+
+# ==========================================
+# VUES DASHBOARD (Suite de la continuité)
+# ==========================================
+
+@login_required
+def analytics_view(request):
+    """
+    Vue pour l'analyse détaillée des performances de production.
+    Utilise les fonctions utilitaires 'get_analytics_kpis' et 'get_analytics_table_data'.
+    """
+    if request.user.role not in ['superviseur', 'admin', 'direction', 'chef_extrusion', 'chef_imprimerie', 'chef_soudure', 'chef_recyclage']:
+        messages.error(request, 'Accès aux analyses refusé.')
+        return redirect('dashboard')
+
+    analytics_kpis = get_analytics_kpis()
+    analytics_table = get_analytics_table_data()
+
+    context = {
+        'page_title': 'Analyses Détaillées',
+        'kpis': analytics_kpis,
+        'table_data': analytics_table,
+        'periode_analyse': 'Mois en cours (Données Simulées)',
+    }
+
+    return render(request, 'analytics.html', context)
+
+
+@login_required
+def chart_data_api(request):
+    """
+    Endpoint API pour récupérer les données de graphique asynchrones.
+    """
+
+    # Récupérer les paramètres de l'URL
+    period_type = request.GET.get('type', 'jour')
+    date_str = request.GET.get('date', timezone.now().strftime('%Y-%m-%d'))
+
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        selected_date = timezone.now().date()
+
+    # LOGIQUE DE RÉCUPÉRATION DES DONNÉES EN FONCTION DU TYPE/DATE
+
+    # 1. Cas 'jour'
+    if period_type == 'jour':
+        production_extrusion = get_production_section_jour('extrusion', selected_date)
+        production_soudure = get_production_section_jour('soudure', selected_date)
+        dechets_totaux = get_dechets_totaux_jour(selected_date)
+
+        # Simulation de données horaires pour l'exemple
+        data = {
+            'labels': ['08h-10h', '10h-12h', '12h-14h', '14h-16h', '16h-18h', '18h-20h'],
+            'extrusion': [
+                round(production_extrusion * Decimal(0.1), 1),
+                round(production_extrusion * Decimal(0.15), 1),
+                round(production_extrusion * Decimal(0.2), 1),
+                round(production_extrusion * Decimal(0.25), 1),
+                round(production_extrusion * Decimal(0.2), 1),
+                round(production_extrusion * Decimal(0.1), 1)
+            ],
+            'soudure': [
+                round(production_soudure * Decimal(0.1), 1),
+                round(production_soudure * Decimal(0.12), 1),
+                round(production_soudure * Decimal(0.18), 1),
+                round(production_soudure * Decimal(0.25), 1),
+                round(production_soudure * Decimal(0.2), 1),
+                round(production_soudure * Decimal(0.15), 1)
+            ],
+            'dechets': [
+                round(dechets_totaux * Decimal(0.15), 1),
+                round(dechets_totaux * Decimal(0.1), 1),
+                round(dechets_totaux * Decimal(0.2), 1),
+                round(dechets_totaux * Decimal(0.2), 1),
+                round(dechets_totaux * Decimal(0.15), 1),
+                round(dechets_totaux * Decimal(0.2), 1)
+            ],
+            'bache_noir': [0, 0, 0, 0, 0, 0],
+        }
+
+    # 2. Cas 'semaine' (Données simulées des 7 derniers jours)
+    elif period_type == 'semaine':
+        data = json.loads(get_chart_data_for_dashboard())
+        # S'assurer que les données sont des listes de nombres pour le JSON
+        data['extrusion'] = [float(d) for d in data['extrusion']]
+        data['soudure'] = [float(d) for d in data['soudure']]
+        data['dechets'] = [float(d) for d in data['dechets']]
+        data['bache_noir'] = [float(d) for d in data['bache_noir']]
+
+    # 3. Cas 'mois' (Simulation mensuelle)
+    elif period_type == 'mois':
+        data = {
+            'labels': ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
+            'extrusion': [45000, 38000, 42000, 39000],
+            'soudure': [18000, 16000, 20000, 17000],
+            'dechets': [1200, 1100, 1300, 1150],
+            'bache_noir': [5000, 4800, 5200, 4900],
+        }
+
+    else: # Par défaut
+        data = json.loads(get_chart_data_for_dashboard())
+
+    return JsonResponse(data)
