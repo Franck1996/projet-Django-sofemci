@@ -18,7 +18,7 @@ class ProductionExtrusion(models.Model):
 
     # Ressources utilisées
     matiere_premiere_kg = models.DecimalField(
-        max_digits=10,
+        max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0.01'))],
         verbose_name="Matière première utilisée (kg)"
@@ -34,35 +34,35 @@ class ProductionExtrusion(models.Model):
 
     # Production
     nombre_bobines_kg = models.DecimalField(
-        max_digits=10,
+        max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0'))],
         verbose_name="Nombre de bobines produites (kg)"
     )
     production_finis_kg = models.DecimalField(
-        max_digits=10,
+        max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0'))],
         verbose_name="Production produits finis (kg)"
     )
     production_semi_finis_kg = models.DecimalField(
-        max_digits=10,
+        max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0'))],
         verbose_name="Production produits semi-finis (kg)"
     )
     dechets_kg = models.DecimalField(
-        max_digits=10,
+        max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0'))],
         verbose_name="Total des déchets (kg)"
     )
 
     # Champs calculés automatiquement
-    total_production_kg = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    total_production_kg = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     rendement_pourcentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     taux_dechet_pourcentage = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
-    production_par_machine = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    production_par_machine = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
 
     # Observations et métadonnées
     observations = models.TextField(blank=True, verbose_name="Observations du jour")
@@ -120,26 +120,26 @@ class ProductionImprimerie(models.Model):
 
     # Production
     production_bobines_finies_kg = models.DecimalField(
-        max_digits=10,
+        max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0'))],
         verbose_name="Production bobines produits finis (kg)"
     )
     production_bobines_semi_finies_kg = models.DecimalField(
-        max_digits=10,
+        max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0'))],
         verbose_name="Production bobines semi-finis (kg)"
     )
     dechets_kg = models.DecimalField(
-        max_digits=10,
+        max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0'))],
         verbose_name="Total des déchets (kg)"
     )
 
     # Champs calculés
-    total_production_kg = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    total_production_kg = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     taux_dechet_pourcentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
 
     # Métadonnées
@@ -187,7 +187,7 @@ class ProductionSoudure(models.Model):
 
     # Production standard
     production_bobines_finies_kg = models.DecimalField(
-        max_digits=10,
+        max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0'))],
         verbose_name="Production bobines produits finis (kg)"
@@ -195,19 +195,19 @@ class ProductionSoudure(models.Model):
 
     # Production spécifique soudure
     production_bretelles_kg = models.DecimalField(
-        max_digits=10,
+        max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0'))],
         verbose_name="Production BRETELLE (EMBALLAGE) (kg)"
     )
     production_rema_kg = models.DecimalField(
-        max_digits=10,
+        max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0'))],
         verbose_name="Production REMA-PLASTIQUE (kg)"
     )
     production_batta_kg = models.DecimalField(
-        max_digits=10,
+        max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0'))],
         verbose_name="Production BATTA (kg)"
@@ -215,7 +215,7 @@ class ProductionSoudure(models.Model):
 
     # NOUVEAU : Sac d'emballage imprimé
     production_sac_emballage_kg = models.DecimalField(
-        max_digits=10,
+        max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0'))],
         default=Decimal('0'),
@@ -224,7 +224,7 @@ class ProductionSoudure(models.Model):
 
     # Déchets
     dechets_kg = models.DecimalField(
-        max_digits=10,
+        max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0'))],
         verbose_name="Total des déchets (kg)"
@@ -232,14 +232,14 @@ class ProductionSoudure(models.Model):
 
     # Champs calculés
     total_production_specifique_kg = models.DecimalField(
-        max_digits=10,
+        max_digits=5,
         decimal_places=2,
         null=True,
         blank=True,
         verbose_name="Total production spécifique (Bretelle+Rema+Batta+Sac)"
     )
     total_production_kg = models.DecimalField(
-        max_digits=10,
+        max_digits=5,
         decimal_places=2,
         null=True,
         blank=True,
@@ -312,21 +312,21 @@ class ProductionRecyclage(models.Model):
 
     # Production
     production_broyage_kg = models.DecimalField(
-        max_digits=10,
+        max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0'))],
         verbose_name="Production journalière de broyage (kg)"
     )
     production_bache_noir_kg = models.DecimalField(
-        max_digits=10,
+        max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0'))],
         verbose_name="Production de bâche noire (kg)"
     )
 
     # Champs calculés
-    total_production_kg = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    production_par_moulinex = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    total_production_kg = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    production_par_moulinex = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     taux_transformation_pourcentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
 
     # Métadonnées

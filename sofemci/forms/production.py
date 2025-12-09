@@ -61,8 +61,8 @@ class ProductionExtrusionForm(forms.ModelForm):
             }),
             'nombre_machines_actives': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'min': '0',
-                'max': '4',
+                'min': '',
+                'max': '200',
                 'id': 'extrusion_machines'
             }),
             'nombre_machinistes': forms.NumberInput(attrs={
@@ -209,7 +209,7 @@ class ProductionImprimerieForm(forms.ModelForm):
             'nombre_machines_actives': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '0',
-                'max': '10',
+                'max': '500',
                 'id': 'imprimerie_machines'
             }),
             'production_bobines_finies_kg': forms.NumberInput(attrs={
@@ -331,8 +331,8 @@ class ProductionSoudureForm(forms.ModelForm):
             }),
             'nombre_machines_actives': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'min': '0',
-                'max': '8',
+                'min': '1',
+                'max': '500',
                 'id': 'soudure_machines'
             }),
             'production_bobines_finies_kg': forms.NumberInput(attrs={
@@ -464,8 +464,8 @@ class ProductionRecyclageForm(forms.ModelForm):
             }),
             'nombre_moulinex': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'min': '0',
-                'max': '5',
+                'min': '1',
+                'max': '500',
                 'id': 'recyclage_moulinex'
             }),
             'production_broyage_kg': forms.NumberInput(attrs={

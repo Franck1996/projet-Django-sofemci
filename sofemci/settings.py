@@ -266,8 +266,8 @@ LOGGING = {
 SOFEMCI_CONFIG = {
     'COMPANY_NAME': 'SOFEM-CI Industries',
     'VERSION': '2.0.0',
-    'MAX_ZONES_EXTRUSION': 5,
-    'MAX_MACHINES_PAR_ZONE': 4,
+    'MAX_ZONES_EXTRUSION': 50,
+    'MAX_MACHINES_PAR_ZONE': 200,
     'OBJECTIF_PRODUCTION_QUOTIDIEN': 75000,  # kg
     'SECTIONS_ACTIVES': ['extrusion', 'imprimerie', 'soudure', 'recyclage'],
     'EQUIPES': ['A', 'B', 'C'],
