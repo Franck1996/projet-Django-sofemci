@@ -63,7 +63,7 @@ class AlerteIA(models.Model):
     
     # Prédictions IA
     probabilite_panne = models.DecimalField(
-        max_digits=6, 
+        max_digits=5, 
         decimal_places=2,
         verbose_name="Probabilité panne (%)"
     )
@@ -73,7 +73,7 @@ class AlerteIA(models.Model):
         verbose_name="Délai estimé (jours)"
     )
     confiance_prediction = models.DecimalField(
-        max_digits=6,
+        max_digits=5,
         decimal_places=2,
         default=0,
         verbose_name="Confiance prédiction (%)"

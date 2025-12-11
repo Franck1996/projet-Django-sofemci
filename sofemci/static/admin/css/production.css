@@ -1,0 +1,55 @@
+/* P:\sofemci\sofemci\sofemci\static\admin\css\production.css */
+
+/* STYLES COMMUNS POUR TOUTES LES SECTIONS DE PRODUCTION */
+
+/* 1. TABLEAU DE LISTE PRINCIPAL */
+#result_list {
+    font-size: 12px !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* 2. EN-TÊTES DE COLONNES - Couleurs par section */
+#result_list th {
+    color: white !important;
+    font-weight: 600 !important;
+    padding: 8px 5px !important;
+    text-align: center !important;
+    border: 1px solid transparent !important;
+    white-space: nowrap !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+}
+
+/* Extrusion - Bleu */
+.model-productionextrusion #result_list th {
+    background: linear-gradient(to bottom, #2c5282, #1a365d) !important;
+}
+
+/* Imprimerie - Violet */
+.model-productionimprimerie #result_list th {
+    background: linear-gradient(to bottom, #11021c, #1d0639) !important;
+}
+
+/* Soudure - Orange */
+.model-productionsoudure #result_list th {
+    background: linear-gradient(to bottom, #E65100, #BF360C) !important;
+}
+
+/* Recyclage - Vert */
+.model-productionrecyclage #result_list th {
+    background: linear-gradient(to bottom, #2E7D32, #1B5E20) !important;
+}
+
+/* 3. CELLULES DU TABLEAU */
+#result_list td {
+    padding: 6px 4px !important;
+    border: 1px solid #e2e8f0 !important;
+    vertical-align: middle !important;
+    max-width: 100px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+/* ... (le reste du CSS reste similaire) */
