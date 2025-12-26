@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Alertes IA - SOFEM-CI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>🔔 Alertes IA</h1>
+        <p>Gestion des alertes de maintenance prédictive</p>
+    </div>
+
+    <!-- Filtres -->
+    <div class="filters-section">
+        <form method="get" class="filters-form">
+            <select name="niveau" onchange="this.form.submit()">
+                <option value="">Tous les niveaux</option>
+                <option value="critique" {% if niveau_filtre == 'critique' %}selected{% endif %}>Critique</option>
+                <option value="urgent" {% if niveau_filtre == 'urgent' %}selected{% endif %}>Urgent</option>
+                <option value="attention" {% if niveau_filtre == 'attention' %}selected{% endif %}>Attention</option>
+                <option value="info" {% if niveau_filtre == 'info' %}selected{% endif %}>Info</option>
+            </select>
+
+            <select name="statut" onchange="this.form.submit()">
+                <option value="">Tous les statuts</option>
+                <option value="nouvelle" {% if statut_filtre == 'nouvelle' %}selected{% endif %}>Nouvelle</option>
+                <option value="vue" {% if statut_filtre == 'vue' %}selected{% endif %}>Vue</option>
+                <option value="en_traitement" {% if statut_filtre == 'en_traitement' %}selected{% endif %}>En traitement</option>
+                <option value="resolue" {% if statut_filtre == 'resolue' %}selected{% endif %}>Résolue</option>
+            </select>
+
+            <select name="section" onchange="this.form.submit()">
+                <option value="">Toutes les sections</option>
+                <option value="extrusion" {% if section_filtre == 'extrusion' %}selected{% endif %}>Extrusion</option>
+                <option value="imprimerie" {% if section_filtre == 'imprimerie' %}selected{% endif %}>Imprimerie</option>
+                <option value="soudure" {% if section_filtre == 'soudure' %}selected{% endif %}>Soudure</option>
+                <option value="recyclage" {% if section_filtre == 'recyclage' %}selected{% endif %}>Recyclage</option>
+            </select>
+        </form>
+    </div>
+
+    <!-- Liste des alertes -->
+    <div class="alertes-list">
+        {% for alerte in alertes %}
+        <div class="alerte-card niveau-{{ alerte.niveau }}">
+            <div class="alerte-header">
+                <div class="alerte-info">
+                    <span class="badge niveau-{{ alerte.niveau }}">{{ alerte.get_niveau_display }}</span>
+                    <span class="badge statut-{{ alerte.statut }}">{{ alerte.get_statut_display }}</span>
+                    <span class="machine-ref">Machine {{ alerte.machine.numero }}</span>
+                </div>
+                <div class="alerte-date">{{ alerte.date_creation|date:"d/m/Y H:i" }}</div>
+            </div>
+
+            <h3>{{ alerte.titre }}</h3>
+            <p class="alerte-message">{{ alerte.message }}</p>
+
+            <div class="alerte-details">
+                <div class="detail-item">
+                    <strong>Probabilité:</strong> {{ alerte.probabilite_panne }}%
+                </div>
+                <div class="detail-item">
+                    <strong>Délai:</strong> {{ alerte.delai_estime_jours }} jours
+                </div>
+                <div class="detail-item">
+                    <strong>Confiance:</strong> {{ alerte.confiance_prediction }}%
+                </div>
+                <div class="detail-item">
+                    <strong>Priorité:</strong> {{ alerte.priorite }}/10
+                </div>
+            </div>
+
+            {% if alerte.action_recommandee %}
+            <div class="action-box">
+                <strong>📋 Action recommandée:</strong>
+                <p>{{ alerte.action_recommandee }}</p>
+            </div>
+            {% endif %}
+
+            {% if alerte.traite_par %}
+            <div class="traitement-info">
+                Pris en charge par {{ alerte.traite_par.get_full_name }} le {{ alerte.date_traitement|date:"d/m/Y" }}
+            </div>
+            {% endif %}
+
+            <div class="alerte-actions">
+                <a href="{% url 'machine_detail_ia' alerte.machine.id %}" class="btn-sm btn-info">
+                    Voir Machine
+                </a>
+                
+                <form method="post" action="{% url 'traiter_alerte_ia' alerte.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    {% if alerte.statut == 'nouvelle' %}
+                    <button type="submit" name="action" value="prendre_en_charge" class="btn-sm btn-primary">
+                        Prendre en charge
+                    </button>
+                    {% endif %}
+                    
+                    {% if alerte.statut == 'en_traitement' %}
+                    <button type="submit" name="action" value="resoudre" class="btn-sm btn-success">
+                        Résoudre
+                    </button>
+                    {% endif %}
+                    
+                    {% if alerte.statut != 'resolue' %}
+                    <button type="submit" name="action" value="ignorer" class="btn-sm btn-secondary">
+                        Ignorer
+                    </button>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+        {% empty %}
+        <div class="no-alertes">
+            <p>Aucune alerte trouvée avec ces critères</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if alertes.has_other_pages %}
+    <div class="pagination">
+        {% if alertes.has_previous %}
+        <a href="?page={{ alertes.previous_page_number }}" class="page-link">Précédent</a>
+        {% endif %}
+        
+        <span class="page-info">Page {{ alertes.number }} / {{ alertes.paginator.num_pages }}</span>
+        
+        {% if alertes.has_next %}
+        <a href="?page={{ alertes.next_page_number }}" class="page-link">Suivant</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.filters-section {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+}
+
+.filters-form {
+    display: flex;
+    gap: 15px;
+}
+
+.filters-form select {
+    padding: 10px;
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    flex: 1;
+}
+
+.alertes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.alerte-card {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    border-left: 5px solid;
+}
+
+.alerte-card.niveau-critique { border-left-color: #e74c3c; }
+.alerte-card.niveau-urgent { border-left-color: #f39c12; }
+.alerte-card.niveau-attention { border-left-color: #3498db; }
+.alerte-card.niveau-info { border-left-color: #95a5a6; }
+
+.alerte-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.alerte-info {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.badge {
+    padding: 5px 12px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.badge.niveau-critique { background: #e74c3c; color: white; }
+.badge.niveau-urgent { background: #f39c12; color: white; }
+.badge.niveau-attention { background: #3498db; color: white; }
+.badge.niveau-info { background: #95a5a6; color: white; }
+
+.badge.statut-nouvelle { background: #e74c3c; color: white; }
+.badge.statut-vue { background: #f39c12; color: white; }
+.badge.statut-en_traitement { background: #3498db; color: white; }
+.badge.statut-resolue { background: #27ae60; color: white; }
+
+.alerte-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.action-box {
+    background: #e8f5e9;
+    border-left: 3px solid #27ae60;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 4px;
+}
+
+.alerte-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn-sm {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary { background: #3498db; color: white; }
+.btn-success { background: #27ae60; color: white; }
+.btn-secondary { background: #95a5a6; color: white; }
+.btn-info { background: #17a2b8; color: white; }
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin-top: 30px;
+}
+
+.page-link {
+    padding: 10px 20px;
+    background: #3498db;
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+}
+</style>
+{% endblock %}

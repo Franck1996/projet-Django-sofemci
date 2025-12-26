@@ -1,0 +1,348 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ action }} Machine - SOFEM-CI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>{{ action }} une Machine</h1>
+        <p>{% if machine %}Modification de {{ machine.numero }}{% else %}Ajout d'une nouvelle machine{% endif %}</p>
+    </div>
+
+    <div class="form-container">
+        <form method="post" class="machine-form">
+            {% csrf_token %}
+            
+            <div class="form-section">
+                <h2>Informations de Base</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="{{ form.numero.id_for_label }}">
+                            Numéro de Machine <span class="required">*</span>
+                        </label>
+                        {{ form.numero }}
+                        {% if form.numero.errors %}
+                            <div class="error-message">{{ form.numero.errors.0 }}</div>
+                        {% endif %}
+                        <small class="form-help">Ex: EXT-Z1-M1, IMP-05, SOU-03</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="{{ form.type_machine.id_for_label }}">
+                            Type de Machine <span class="required">*</span>
+                        </label>
+                        {{ form.type_machine }}
+                        {% if form.type_machine.errors %}
+                            <div class="error-message">{{ form.type_machine.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="{{ form.section.id_for_label }}">
+                            Section <span class="required">*</span>
+                        </label>
+                        {{ form.section }}
+                        {% if form.section.errors %}
+                            <div class="error-message">{{ form.section.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                  <div class="form-group" id="zone-fields" style="display: none;">
+    <label>Zone d'Extrusion <span class="required">*</span></label>
+    <div class="form-grid" style="grid-template-columns: 1fr 2fr; gap: 10px;">
+        <div>
+            <label for="{{ form.zone_numero.id_for_label }}" style="font-weight: normal; font-size: 0.9rem;">
+                Numéro
+            </label>
+            {{ form.zone_numero }}
+            {% if form.zone_numero.errors %}
+                <div class="error-message">{{ form.zone_numero.errors.0 }}</div>
+            {% endif %}
+        </div>
+        <div>
+            <label for="{{ form.zone_nom.id_for_label }}" style="font-weight: normal; font-size: 0.9rem;">
+                Nom
+            </label>
+            {{ form.zone_nom }}
+            {% if form.zone_nom.errors %}
+                <div class="error-message">{{ form.zone_nom.errors.0 }}</div>
+            {% endif %}
+        </div>
+    </div>
+    <small class="form-help">La zone sera créée automatiquement si elle n'existe pas</small>
+</div>
+</div>
+</div>
+<!-- SECTION 2: Origine et État (NOUVELLE SECTION) -->
+            <div class="form-section">
+                <h2>🌍 Origine et État</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="{{ form.provenance.id_for_label }}">
+                            Pays d'Origine <span class="required">*</span>
+                        </label>
+                        {{ form.provenance }}
+                        {% if form.provenance.errors %}
+                            <div class="error-message">{{ form.provenance.errors.0 }}</div>
+                        {% endif %}
+                        <small class="form-help">Pays de fabrication de la machine</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="{{ form.etat.id_for_label }}">
+                            État Actuel <span class="required">*</span>
+                        </label>
+                        {{ form.etat }}
+                        {% if form.etat.errors %}
+                            <div class="error-message">{{ form.etat.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-group-checkbox">
+                    <div class="checkbox-container">
+                        {{ form.est_nouvelle }}
+                        <label for="{{ form.est_nouvelle.id_for_label }}" class="checkbox-label">
+                            <span class="checkbox-icon">✨</span>
+                            Machine neuve (lors de son installation)
+                        </label>
+                    </div>
+                    {% if form.est_nouvelle.errors %}
+                        <div class="error-message">{{ form.est_nouvelle.errors.0 }}</div>
+                    {% endif %}
+                    <small class="form-help">Cochez si la machine était neuve lors de son installation à SOFEM-CI</small>
+                </div>
+            </div>
+
+
+            <div class="form-section">
+                <h2>État et Maintenance</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="{{ form.etat.id_for_label }}">
+                            État Actuel <span class="required">*</span>
+                        </label>
+                        {{ form.etat }}
+                        {% if form.etat.errors %}
+                            <div class="error-message">{{ form.etat.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label for="{{ form.derniere_maintenance.id_for_label }}">
+                            Dernière Maintenance
+                        </label>
+                        {{ form.derniere_maintenance }}
+                    </div>
+
+                    <div class="form-group">
+                        <label for="{{ form.date_installation.id_for_label }}">
+                            Date d'Installation
+                        </label>
+                        {{ form.date_installation }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>Caractéristiques Techniques</h2>
+                <div class="form-group">
+                    <label for="{{ form.capacite_horaire.id_for_label }}">
+                        Capacité Horaire (kg/h)
+                    </label>
+                    {{ form.capacite_horaire }}
+                    <small class="form-help">Production maximale par heure</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.observations.id_for_label }}">
+                        Observations / Notes
+                    </label>
+                    {{ form.observations }}
+                    <small class="form-help">Particularités, historique, recommandations...</small>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">
+                    Enregistrer
+                </button>
+                <a href="{% url 'machines_list' %}" class="btn-secondary">
+                    Annuler
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    background:#e9e9e9;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.form-section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e1e8ed;
+}
+
+.form-section h2 {
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #2c3e50;
+}
+
+.required {
+    color: #e74c3c;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 12px;
+    border: 2px solid #e1e8ed;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+.form-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+* NOUVEAU: Styles pour checkbox */
+.form-group-checkbox {
+    margin-top: 20px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border-left: 4px solid #27ae60;
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.checkbox-container input[type="checkbox"] {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    accent-color: #27ae60;
+}
+
+.checkbox-label {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #2c3e50;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.checkbox-icon {
+    font-size: 1.3rem;
+}
+
+
+.form-help {
+    color: #7f8c8d;
+    font-size: 0.85rem;
+    margin-top: 5px;
+}
+
+.error-message {
+    color: #e74c3c;
+    font-size: 0.85rem;
+    margin-top: 5px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    padding-top: 20px;
+}
+
+.btn-primary, .btn-secondary {
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-secondary {
+    background: #e1e8ed;
+    color: #2c3e50;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sectionSelect = document.getElementById('{{ form.section.id_for_label }}');
+    const zoneField = document.getElementById('zone-field');
+    const zoneSelect = document.getElementById('{{ form.zone_extrusion.id_for_label }}');
+    
+   function toggleZoneField() {
+    const zoneFields = document.getElementById('zone-fields');
+    if (sectionSelect && sectionSelect.value === 'extrusion') {
+        zoneFields.style.display = 'block';
+    } else {
+        zoneFields.style.display = 'none';
+    }
+}
+    
+    toggleZoneField();
+    if (sectionSelect) {
+        sectionSelect.addEventListener('change', toggleZoneField);
+    }
+});
+
+</script>
+{% endblock %}

@@ -1,0 +1,2650 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Dashboard Principal - SOFEM-CI{% endblock %}
+
+{% block content %}
+<marquee style="
+    color: #e0a910ff; 
+    font-size: 1.8rem; 
+    font-weight: bold; 
+    font-family: 'Arial', sans-serif; 
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    padding: 18px 0;
+    background: linear-gradient(135deg, #07aaeaff, #8de8d1ff);
+    border-radius: 12px;
+    margin: 12px 0;
+    border-left: 5px solid #1edaebff;
+    border-right: 5px solid #13a9e4ff;
+    animation: pulse-orange 2s infinite;
+">
+
+<style>
+@keyframes pulse-orange {
+    0% { box-shadow: 0 0 0 0 rgba(14, 234, 106, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(39, 174, 96, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0); }
+}
+</style>
+
+    🏭 BIENVENUE DANS LA BASE DE DONNÉES DE <strong style="color: #000703ff;">SOFEM-CI</strong> - SOCIÉTÉ DE FABRICATION D'EMBALLAGES 🏭
+</marquee>
+
+<div class="dashboard-container">
+    <!-- En-tête du Dashboard -->
+    <!-- Dashboard Header avec filtre intégré -->
+    <div class="dashboard-header-integrated">
+        <!-- Filtre de date intégré -->
+        <div class="header-filter">
+            <div class="filter-container">
+                <form method="get" class="inline-date-filter">
+                    <div class="filter-row">
+                        <label for="date-filter" class="filter-label">
+                            📅 Date de consultation :
+                        </label>
+                        <input type="date" 
+                               id="date-filter" 
+                               name="date" 
+                               value="{{ selected_date|date:'Y-m-d' }}"
+                               max="{{ 'now'|date:'Y-m-d' }}"
+                               class="date-input-inline">
+                        
+                        <button type="submit" class="btn-refresh">
+                            🔄 Rafraîchir
+                        </button>
+                        
+                        {% if not is_today %}
+                        <a href="{% url 'dashboard' %}" class="btn-today-inline">
+                            📆 Aujourd'hui
+                        </a>
+                        {% endif %}
+                    </div>
+                </form>
+                
+                <!-- current-time déplacé ici pour être à droite -->
+                <div class="current-time" id="current-time">
+                    {{ 'now'|date:"d/m/Y" }}
+                </div>
+            </div>
+            {% if not is_today %}
+            <div class="consultation-badge">
+                <span class="badge-icon">ℹ️</span>
+                Vous consultez les données du {{ selected_date|date:"d/m/Y" }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Métriques Principales en Temps Réel -->
+    <div class="metrics-grid">
+        <!-- Production Totale -->
+        <div class="metric-card production-card">
+            <div class="metric-icon">🏭</div>
+            <div class="metric-content">
+                <div class="metric-value" id="production-totale">
+                    {{ production_totale|floatformat:0|intcomma }}
+                    <span class="metric-unit">kg</span>
+                    <span class="metric-percentage">
+                        ({{ pourcentage_production_totale|floatformat:1 }}% de l'objectif)
+                    </span>
+                </div>
+                <div class="metric-label">Production Totale</div>
+                <div class="metric-trend trend-up">
+                    ↗ Mise à jour temps réel
+                </div>
+            </div>
+        </div>
+
+        <!-- Efficacité -->
+        <div class="metric-card efficiency-card">
+            <div class="metric-icon">⚡</div>
+            <div class="metric-content">
+                <div class="metric-value">
+                    {{ efficacite_moyenne|floatformat:1 }}%
+                </div>
+                <div class="metric-label">Efficacité Moyenne</div>
+                <div class="metric-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{ efficacite_moyenne }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Machines Actives -->
+        <div class="metric-card machines-card">
+            <div class="metric-icon">🔧</div>
+            <div class="metric-content">
+                <div class="metric-value">
+                    {{ machines_stats.actives }}/{{ machines_stats.total }}
+                    <span class="metric-percentage">
+                        ({{ pourcentage_machines_actives|floatformat:1 }}%)
+                    </span>
+                </div>
+                <div class="metric-label">Machines Actives</div>
+                <div class="machine-status">
+                    <span class="status-dot active"></span>
+                    <span class="status-count">{{ machines_stats.actives }} Active{{ machines_stats.actives|pluralize }}</span>
+                    <span class="status-dot maintenance"></span>
+                    <span class="status-count">{{ machines_stats.maintenance }} Maintenance</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Déchets -->
+        <div class="metric-card waste-card">
+            <div class="metric-icon">♻️</div>
+            <div class="metric-content">
+                <div class="metric-value">
+                    {{ total_dechets|floatformat:0|intcomma }}
+                    <span class="metric-unit">kg</span>
+                    <span class="metric-percentage waste-percentage">
+                        ({{ pourcentage_dechets|floatformat:1 }}% de la production)
+                    </span>
+                </div>
+                <div class="metric-label">Déchets Totaux</div>
+                <div class="waste-reduction">
+                    <span class="reduction-label">Objectif réduction:</span>
+                    <span class="reduction-value">-15%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vue d'ensemble des Sections - ÉLARGIE ET AMÉLIORÉE -->
+    <div class="sections-overview">
+        <div class="section-header-main">
+            <h2 class="section-title">🏭 Production du jour et par section</h2>
+            <div class="section-summary">
+                <div class="summary-item">
+                    <span class="summary-label">Production totale sections:</span>
+                    <span class="summary-value">
+                        {{ production_totale|floatformat:0|intcomma }} kg
+                        <span class="summary-percentage">
+                            ({{ pourcentage_production_totale|floatformat:1 }}%)
+                        </span>
+                    </span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Sections actives:</span>
+                    <span class="summary-value">4/4</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="sections-grid-expanded">
+            <!-- Section Extrusion -->
+            <div class="section-card-extended extrusion-card">
+                <div class="section-header-expanded">
+                    <div class="section-info-main">
+                        <div class="section-icon">🔧</div>
+                        <div class="section-title-content">
+                            <h3>Extrusion</h3>
+                            <span class="section-status status-active">● Production en cours</span>
+                        </div>
+                    </div>
+                    <div class="section-production-main">
+                        <div class="production-value">
+                            {{ production_extrusion|floatformat:0|intcomma }} kg
+                            <span class="production-percentage">
+                                ({{ pourcentage_extrusion|floatformat:1 }}%)
+                            </span>
+                        </div>
+                        <div class="production-label">Production du jour</div>
+                    </div>
+                </div>
+                
+                <div class="section-details-grid">
+                    <div class="detail-column">
+                        <div class="detail-group">
+                            <h4 class="detail-group-title">📊 Performance</h4>
+                            <div class="detail-item-enhanced">
+                                <span class="detail-label">⏱️ Temps de travail:</span>
+                                <span class="detail-value">{{ extrusion_stats.temps_travail }}h</span>
+                            </div>
+                            <div class="detail-item-enhanced">
+                                <span class="detail-label">👥 Machinistes:</span>
+                                <span class="detail-value">{{ extrusion_stats.machinistes_moyen }}</span>
+                            </div>
+                            <div class="detail-item-enhanced">
+                                <span class="detail-label">📦 Matière première:</span>
+                                <span class="detail-value">
+                                    {{ extrusion_stats.matiere_premiere|floatformat:0|intcomma }} kg
+                                    <span class="detail-percentage">
+                                        ({{ pourcentage_matiere_premiere|floatformat:1 }}% utilisée)
+                                    </span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-column">
+                        <div class="detail-group">
+                            <h4 class="detail-group-title">🎯 Production détaillée</h4>
+                            <div class="production-breakdown-enhanced">
+                                <div class="breakdown-item-enhanced">
+                                    <span class="breakdown-label">Semi-finis:</span>
+                                    <span class="breakdown-value">
+                                        {{ extrusion_stats.production_semi_finis|floatformat:0|intcomma }} kg
+                                        <span class="breakdown-percentage">
+                                            ({{ pourcentage_semi_finis|floatformat:1 }}%)
+                                        </span>
+                                    </span>
+                                </div>
+                                <div class="breakdown-item-enhanced">
+                                    <span class="breakdown-label">Finis:</span>
+                                    <span class="breakdown-value">
+                                        {{ extrusion_stats.production_finis|floatformat:0|intcomma }} kg
+                                        <span class="breakdown-percentage">
+                                            ({{ pourcentage_finis|floatformat:1 }}%)
+                                        </span>
+                                    </span>
+                                </div>
+                                <div class="breakdown-item-enhanced total">
+                                    <span class="breakdown-label">Total production:</span>
+                                    <span class="breakdown-value">
+                                        {{ extrusion_stats.production_totale|floatformat:0|intcomma }} kg
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-column">
+                        <div class="detail-group">
+                            <h4 class="detail-group-title">📈 Indicateurs</h4>
+                            <div class="indicators-grid">
+                                <div class="indicator-item">
+                                    <span class="indicator-label">🗑️ Déchets:</span>
+                                    <span class="indicator-value waste">
+                                        {{ extrusion_stats.dechets_totaux|floatformat:0|intcomma }} kg
+                                        <span class="indicator-percentage">
+                                            ({{ pourcentage_dechets_extrusion|floatformat:1 }}%)
+                                        </span>
+                                    </span>
+                                </div>
+                                <div class="indicator-item">
+                                    <span class="indicator-label">📊 Taux déchet:</span>
+                                    <span class="indicator-value {% if extrusion_stats.taux_dechet < 3 %}good{% else %}poor{% endif %}">
+                                        {{ extrusion_stats.taux_dechet }}%
+                                    </span>
+                                </div>
+                                <div class="indicator-item">
+                                    <span class="indicator-label">⚡ Efficacité:</span>
+                                    <span class="indicator-value good">{{ extrusion_stats.efficacite|default:"95" }}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section-actions-expanded">
+                    <a href="{% url 'saisie_extrusion' %}" class="btn-section-action primary">
+                        📊 Saisir production
+                    </a>
+                    <a href="#" class="btn-section-action secondary">
+                        📈 Voir détails
+                    </a>
+                </div>
+            </div>
+
+            <!-- Section Imprimerie -->
+            <div class="section-card-extended imprimerie-card">
+                <div class="section-header-expanded">
+                    <div class="section-info-main">
+                        <div class="section-icon">🖨️</div>
+                        <div class="section-title-content">
+                            <h3>Imprimerie</h3>
+                            <span class="section-status status-active">● Production en cours</span>
+                        </div>
+                    </div>
+                    <div class="section-production-main">
+                        <div class="production-value">
+                            {{ production_imprimerie|floatformat:0|intcomma }} kg
+                            <span class="production-percentage">
+                                ({{ pourcentage_imprimerie|floatformat:1 }}%)
+                            </span>
+                        </div>
+                        <div class="production-label">Production du jour</div>
+                    </div>
+                </div>
+                
+                <div class="section-details-grid">
+                    <div class="detail-column">
+                        <div class="detail-group">
+                            <h4 class="detail-group-title">📊 Performance</h4>
+                            <div class="detail-item-enhanced">
+                                <span class="detail-label">⏱️ Temps de travail:</span>
+                                <span class="detail-value">{{ imprimerie_stats.temps_travail|default:"0" }}h</span>
+                            </div>
+                            <div class="detail-item-enhanced">
+                                <span class="detail-label">👥 Équipes actives:</span>
+                                <span class="detail-value">{{ imprimerie_stats.equipes_actives|default:"0" }}</span>
+                            </div>
+                            <div class="detail-item-enhanced">
+                                <span class="detail-label">🔧 Machines:</span>
+                                <span class="detail-value">
+                                    {{ imprimerie_stats.machines_actives|default:"0" }}/{{ imprimerie_stats.machines_totales|default:"0" }}
+                                    <span class="detail-percentage">
+                                        ({{ pourcentage_machines_imprimerie|floatformat:1 }}%)
+                                    </span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-column">
+                        <div class="detail-group">
+                            <h4 class="detail-group-title">🎨 Production détaillée</h4>
+                            <div class="production-breakdown-enhanced">
+                                <div class="breakdown-item-enhanced">
+                                    <span class="breakdown-label">Bobines finies:</span>
+                                    <span class="breakdown-value">
+                                        {{ imprimerie_stats.bobines_finies|default:"0"|floatformat:0|intcomma }} kg
+                                        <span class="breakdown-percentage">
+                                            ({{ pourcentage_bobines_finies|floatformat:1 }}%)
+                                        </span>
+                                    </span>
+                                </div>
+                                <div class="breakdown-item-enhanced">
+                                    <span class="breakdown-label">Bobines semi-finies:</span>
+                                    <span class="breakdown-value">
+                                        {{ imprimerie_stats.bobines_semi_finies|default:"0"|floatformat:0|intcomma }} kg
+                                        <span class="breakdown-percentage">
+                                            ({{ pourcentage_bobines_semi_finies|floatformat:1 }}%)
+                                        </span>
+                                    </span>
+                                </div>
+                                <div class="breakdown-item-enhanced total">
+                                    <span class="breakdown-label">Total production:</span>
+                                    <span class="breakdown-value">
+                                        {{ imprimerie_stats.production_totale|default:"0"|floatformat:0|intcomma }} kg
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-column">
+                        <div class="detail-group">
+                            <h4 class="detail-group-title">📈 Indicateurs</h4>
+                            <div class="indicators-grid">
+                                <div class="indicator-item">
+                                    <span class="indicator-label">🗑️ Déchets:</span>
+                                    <span class="indicator-value waste">
+                                        {{ imprimerie_stats.dechets_totaux|default:"0"|floatformat:0|intcomma }} kg
+                                        <span class="indicator-percentage">
+                                            ({{ pourcentage_dechets_imprimerie|floatformat:1 }}%)
+                                        </span>
+                                    </span>
+                                </div>
+                                <div class="indicator-item">
+                                    <span class="indicator-label">📊 Taux déchet:</span>
+                                    <span class="indicator-value {% if imprimerie_stats.taux_dechet < 3 %}good{% else %}poor{% endif %}">
+                                        {{ imprimerie_stats.taux_dechet|default:"0" }}%
+                                    </span>
+                                </div>
+                                <div class="indicator-item">
+                                    <span class="indicator-label">⚡ Efficacité:</span>
+                                    <span class="indicator-value good">{{ imprimerie_stats.efficacite|default:"92" }}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section-actions-expanded">
+                    <a href="{% url 'saisie_sections' %}" class="btn-section-action primary">
+                        📊 Saisir production
+                    </a>
+                    <a href="#" class="btn-section-action secondary">
+                        📈 Voir détails
+                    </a>
+                </div>
+            </div>
+
+           <!-- Section Soudure -->
+<div class="section-card-extended soudure-card">
+    <div class="section-header-expanded">
+        <div class="section-info-main">
+            <div class="section-icon">🔌</div>
+            <div class="section-title-content">
+                <h3>Soudure</h3>
+                <span class="section-status status-active">● Production en cours</span>
+            </div>
+        </div>
+        <div class="section-production-main">
+            <div class="production-value">
+                {{ production_soudure|floatformat:0|intcomma }} kg
+                <span class="production-percentage">
+                    ({{ pourcentage_soudure|floatformat:1 }}%)
+                </span>
+            </div>
+            <div class="production-label">Production du jour</div>
+        </div>
+    </div>
+    
+    <div class="section-details-grid">
+        <div class="detail-column">
+            <div class="detail-group">
+                <h4 class="detail-group-title">📊 Performance</h4>
+                <div class="detail-item-enhanced">
+                    <span class="detail-label">⏱️ Temps de travail:</span>
+                    <span class="detail-value">{{ soudure_stats.temps_travail|default:"0" }}h</span>
+                </div>
+                <div class="detail-item-enhanced">
+                    <span class="detail-label">🔧 Machines actives:</span>
+                    <span class="detail-value">
+                        {{ soudure_stats.machines_actives|default:"0" }}/{{ soudure_stats.machines_totales|default:"0" }}
+                        <span class="detail-percentage">
+                            ({{ pourcentage_machines_soudure|floatformat:1 }}%)
+                        </span>
+                    </span>
+                </div>
+                <div class="detail-item-enhanced">
+                    <span class="detail-label">👥 Opérateurs:</span>
+                    <span class="detail-value">{{ soudure_stats.operateurs|default:"8" }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="detail-column">
+            <div class="detail-group">
+                <h4 class="detail-group-title">⚡ Production détaillée</h4>
+                <div class="production-breakdown-enhanced">
+                    <div class="breakdown-item-enhanced">
+                        <span class="breakdown-label">🔄 Bretelles:</span>
+                        <span class="breakdown-value">
+                            {{ soudure_stats.production_bretelles|default:"0"|floatformat:0|intcomma }} kg
+                            <span class="breakdown-percentage">
+                                ({{ soudure_stats.pourcentage_bretelles|floatformat:1 }}%)
+                            </span>
+                        </span>
+                    </div>
+                    <div class="breakdown-item-enhanced">
+                        <span class="breakdown-label">🔗 Rema:</span>
+                        <span class="breakdown-value">
+                            {{ soudure_stats.production_rema|default:"0"|floatformat:0|intcomma }} kg
+                            <span class="breakdown-percentage">
+                                ({{ soudure_stats.pourcentage_rema|floatformat:1 }}%)
+                            </span>
+                        </span>
+                    </div>
+                    <div class="breakdown-item-enhanced">
+                        <span class="breakdown-label">⚙️ Batta:</span>
+                        <span class="breakdown-value">
+                            {{ soudure_stats.production_batta|default:"0"|floatformat:0|intcomma }} kg
+                            <span class="breakdown-percentage">
+                                ({{ soudure_stats.pourcentage_batta|floatformat:1 }}%)
+                            </span>
+                        </span>
+                    </div>
+                    <!-- NOUVEAU CHAMP AJOUTÉ ICI -->
+                    <div class="breakdown-item-enhanced">
+                        <span class="breakdown-label">📦 Sacs d'emballage:</span>
+                        <span class="breakdown-value">
+                            {{ soudure_stats.production_sac_emballage|default:"0"|floatformat:0|intcomma }} kg
+                            <span class="breakdown-percentage">
+                                ({{ soudure_stats.pourcentage_sac_emballage|floatformat:1 }}%)
+                            </span>
+                        </span>
+                    </div>
+                    <!-- FIN DU NOUVEAU CHAMP -->
+                    <div class="breakdown-item-enhanced total">
+                        <span class="breakdown-label">📊 Total production:</span>
+                        <span class="breakdown-value">
+                            {{ soudure_stats.production_totale|default:"0"|floatformat:0|intcomma }} kg
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="detail-column">
+            <div class="detail-group">
+                <h4 class="detail-group-title">📈 Indicateurs</h4>
+                <div class="indicators-grid">
+                    <div class="indicator-item">
+                        <span class="indicator-label">🗑️ Déchets:</span>
+                        <span class="indicator-value waste">
+                            {{ soudure_stats.dechets_totaux|default:"0"|floatformat:0|intcomma }} kg
+                            <span class="indicator-percentage">
+                                ({{ pourcentage_dechets_soudure|floatformat:1 }}%)
+                            </span>
+                        </span>
+                    </div>
+                    <div class="indicator-item">
+                        <span class="indicator-label">📊 Taux déchet:</span>
+                        <span class="indicator-value {% if soudure_stats.taux_dechet < 4 %}good{% else %}poor{% endif %}">
+                            {{ soudure_stats.taux_dechet|default:"0" }}%
+                        </span>
+                    </div>
+                    <div class="indicator-item">
+                        <span class="indicator-label">⚡ Efficacité:</span>
+                        <span class="indicator-value average">{{ soudure_stats.efficacite|default:"88" }}%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section-actions-expanded">
+        <a href="{% url 'saisie_sections' %}" class="btn-section-action primary">
+            📊 Saisir production
+        </a>
+        <a href="#" class="btn-section-action secondary">
+            📈 Voir détails
+        </a>
+    </div>
+</div>
+
+            <!-- Section Recyclage -->
+            <div class="section-card-extended recyclage-card">
+                <div class="section-header-expanded">
+                    <div class="section-info-main">
+                        <div class="section-icon">♻️</div>
+                        <div class="section-title-content">
+                            <h3>Recyclage</h3>
+                            <span class="section-status status-active">● Production en cours</span>
+                        </div>
+                    </div>
+                    <div class="section-production-main">
+                        <div class="production-value">
+                            {{ production_recyclage|floatformat:0|intcomma }} kg
+                            <span class="production-percentage">
+                                ({{ pourcentage_recyclage|floatformat:1 }}%)
+                            </span>
+                        </div>
+                        <div class="production-label">Production du jour</div>
+                    </div>
+                </div>
+                
+                <div class="section-details-grid">
+                    <div class="detail-column">
+                        <div class="detail-group">
+                            <h4 class="detail-group-title">📊 Performance</h4>
+                            <div class="detail-item-enhanced">
+                                <span class="detail-label">🏭 Moulinex actifs:</span>
+                                <span class="detail-value">
+                                    {{ recyclage_stats.moulinex_actifs|default:"0" }}/{{ recyclage_stats.moulinex_totaux|default:"0" }}
+                                    <span class="detail-percentage">
+                                        ({{ pourcentage_moulinex_actifs|floatformat:1 }}%)
+                                    </span>
+                                </span>
+                            </div>
+                            <div class="detail-item-enhanced">
+                                <span class="detail-label">⏱️ Temps de travail:</span>
+                                <span class="detail-value">{{ recyclage_stats.temps_travail|default:"0" }}h</span>
+                            </div>
+                            <div class="detail-item-enhanced">
+                                <span class="detail-label">👥 Opérateurs:</span>
+                                <span class="detail-value">{{ recyclage_stats.operateurs|default:"6" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-column">
+                        <div class="detail-group">
+                            <h4 class="detail-group-title">🔄 Production détaillée</h4>
+                            <div class="production-breakdown-enhanced">
+                                <div class="breakdown-item-enhanced">
+                                    <span class="breakdown-label">🌫️ Broyage total:</span>
+                                    <span class="breakdown-value">
+                                        {{ recyclage_stats.total_broyage|default:"0"|floatformat:0|intcomma }} kg
+                                        <span class="breakdown-percentage">
+                                            ({{ pourcentage_broyage|floatformat:1 }}%)
+                                        </span>
+                                    </span>
+                                </div>
+                                <div class="breakdown-item-enhanced">
+                                    <span class="breakdown-label">⚫ Bâche noire:</span>
+                                    <span class="breakdown-value">
+                                        {{ recyclage_stats.total_bache_noir|default:"0"|floatformat:0|intcomma }} kg
+                                        <span class="breakdown-percentage">
+                                            ({{ pourcentage_bache_noir|floatformat:1 }}%)
+                                        </span>
+                                    </span>
+                                </div>
+                                <div class="breakdown-item-enhanced total">
+                                    <span class="breakdown-label">📊 Total production:</span>
+                                    <span class="breakdown-value">
+                                        {{ recyclage_stats.production_totale|default:"0"|floatformat:0|intcomma }} kg
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-column">
+                        <div class="detail-group">
+                            <h4 class="detail-group-title">📈 Indicateurs</h4>
+                            <div class="indicators-grid">
+                                <div class="indicator-item">
+                                    <span class="indicator-label">📈 Taux transformation:</span>
+                                    <span class="indicator-value good">{{ recyclage_stats.taux_transformation|default:"85" }}%</span>
+                                </div>
+                                <div class="indicator-item">
+                                    <span class="indicator-label">⚡ Rendement:</span>
+                                    <span class="indicator-value good">{{ recyclage_stats.rendement|default:"92" }}%</span>
+                                </div>
+                                <div class="indicator-item">
+                                    <span class="indicator-label">🏭 Productivité:</span>
+                                    <span class="indicator-value good">
+                                        {{ recyclage_stats.productivite_par_moulinex|default:"450" }} kg/h
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section-actions-expanded">
+                    <a href="{% url 'saisie_sections' %}" class="btn-section-action primary">
+                        📊 Saisir production
+                    </a>
+                    <a href="#" class="btn-section-action secondary">
+                        📈 Voir détails
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics et Tendances -->
+    <div class="analytics-section">
+        <div class="analytics-header">
+            <h2>📈 Analytics & Tendances de Production</h2>
+            <p>Vue d'ensemble des performances mensuelles et tendances</p>
+        </div>
+        
+        <div class="analytics-grid">
+            <!-- Graphique principal des tendances -->
+            <div class="analytics-card main-chart">
+                <div class="chart-header">
+                    <h3>📊 Évolution Mensuelle de la Production</h3>
+                    <div class="chart-legend">
+                        <div class="legend-item">
+                            <span class="legend-color extrusion"></span>
+                            <span>Extrusion</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color soudure"></span>
+                            <span>Soudure</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color dechets"></span>
+                            <span>Déchets</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color bache-noir"></span>
+                            <span>Bâche Noire</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="productionTrendChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+            
+            <!-- Métriques KPIs -->
+            <div class="analytics-card kpi-cards">
+                <h3>🎯 KPIs du Mois</h3>
+                <div class="kpi-grid">
+                    <div class="kpi-item">
+                        <div class="kpi-value">
+                            {{ analytics_kpis.production_totale_mois|floatformat:0|intcomma }}
+                            <span class="kpi-percentage">
+                                ({{ pourcentage_kpi_production|floatformat:1 }}%)
+                            </span>
+                        </div>
+                        <div class="kpi-label">Production Totale (kg)</div>
+                        <div class="kpi-trend trend-up">+{{ analytics_kpis.croissance_production }}%</div>
+                    </div>
+                    <div class="kpi-item">
+                        <div class="kpi-value">{{ analytics_kpis.taux_dechet_mois }}%</div>
+                        <div class="kpi-label">Taux Déchet Moyen</div>
+                        <div class="kpi-trend trend-down">-{{ analytics_kpis.reduction_dechets }}%</div>
+                    </div>
+                    <div class="kpi-item">
+                        <div class="kpi-value">{{ analytics_kpis.efficacite_moyenne }}%</div>
+                        <div class="kpi-label">Efficacité Globale</div>
+                        <div class="kpi-trend trend-up">+{{ analytics_kpis.amélioration_efficacite }}%</div>
+                    </div>
+                    <div class="kpi-item">
+                        <div class="kpi-value">{{ analytics_kpis.taux_transformation }}%</div>
+                        <div class="kpi-label">Taux Transformation</div>
+                        <div class="kpi-trend trend-up">+{{ analytics_kpis.amélioration_transformation }}%</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Graphique circulaire répartition -->
+            <div class="analytics-card pie-chart">
+                <h3>🥧 Répartition de la Production</h3>
+                <div class="chart-container">
+                    <canvas id="productionDistributionChart" width="200" height="200"></canvas>
+                </div>
+            </div>
+            
+            <!-- Tableau des performances par section -->
+            <div class="analytics-card performance-table">
+                <h3>📋 Performance par Section (Mois)</h3>
+                <div class="table-container">
+                    <table class="performance-table">
+                        <thead>
+                            <tr>
+                                <th>Section</th>
+                                <th>Production (kg)</th>
+                                <th>Déchets (kg)</th>
+                                <th>Taux Déchet</th>
+                                <th>Efficacité</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>🔧 Extrusion</td>
+                                <td>
+                                    {{ analytics_table.extrusion.production|floatformat:0|intcomma }}
+                                    <span class="table-percentage">
+                                        ({{ pourcentage_table_extrusion|floatformat:1 }}%)
+                                    </span>
+                                </td>
+                                <td>{{ analytics_table.extrusion.dechets|floatformat:0|intcomma }}</td>
+                                <td class="{% if analytics_table.extrusion.taux_dechet < 3 %}value-good{% else %}value-poor{% endif %}">
+                                    {{ analytics_table.extrusion.taux_dechet }}%
+                                </td>
+                                <td class="value-good">{{ analytics_table.extrusion.efficacite }}%</td>
+                            </tr>
+                            <tr>
+                                <td>🖨️ Imprimerie</td>
+                                <td>
+                                    {{ analytics_table.imprimerie.production|floatformat:0|intcomma }}
+                                    <span class="table-percentage">
+                                        ({{ pourcentage_table_imprimerie|floatformat:1 }}%)
+                                    </span>
+                                </td>
+                                <td>{{ analytics_table.imprimerie.dechets|floatformat:0|intcomma }}</td>
+                                <td class="{% if analytics_table.imprimerie.taux_dechet < 3 %}value-good{% else %}value-poor{% endif %}">
+                                    {{ analytics_table.imprimerie.taux_dechet }}%
+                                </td>
+                                <td class="value-good">{{ analytics_table.imprimerie.efficacite }}%</td>
+                            </tr>
+                            <tr>
+                                <td>🔌 Soudure</td>
+                                <td>
+                                    {{ analytics_table.soudure.production|floatformat:0|intcomma }}
+                                    <span class="table-percentage">
+                                        ({{ pourcentage_table_soudure|floatformat:1 }}%)
+                                    </span>
+                                </td>
+                                <td>{{ analytics_table.soudure.dechets|floatformat:0|intcomma }}</td>
+                                <td class="{% if analytics_table.soudure.taux_dechet < 4 %}value-good{% else %}value-poor{% endif %}">
+                                    {{ analytics_table.soudure.taux_dechet }}%
+                                </td>
+                                <td class="value-average">{{ analytics_table.soudure.efficacite }}%</td>
+                            </tr>
+                            <tr>
+                                <td>♻️ Recyclage</td>
+                                <td>
+                                    {{ analytics_table.recyclage.production|floatformat:0|intcomma }}
+                                    <span class="table-percentage">
+                                        ({{ pourcentage_table_recyclage|floatformat:1 }}%)
+                                    </span>
+                                </td>
+                                <td>-</td>
+                                <td class="value-good">{{ analytics_table.recyclage.taux_transformation }}%</td>
+                                <td class="value-good">{{ analytics_table.recyclage.rendement }}%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ==========================================
+   VARIABLES CSS
+   ========================================== */
+:root {
+    --primary-color: #3498db;
+    --secondary-color: #2c3e50;
+    --success-color: #27ae60;
+    --warning-color: #f39c12;
+    --danger-color: #e74c3c;
+    --light-bg: #f8f9fa;
+    --border-color: #e1e8ed;
+    --text-dark: #2c3e50;
+    --text-light: #7f8c8d;
+    --extrusion-color: #3498db;
+    --imprimerie-color: #9b59b6;
+    --soudure-color: #e67e22;
+    --recyclage-color: #27ae60;
+}
+
+/* ==========================================
+   DASHBOARD CONTAINER
+   ========================================== */
+.dashboard-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 25px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f7fa;
+    min-height: 100vh;
+}
+
+/* ==========================================
+   HEADER
+   ========================================== */
+.header-content h1 {
+    color: var(--text-dark);
+    margin: 0;
+    font-size: 2.2rem;
+    font-weight: 700;
+}
+
+.header-content p {
+    color: var(--text-light);
+    margin: 8px 0 0 0;
+    font-size: 1.2rem;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+}
+
+.user-welcome {
+    text-align: right;
+}
+
+.welcome-text {
+    color: var(--text-light);
+    display: block;
+    font-size: 1rem;
+}
+
+.user-name {
+    font-weight: 700;
+    color: var(--text-dark);
+    display: block;
+    font-size: 1.1rem;
+    margin: 4px 0;
+}
+
+.user-role-badge {
+    background: linear-gradient(135deg, var(--primary-color), #2980b9);
+    color: white;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    margin-top: 5px;
+    display: inline-block;
+    font-weight: 600;
+}
+
+.current-time {
+    background: white;
+    color: black;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1.2rem;
+    min-width: 120px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* ==========================================
+   DATE FILTER - HEADER INTEGRATED
+   ========================================== */
+.dashboard-header-integrated {
+    background: linear-gradient(135deg, #ebab09ff 0%, #120a1bff 100%);
+    padding: 10px 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 15px;
+    color: white;
+}
+
+.filter-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.header-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 25px;
+    margin-bottom: 5px;
+}
+
+.header-left h1 {
+    color: white;
+    margin: 0 0 8px 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.header-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+    font-size: 1rem;
+}
+
+.header-filter {
+    margin-top: 8px;
+}
+
+.inline-date-filter {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.filter-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.filter-label {
+    white-space: nowrap;
+    margin: 0;
+    color: white;
+}
+
+.date-input-inline {
+    padding: 6px 8px;
+    border: none;
+    border-radius: 4px;
+}
+
+.date-input-inline:focus {
+    outline: none;
+    border-color: white;
+    background: white;
+}
+
+.btn-refresh, .btn-today-inline {
+    padding: 6px 12px;
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 4px;
+    color: white;
+    text-decoration: none;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.btn-refresh:hover, .btn-today-inline:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+.btn-today-inline {
+    padding: 10px 20px;
+    background: #1096efff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.3s;
+    display: inline-block;
+}
+
+.btn-today-inline:hover {
+    background: #229954;
+    transform: translateY(-2px);
+    color: white;
+}
+
+.consultation-badge {
+    margin-top: 8px;
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+.badge-icon {
+    font-size: 1.1rem;
+}
+
+/* ==========================================
+   METRICS GRID
+   ========================================== */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.metric-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: all 0.3s ease;
+    border-left: 4px solid var(--primary-color);
+    position: relative;
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), transparent);
+}
+
+.metric-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+.metric-icon {
+    font-size: 2rem;
+    opacity: 0.9;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+}
+
+.metric-content {
+    flex: 1;
+}
+
+.metric-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 5px;
+    line-height: 1;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.metric-unit {
+    font-size: 1rem;
+    color: var(--text-light);
+    font-weight: 600;
+}
+
+.metric-percentage {
+    font-size: 0.7rem;
+    color: var(--success-color);
+    font-weight: 600;
+    margin-left: 5px;
+}
+
+.metric-percentage.waste-percentage {
+    color: var(--danger-color);
+}
+
+.metric-label {
+    color: var(--text-light);
+    font-size: 1.05rem;
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+
+.metric-trend {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 3px 6px;
+    border-radius: 6px;
+    display: inline-block;
+}
+
+.trend-up { 
+    background: rgba(39, 174, 96, 0.1); 
+    color: var(--success-color); 
+}
+
+.trend-down { 
+    background: rgba(231, 76, 60, 0.1); 
+    color: var(--danger-color); 
+}
+
+.progress-bar {
+    background: #ecf0f1;
+    border-radius: 8px;
+    height: 8px;
+    overflow: hidden;
+    margin-top: 8px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.progress-fill {
+    background: linear-gradient(90deg, var(--success-color), #2ecc71);
+    height: 100%;
+    border-radius: 12px;
+    transition: width 0.8s ease;
+    box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+}
+
+.machine-status {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-top: 8px;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-dot.active {
+    background: var(--success-color);
+}
+
+.status-dot.maintenance {
+    background: var(--warning-color);
+}
+
+.status-count {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    font-weight: 600;
+}
+
+.waste-reduction {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.reduction-label {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    font-weight: 600;
+}
+
+.reduction-value {
+    font-weight: 700;
+    color: var(--success-color);
+    background: rgba(39, 174, 96, 0.1);
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+/* ==========================================
+   SECTIONS OVERVIEW - OPTIMISÉ
+   ========================================== */
+.sections-overview {
+    margin-bottom: 50px;
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+}
+
+.section-header-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--light-bg);
+}
+
+.section-title {
+    color: var(--text-dark);
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 800;
+}
+
+.section-summary {
+    display: flex;
+    gap: 30px;
+}
+
+.summary-item {
+    text-align: center;
+    padding: 15px 25px;
+    background: #becad1;
+    border-radius: 12px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.summary-label {
+    display: block;
+    color: var(--text-light);
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.summary-value {
+    display: block;
+    color: var(--text-dark);
+    font-size: 1.3rem;
+    font-weight: 800;
+}
+
+.summary-percentage {
+    font-size: 0.8rem;
+    color: var(--success-color);
+    font-weight: 600;
+    margin-left: 5px;
+}
+
+/* ==========================================
+   GRID DES SECTIONS - OPTIMISÉ POUR TOUTES
+   ========================================== */
+.sections-grid-expanded {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.section-card-extended {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    border-left: 8px solid;
+    transition: all 0.4s ease;
+    position: relative;
+    overflow: visible;
+}
+
+.section-card-extended::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, currentColor, transparent);
+    opacity: 0.8;
+}
+
+.section-card-extended:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.18);
+}
+
+.extrusion-card { 
+    border-left-color: var(--extrusion-color); 
+    color: var(--extrusion-color);
+}
+
+.imprimerie-card { 
+    border-left-color: var(--imprimerie-color); 
+    color: var(--imprimerie-color);
+}
+
+.soudure-card { 
+    border-left-color: var(--soudure-color); 
+    color: var(--soudure-color);
+}
+
+.recyclage-card { 
+    border-left-color: var(--recyclage-color); 
+    color: var(--recyclage-color);
+}
+
+/* ==========================================
+   EN-TÊTE DES SECTIONS - TAILLES AUGMENTÉES
+   ========================================== */
+.section-header-expanded {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 3px solid rgba(0,0,0,0.08);
+}
+
+.section-info-main {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.section-icon {
+    font-size: 3.5rem;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.15));
+}
+
+.section-title-content h3 {
+    margin: 0 0 10px 0;
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: var(--text-dark);
+    letter-spacing: -0.5px;
+}
+
+.section-status {
+    font-size: 0.95rem;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 25px;
+    display: inline-block;
+}
+
+.status-active { 
+    background: rgba(39, 174, 96, 0.15); 
+    color: var(--success-color);
+    box-shadow: 0 2px 8px rgba(39, 174, 96, 0.2);
+}
+
+.section-production-main {
+    text-align: right;
+}
+
+.production-value {
+    font-size: 2.8rem;
+    font-weight: 900;
+    color: var(--text-dark);
+    line-height: 1;
+    margin-bottom: 8px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+
+.production-percentage {
+    font-size: 1.1rem;
+    color: var(--success-color);
+    font-weight: 700;
+    margin-left: 10px;
+    background: rgba(39, 174, 96, 0.1);
+    padding: 4px 12px;
+    border-radius: 20px;
+    display: inline-block;
+}
+
+.production-label {
+    color: var(--text-light);
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+/* ==========================================
+   GRILLE DES DÉTAILS - OPTIMISÉE
+   ========================================== */
+.section-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+    margin-bottom: 25px;
+}
+
+.detail-column {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.detail-group {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-radius: 16px;
+    padding: 22px;
+    height: 100%;
+    border-left: 5px solid currentColor;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
+
+.detail-group:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    transform: translateY(-3px);
+}
+
+.detail-group-title {
+    margin: 0 0 20px 0;
+    font-size: 1.25rem;
+    font-weight: 900;
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 15px;
+    border-bottom: 3px solid rgba(0,0,0,0.1);
+    letter-spacing: -0.3px;
+}
+
+/* ==========================================
+   ITEMS DE DÉTAILS - LABELS ET VALEURS AGRANDIS
+   ========================================== */
+.detail-item-enhanced {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 2px solid rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+}
+
+.detail-item-enhanced:hover {
+    background: rgba(52, 152, 219, 0.03);
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 8px;
+}
+
+.detail-item-enhanced:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    color: var(--text-dark);
+    font-size: 1.05rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.detail-value {
+    font-weight: 900;
+    color: var(--text-dark);
+    font-size: 1.35rem;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.detail-percentage {
+    font-size: 0.95rem;
+    color: var(--text-light);
+    font-weight: 700;
+    margin-left: 8px;
+    background: rgba(52, 152, 219, 0.1);
+    padding: 3px 10px;
+    border-radius: 15px;
+}
+
+/* ==========================================
+   PRODUCTION BREAKDOWN - VALEURS TRÈS VISIBLES
+   ========================================== */
+.production-breakdown-enhanced {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.breakdown-item-enhanced {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: all 0.3s ease;
+}
+
+.breakdown-item-enhanced:hover {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+    transform: translateX(5px);
+}
+
+.breakdown-item-enhanced.total {
+    border-top: 3px solid var(--border-color);
+    padding-top: 15px;
+    margin-top: 10px;
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.05), rgba(52, 152, 219, 0.1));
+    font-weight: 900;
+    border-left: 4px solid currentColor;
+}
+
+.breakdown-label {
+    color: var(--text-dark);
+    font-size: 1.05rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.breakdown-value {
+    font-weight: 900;
+    color: var(--text-dark);
+    font-size: 1.4rem;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.breakdown-item-enhanced.total .breakdown-value {
+    color: currentColor;
+    font-size: 1.6rem;
+}
+
+.breakdown-percentage {
+    font-size: 0.95rem;
+    color: var(--success-color);
+    font-weight: 700;
+    margin-left: 10px;
+    background: rgba(39, 174, 96, 0.12);
+    padding: 4px 10px;
+    border-radius: 15px;
+}
+
+/* ==========================================
+   INDICATEURS - GRILLE AMÉLIORÉE
+   ========================================== */
+.indicators-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.indicator-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
+
+.indicator-item:hover {
+    box-shadow: 0 4px 18px rgba(0,0,0,0.15);
+    transform: scale(1.02);
+}
+
+.indicator-label {
+    color: var(--text-dark);
+    font-size: 1.05rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.indicator-value {
+    font-weight: 900;
+    font-size: 1.5rem;
+    padding: 6px 14px;
+    border-radius: 10px;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.indicator-value.good {
+    background: linear-gradient(135deg, rgba(39, 174, 96, 0.15), rgba(39, 174, 96, 0.25));
+    color: var(--success-color);
+}
+
+.indicator-value.average {
+    background: linear-gradient(135deg, rgba(243, 156, 18, 0.15), rgba(243, 156, 18, 0.25));
+    color: var(--warning-color);
+}
+
+.indicator-value.poor {
+    background: linear-gradient(135deg, rgba(231, 76, 60, 0.15), rgba(231, 76, 60, 0.25));
+    color: var(--danger-color);
+}
+
+.indicator-value.waste {
+    background: linear-gradient(135deg, rgba(231, 76, 60, 0.12), rgba(231, 76, 60, 0.2));
+    color: var(--danger-color);
+}
+
+.indicator-percentage {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    font-weight: 700;
+    margin-left: 6px;
+}
+
+/* ==========================================
+   ACTIONS DES SECTIONS
+   ========================================== */
+.section-actions-expanded {
+    display: flex;
+    gap: 15px;
+    justify-content: flex-end;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 3px solid rgba(0,0,0,0.05);
+}
+
+.btn-section-action {
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.btn-section-action.primary {
+    background: linear-gradient(135deg, var(--primary-color), #2980b9);
+    color: white;
+}
+
+.btn-section-action.primary:hover {
+    background: linear-gradient(135deg, #2980b9, #21618c);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(52, 152, 219, 0.4);
+    color: white;
+}
+
+.btn-section-action.secondary {
+    background: white;
+    color: var(--text-dark);
+    border-color: var(--border-color);
+}
+
+.btn-section-action.secondary:hover {
+    background: var(--light-bg);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+    border-color: var(--primary-color);
+}
+
+/* ==========================================
+   ANALYTICS SECTION
+   ========================================== */
+.analytics-section {
+    margin: 50px 0;
+    background: white;
+    border-radius: 20px;
+    padding: 35px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+}
+
+.analytics-header {
+    margin-bottom: 35px;
+    text-align: center;
+}
+
+.analytics-header h2 {
+    color: var(--text-dark);
+    margin-bottom: 10px;
+    font-size: 2rem;
+    font-weight: 800;
+}
+
+.analytics-header p {
+    color: var(--text-light);
+    font-size: 1.2rem;
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 25px;
+}
+
+.analytics-card {
+    background: var(--light-bg);
+    border-radius: 15px;
+    padding: 25px;
+    border: 1px solid var(--border-color);
+    transition: transform 0.3s ease;
+}
+
+.analytics-card:hover {
+    transform: translateY(-3px);
+}
+
+.analytics-card.main-chart {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.analytics-card.kpi-cards {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.analytics-card.pie-chart {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.analytics-card.performance-table {
+    grid-column: 2;
+    grid-row: 2;
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.chart-header h3 {
+    margin: 0;
+    color: var(--text-dark);
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.chart-legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: var(--text-light);
+    font-weight: 600;
+}
+
+.legend-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+.legend-color.extrusion { background: var(--extrusion-color); }
+.legend-color.soudure { background: var(--soudure-color); }
+.legend-color.dechets { background: var(--danger-color); }
+.legend-color.bache-noir { background: var(--secondary-color); }
+
+.chart-container {
+    height: 280px;
+    position: relative;
+}
+
+.kpi-cards h3 {
+    margin: 0 0 25px 0;
+    color: var(--text-dark);
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+.kpi-item {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    border-left: 5px solid var(--primary-color);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease;
+}
+
+.kpi-item:hover {
+    transform: translateY(-3px);
+}
+
+.kpi-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-dark);
+    margin-bottom: 8px;
+    line-height: 1;
+}
+
+.kpi-label {
+    color: var(--text-light);
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.kpi-trend {
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 6px;
+    display: inline-block;
+}
+
+.kpi-percentage {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    font-weight: 600;
+    margin-left: 5px;
+}
+
+.performance-table h3 {
+    margin: 0 0 20px 0;
+    color: var(--text-dark);
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.table-container {
+    overflow-x: auto;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+.performance-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+    background: white;
+}
+
+.performance-table th {
+    background: linear-gradient(135deg, var(--primary-color), #2980b9);
+    color: white;
+    padding: 15px 12px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.performance-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 600;
+}
+
+.performance-table tr:hover {
+    background: rgba(52, 152, 219, 0.05);
+}
+
+.value-good { 
+    color: var(--success-color); 
+    font-weight: 700; 
+}
+
+.value-average { 
+    color: var(--warning-color); 
+    font-weight: 700; 
+}
+
+.value-poor { 
+    color: var(--danger-color); 
+    font-weight: 700; 
+}
+
+.table-percentage {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    font-weight: 600;
+    margin-left: 3px;
+}
+
+/* ==========================================
+   ANIMATIONS
+   ========================================== */
+@keyframes fadeInUp {
+    from { 
+        opacity: 0; 
+        transform: translateY(30px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+.metric-card, .section-card-extended, .analytics-card {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes pulse-orange {
+    0% { box-shadow: 0 0 0 0 rgba(14, 234, 106, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(39, 174, 96, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0); }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+.status-active::before {
+    content: '●';
+    margin-right: 5px;
+    animation: pulse 2s infinite;
+}
+
+/* Effet de brillance sur les cartes */
+.section-card-extended::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+    );
+    transition: left 0.5s;
+    pointer-events: none;
+}
+
+.section-card-extended:hover::after {
+    left: 100%;
+}
+
+/* ==========================================
+   RESPONSIVE DESIGN
+   ========================================== */
+@media (max-width: 1400px) {
+    .dashboard-container {
+        padding: 20px;
+        max-width: 100%;
+    }
+    
+    .section-details-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+    }
+    
+    .section-icon {
+        font-size: 3rem;
+    }
+    
+    .section-title-content h3 {
+        font-size: 1.6rem;
+    }
+    
+    .production-value {
+        font-size: 2.4rem;
+    }
+    
+    .analytics-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto auto;
+    }
+    
+    .analytics-card.main-chart {
+        grid-column: 1;
+        grid-row: 1;
+    }
+    
+    .analytics-card.kpi-cards {
+        grid-column: 1;
+        grid-row: 2;
+    }
+    
+    .analytics-card.pie-chart {
+        grid-column: 1;
+        grid-row: 3;
+    }
+    
+    .analytics-card.performance-table {
+        grid-column: 1;
+        grid-row: 4;
+    }
+    
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 1200px) {
+    .section-card-extended {
+        padding: 25px;
+    }
+    
+    .section-details-grid {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+    
+    .detail-group-title {
+        font-size: 1.15rem;
+    }
+    
+    .detail-label {
+        font-size: 1rem;
+    }
+    
+    .detail-value {
+        font-size: 1.25rem;
+    }
+    
+    .breakdown-value {
+        font-size: 1.3rem;
+    }
+    
+    .indicator-value {
+        font-size: 1.35rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-header-integrated {
+        padding: 20px;
+    }
+    
+    .header-main {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .header-left h1 {
+        font-size: 1.5rem;
+    }
+    
+    .inline-date-filter {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .date-input-inline,
+    .btn-refresh,
+    .btn-today-inline {
+        width: 100%;
+    }
+    
+    .filter-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .header-actions {
+        flex-direction: column;
+        gap: 15px;
+        width: 100%;
+    }
+    
+    .user-welcome {
+        text-align: center;
+    }
+    
+    .section-header-main {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+    
+    .section-summary {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .section-card-extended {
+        padding: 20px;
+    }
+    
+    .section-header-expanded {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .section-info-main {
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+    }
+    
+    .section-production-main {
+        text-align: center;
+    }
+    
+    .section-icon {
+        font-size: 2.5rem;
+    }
+    
+    .section-title-content h3 {
+        font-size: 1.4rem;
+    }
+    
+    .production-value {
+        font-size: 2rem;
+    }
+    
+    .section-details-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .detail-group {
+        padding: 18px;
+    }
+    
+    .detail-group-title {
+        font-size: 1.05rem;
+    }
+    
+    .detail-label {
+        font-size: 0.95rem;
+    }
+    
+    .detail-value {
+        font-size: 1.15rem;
+    }
+    
+    .breakdown-value {
+        font-size: 1.2rem;
+    }
+    
+    .indicator-value {
+        font-size: 1.25rem;
+    }
+    
+    .section-actions-expanded {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .btn-section-action {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .analytics-section {
+        padding: 20px;
+    }
+    
+    .chart-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+    
+    .kpi-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .chart-legend {
+        justify-content: flex-start;
+    }
+    
+    .metric-percentage {
+        display: block;
+        margin-left: 0;
+        margin-top: 2px;
+    }
+    
+    .production-percentage {
+        display: block;
+        margin-left: 0;
+    }
+    
+    .breakdown-percentage {
+        display: block;
+        margin-left: 0;
+        margin-top: 1px;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-container {
+        padding: 15px;
+    }
+    
+    .metric-card {
+        padding: 20px;
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .section-card-extended {
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .section-icon {
+        font-size: 2rem;
+    }
+    
+    .section-title-content h3 {
+        font-size: 1.2rem;
+    }
+    
+    .production-value {
+        font-size: 1.6rem;
+    }
+    
+    .metric-unit {
+        font-size: 1rem;
+    }
+    
+    .production-percentage {
+        font-size: 0.9rem;
+        display: block;
+        margin-left: 0;
+        margin-top: 5px;
+    }
+    
+    .section-header-expanded {
+        margin-bottom: 15px;
+    }
+    
+    .section-actions-expanded {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .btn-section-action {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .detail-group {
+        padding: 15px;
+    }
+    
+    .detail-item-enhanced {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .breakdown-item-enhanced {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .indicator-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .breakdown-percentage,
+    .detail-percentage,
+    .indicator-percentage {
+        margin-left: 0;
+        margin-top: 5px;
+    }
+}
+
+/* ==========================================
+   AMÉLIORATIONS VISUELLES PROFESSIONNELLES
+   ========================================== */
+
+/* Amélioration des ombres au survol */
+.detail-group:hover,
+.breakdown-item-enhanced:hover,
+.indicator-item:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+/* Styles pour les pourcentages */
+.pourcentage_bretelles,
+.pourcentage_rema,
+.pourcentage_batta,
+.pourcentage_sac_emballage,
+.pourcentage_broyage,
+.pourcentage_bache_noir,
+.pourcentage_bobines_finies,
+.pourcentage_bobines_semi_finies,
+.pourcentage_semi_finis,
+.pourcentage_finis,
+.pourcentage_matiere_premiere,
+.pourcentage_dechets_extrusion,
+.pourcentage_dechets_imprimerie,
+.pourcentage_dechets_soudure,
+.pourcentage_machines_imprimerie,
+.pourcentage_machines_soudure,
+.pourcentage_moulinex_actifs {
+    font-size: 0.95rem;
+    color: var(--success-color);
+    font-weight: 700;
+    margin-left: 10px;
+    background: rgba(39, 174, 96, 0.12);
+    padding: 4px 10px;
+    border-radius: 15px;
+}
+
+/* Styles spéciaux pour les KPIs */
+.pourcentage_kpi_production,
+.pourcentage_table_extrusion,
+.pourcentage_table_imprimerie,
+.pourcentage_table_soudure,
+.pourcentage_table_recyclage {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    font-weight: 600;
+    margin-left: 5px;
+}
+
+/* Amélioration de la lisibilité des unités */
+.metric-unit,
+.unit-large,
+.unit-small,
+.total-unit {
+    opacity: 0.8;
+}
+
+/* Style pour les badges de statut */
+.status-good,
+.status-poor {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.status-good {
+    background: rgba(39, 174, 96, 0.15);
+    color: #27ae60;
+}
+
+.status-poor {
+    background: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+}
+
+/* Amélioration des transitions */
+* {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Scrollbar personnalisée */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #2980b9;
+}
+
+/* Amélioration de la sélection de texte */
+::selection {
+    background: rgba(52, 152, 219, 0.3);
+    color: var(--text-dark);
+}
+
+/* Focus visible pour l'accessibilité */
+*:focus-visible {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* Amélioration des inputs */
+input[type="date"],
+input[type="time"],
+select {
+    transition: all 0.3s ease;
+}
+
+input[type="date"]:focus,
+input[type="time"]:focus,
+select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+/* Print styles */
+@media print {
+    .dashboard-header-integrated,
+    .section-actions-expanded,
+    .btn-section-action {
+        display: none;
+    }
+    
+    .section-card-extended {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    
+    body {
+        background: white;
+    }
+    
+    .dashboard-container {
+        max-width: 100%;
+        padding: 0;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Mise à jour temps réel de l'heure
+function updateCurrentTime() {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('fr-FR', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        second: '2-digit'
+    });
+    document.getElementById('current-time').textContent = timeString;
+}
+
+// Mise à jour des données du dashboard
+function updateDashboardData() {
+    if (window.SOFEMCI && window.SOFEMCI.urls && window.SOFEMCI.urls.apiDashboard) {
+        fetch(window.SOFEMCI.urls.apiDashboard)
+            .then(response => response.json())
+            .then(data => {
+                const productionElement = document.getElementById('production-totale');
+                if (productionElement && data.production_totale) {
+                    productionElement.innerHTML = `${data.production_totale.toLocaleString('fr-FR')} <span class="metric-unit">kg</span>`;
+                }
+            })
+            .catch(error => console.error('Erreur mise à jour dashboard:', error));
+    }
+}
+
+// Graphiques Analytics
+function initializeCharts() {
+    const chartData = {{ chart_data|safe }};
+    
+    // Graphique de tendances
+    const trendCtx = document.getElementById('productionTrendChart').getContext('2d');
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: chartData.months,
+            datasets: [
+                {
+                    label: 'Extrusion',
+                    data: chartData.extrusion,
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 3
+                },
+                {
+                    label: 'Soudure',
+                    data: chartData.soudure,
+                    borderColor: '#e67e22',
+                    backgroundColor: 'rgba(230, 126, 34, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 3
+                },
+                {
+                    label: 'Déchets',
+                    data: chartData.dechets,
+                    borderColor: '#e74c3c',
+                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 3
+                },
+                {
+                    label: 'Bâche Noire',
+                    data: chartData.bache_noir,
+                    borderColor: '#2c3e50',
+                    backgroundColor: 'rgba(44, 62, 80, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    titleColor: '#2c3e50',
+                    bodyColor: '#2c3e50',
+                    borderColor: '#e1e8ed',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    padding: 12
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Kilogrammes (kg)',
+                        color: '#7f8c8d',
+                        font: {
+                            weight: 'bold'
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                }
+            }
+        }
+    });
+    
+    // Graphique de répartition
+    const pieCtx = document.getElementById('productionDistributionChart').getContext('2d');
+    new Chart(pieCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Extrusion', 'Imprimerie', 'Soudure', 'Recyclage'],
+            datasets: [{
+                data: [28400, 17200, 9800, 6800],
+                backgroundColor: [
+                    '#3498db',
+                    '#9b59b6',
+                    '#e67e22',
+                    '#27ae60'
+                ],
+                borderWidth: 3,
+                borderColor: '#fff',
+                hoverOffset: 15
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        font: {
+                            weight: '600'
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    titleColor: '#2c3e50',
+                    bodyColor: '#2c3e50',
+                    borderColor: '#e1e8ed',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    padding: 12
+                }
+            },
+            cutout: '60%'
+        }
+    });
+}
+
+// Initialisation au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    updateCurrentTime();
+    setInterval(updateCurrentTime, 1000);
+    
+    if (window.SOFEMCI && window.SOFEMCI.urls && window.SOFEMCI.urls.apiDashboard) {
+        updateDashboardData();
+        setInterval(updateDashboardData, 30000);
+    }
+    
+    // Initialiser les graphiques
+    initializeCharts();
+    
+    // Animation au scroll
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
+    
+    // Observer les cartes de sections
+    document.querySelectorAll('.section-card-extended').forEach(card => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(30px)';
+        card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(card);
+    });
+});
+</script>
+{% endblock %}
