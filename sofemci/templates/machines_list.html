@@ -1,0 +1,609 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Gestion du Parc Machines - SOFEM-CI{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- En-tête avec actions -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-2">🏭 Gestion du Parc Machines</h1>
+            <p class="text-muted mb-0">Vue d'ensemble et gestion complète du parc machines industriel</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'machine_create' %}" class="btn btn-primary btn-lg">
+                <i class="fas fa-plus me-2"></i>Nouvelle Machine
+            </a>
+            <button class="btn btn-outline-secondary btn-lg" data-bs-toggle="modal" data-bs-target="#exportModal">
+                <i class="fas fa-download me-2"></i>Exporter
+            </button>
+        </div>
+    </div>
+
+    <!-- Cartes de statistiques -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-stats total-machines">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="stat-icon bg-primary">
+                                <i class="fas fa-industry"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h4 class="card-title text-primary mb-1">{{ stats.total }}</h4>
+                            <p class="card-text text-muted mb-0">Total Machines</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-stats active-machines">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="stat-icon bg-success">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h4 class="card-title text-success mb-1">{{ stats.actives }}</h4>
+                            <p class="card-text text-muted mb-0">Machines Actives</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-stats maintenance-machines">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="stat-icon bg-warning">
+                                <i class="fas fa-tools"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h4 class="card-title text-warning mb-1">{{ stats.maintenance }}</h4>
+                            <p class="card-text text-muted mb-0">En Maintenance</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-stats down-machines">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="stat-icon bg-danger">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h4 class="card-title text-danger mb-1">{{ stats.pannes }}</h4>
+                            <p class="card-text text-muted mb-0">En Panne</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres et Recherche -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-filter me-2"></i>Filtres et Recherche
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="section" class="form-label">Section</label>
+                    <select id="section" name="section" class="form-select">
+                        <option value="">Toutes les sections</option>
+                        {% for value, label in sections %}
+                        <option value="{{ value }}" {% if section_filter == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="etat" class="form-label">État</label>
+                    <select id="etat" name="etat" class="form-select">
+                        <option value="">Tous les états</option>
+                        {% for value, label in etats %}
+                        <option value="{{ value }}" {% if etat_filter == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="zone" class="form-label">Zone (Extrusion)</label>
+                    <select id="zone" name="zone" class="form-select">
+                        <option value="">Toutes les zones</option>
+                        {% for zone in zones %}
+                        <option value="{{ zone.numero }}" {% if zone_filter == zone.numero|stringformat:"i" %}selected{% endif %}>
+                            Zone {{ zone.numero }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="search" class="form-label">Recherche</label>
+                    <input type="text" id="search" name="search" class="form-control" 
+                           placeholder="Numéro, type..." value="{{ search_query }}">
+                </div>
+                
+                <div class="col-12">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-2"></i>Appliquer les filtres
+                        </button>
+                        <a href="{% url 'machines_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-undo me-2"></i>Réinitialiser
+                        </a>
+                        <div class="ms-auto">
+                            <select id="page-size" name="page_size" class="form-select" onchange="this.form.submit()">
+                                <option value="10" {% if page_size == 10 %}selected{% endif %}>10 par page</option>
+                                <option value="25" {% if page_size == 25 %}selected{% endif %}>25 par page</option>
+                                <option value="50" {% if page_size == 50 %}selected{% endif %}>50 par page</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Liste des machines -->
+    <div class="card">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-list me-2"></i>Liste des Machines
+                <span class="badge bg-primary ms-2">{{ machines.paginator.count }}</span>
+            </h5>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary" onclick="toggleMaintenanceView()">
+                    <i class="fas fa-calendar-alt me-1"></i>Vue Maintenance
+                </button>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                            data-bs-toggle="dropdown">
+                        <i class="fas fa-columns me-1"></i>Colonnes
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#" onclick="toggleColumn('capacite')">Capacité</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="toggleColumn('maintenance')">Maintenance</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-body p-0">
+            {% if machines %}
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0 machines-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="80">Numéro</th>
+                            <th>Type</th>
+                            <th>Section</th>
+                            <th>Zone</th>
+                            <th>État</th>
+                            <th class="column-capacite">Capacité/h</th>
+                            <th class="column-maintenance">Dernière Maintenance</th>
+                            <th class="column-maintenance">Prochaine Maintenance</th>
+                            <th width="120" class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for machine in machines %}
+                        <tr class="machine-status-{{ machine.etat }}">
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <span class="machine-indicator status-{{ machine.etat }}"></span>
+                                    <strong class="ms-2">{{ machine.numero }}</strong>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary machine-type">
+                                    {{ machine.get_type_machine_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <span class="section-icon me-2">
+                                        {% if machine.section == 'extrusion' %}<i class="fas fa-cogs text-primary"></i>
+                                        {% elif machine.section == 'imprimerie' %}<i class="fas fa-print text-purple"></i>
+                                        {% elif machine.section == 'soudure' %}<i class="fas fa-bolt text-warning"></i>
+                                        {% elif machine.section == 'recyclage' %}<i class="fas fa-recycle text-success"></i>
+                                        {% endif %}
+                                    </span>
+                                    <span>{{ machine.get_section_display }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                {% if machine.zone_extrusion %}
+                                    <span class="badge bg-light text-dark">
+                                        Zone {{ machine.zone_extrusion.numero }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <select class="form-select form-select-sm status-select status-{{ machine.etat }}" 
+                                        data-machine-id="{{ machine.id }}" 
+                                        onchange="changeMachineStatus(this)">
+                                    {% for value, label in etats %}
+                                    <option value="{{ value }}" {% if machine.etat == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td class="column-capacite">
+                                {% if machine.capacite_horaire %}
+                                    <span class="fw-bold">{{ machine.capacite_horaire|floatformat:0 }}</span>
+                                    <small class="text-muted">kg/h</small>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="column-maintenance">
+                                {% if machine.derniere_maintenance %}
+                                    <span class="{% if machine.maintenance_est_due %}text-danger{% endif %}">
+                                        {{ machine.derniere_maintenance|date:"d/m/Y" }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">Non définie</span>
+                                {% endif %}
+                            </td>
+                            <td class="column-maintenance">
+                                {% if machine.prochaine_maintenance %}
+                                    <span class="{% if machine.maintenance_est_due %}text-danger fw-bold{% endif %}">
+                                        {{ machine.prochaine_maintenance|date:"d/m/Y" }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex justify-content-center gap-1">
+                                    <a href="{% url 'machine_detail' machine.id %}" 
+                                       class="btn btn-sm btn-outline-primary" 
+                                       data-bs-toggle="tooltip" title="Voir détails">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'machine_edit' machine.id %}" 
+                                       class="btn btn-sm btn-outline-warning"
+                                       data-bs-toggle="tooltip" title="Modifier">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% if user.role == 'admin' %}
+                                    <a href="{% url 'machine_delete' machine.id %}" 
+                                       class="btn btn-sm btn-outline-danger"
+                                       data-bs-toggle="tooltip" title="Supprimer"
+                                       onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette machine ?')">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if machines.has_other_pages %}
+            <div class="card-footer bg-white">
+                <nav aria-label="Navigation des pages">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if machines.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" 
+                                   href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" 
+                                   href="?page={{ machines.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fas fa-angle-left"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">
+                                Page {{ machines.number }} sur {{ machines.paginator.num_pages }}
+                            </span>
+                        </li>
+
+                        {% if machines.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" 
+                                   href="?page={{ machines.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fas fa-angle-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" 
+                                   href="?page={{ machines.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-industry fa-4x text-muted"></i>
+                </div>
+                <h4 class="text-muted mb-3">Aucune machine trouvée</h4>
+                <p class="text-muted mb-4">Aucune machine ne correspond aux critères de recherche</p>
+                <a href="{% url 'machine_create' %}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-plus me-2"></i>Créer la première machine
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'export -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Exporter les données</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Format d'export</label>
+                    <select class="form-select">
+                        <option>Excel (.xlsx)</option>
+                        <option>CSV (.csv)</option>
+                        <option>PDF (.pdf)</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Colonnes à inclure</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" checked>
+                        <label class="form-check-label">Informations de base</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" checked>
+                        <label class="form-check-label">Statut et maintenance</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox">
+                        <label class="form-check-label">Historique complet</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary">Télécharger</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.card-stats {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: transform 0.2s;
+}
+
+.card-stats:hover {
+    transform: translateY(-2px);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.machine-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-actif { background-color: #28a745; }
+.status-maintenance { background-color: #ffc107; }
+.status-panne { background-color: #dc3545; }
+.status-arret { background-color: #6c757d; }
+
+.status-select.status-actif {
+    border-color: #28a745;
+    background-color: rgba(40, 167, 69, 0.1);
+}
+
+.status-select.status-maintenance {
+    border-color: #ffc107;
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+.status-select.status-panne {
+    border-color: #dc3545;
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.status-select.status-arret {
+    border-color: #6c757d;
+    background-color: rgba(108, 117, 125, 0.1);
+}
+
+.machine-type {
+    font-size: 0.8rem;
+}
+
+.section-icon {
+    width: 24px;
+    text-align: center;
+}
+
+.text-purple {
+    color: #6f42c1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.25rem;
+    }
+}
+
+/* Animation pour changement de statut */
+.status-select {
+    transition: all 0.3s ease;
+}
+
+.status-select:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function changeMachineStatus(selectElement) {
+    const machineId = selectElement.dataset.machineId;
+    const newStatus = selectElement.value;
+    const currentStatus = selectElement.className.match(/status-(\w+)/)[1];
+    
+    if (confirm(`Changer le statut de cette machine de "${currentStatus}" à "${newStatus}" ?`)) {
+        // Afficher un indicateur de chargement
+        const originalHTML = selectElement.innerHTML;
+        selectElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        selectElement.disabled = true;
+        
+        fetch(`/machines/${machineId}/change-status/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `status=${newStatus}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Mettre à jour les classes CSS
+                selectElement.className = `form-select form-select-sm status-select status-${newStatus}`;
+                selectElement.innerHTML = originalHTML;
+                selectElement.disabled = false;
+                
+                // Mettre à jour l'indicateur visuel
+                const row = selectElement.closest('tr');
+                const indicator = row.querySelector('.machine-indicator');
+                indicator.className = `machine-indicator status-${newStatus}`;
+                
+                // Afficher un message de succès
+                showAlert('Statut mis à jour avec succès', 'success');
+            } else {
+                throw new Error(data.message);
+            }
+        })
+        .catch(error => {
+            selectElement.innerHTML = originalHTML;
+            selectElement.disabled = false;
+            showAlert('Erreur lors de la mise à jour: ' + error.message, 'error');
+            // Recharger la page pour récupérer l'état actuel
+            setTimeout(() => location.reload(), 2000);
+        });
+    } else {
+        // Recharger pour réinitialiser la sélection
+        location.reload();
+    }
+}
+
+function showAlert(message, type) {
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+    const alert = document.createElement('div');
+    alert.className = `alert ${alertClass} alert-dismissible fade show`;
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.querySelector('.container-fluid').insertBefore(alert, document.querySelector('.container-fluid').firstChild);
+    
+    setTimeout(() => {
+        alert.remove();
+    }, 5000);
+}
+
+function toggleMaintenanceView() {
+    const maintenanceColumns = document.querySelectorAll('.column-maintenance');
+    maintenanceColumns.forEach(col => {
+        col.style.display = col.style.display === 'none' ? 'table-cell' : 'none';
+    });
+}
+
+function toggleColumn(columnName) {
+    const columns = document.querySelectorAll(`.column-${columnName}`);
+    columns.forEach(col => {
+        col.style.display = col.style.display === 'none' ? 'table-cell' : 'none';
+    });
+}
+
+// Initialisation des tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+
+// Recherche en temps réel (optionnel)
+document.getElementById('search').addEventListener('input', function(e) {
+    // Implémentation de la recherche en temps réel si nécessaire
+    console.log('Recherche:', e.target.value);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ machine.numero }} - Détails{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <div>
+            <a href="{% url 'machines_list' %}" class="back-link">← Retour</a>
+            <h1>Machine {{ machine.numero }}</h1>
+        </div>
+        <a href="{% url 'machine_edit' machine.id %}" class="btn-primary">Modifier</a>
+    </div>
+
+    <div class="detail-card">
+        <h2>Informations</h2>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="label">Numéro:</span>
+                <span class="value">{{ machine.numero }}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Type:</span>
+                <span class="value">{{ machine.get_type_machine_display }}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Section:</span>
+                <span class="value">{{ machine.get_section_display }}</span>
+            </div>
+            {% if machine.zone_extrusion %}
+            <div class="info-item">
+                <span class="label">Zone:</span>
+                <span class="value">Zone {{ machine.zone_extrusion.numero }}</span>
+            </div>
+            {% endif %}
+            <div class="info-item">
+                <span class="label">État:</span>
+                <span class="value">{{ machine.get_etat_display }}</span>
+            </div>
+            {% if machine.capacite_horaire %}
+            <div class="info-item">
+                <span class="label">Capacité:</span>
+                <span class="value">{{ machine.capacite_horaire }} kg/h</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.back-link {
+    color: #3498db;
+    text-decoration: none;
+    margin-bottom: 10px;
+    display: inline-block;
+}
+
+.detail-card {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    margin-top: 20px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.info-item .label {
+    font-weight: 600;
+    color: #7f8c8d;
+}
+
+.info-item .value {
+    font-weight: 600;
+    color: #2c3e50;
+}
+</style>
+{% endblock %}

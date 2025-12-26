@@ -1,0 +1,330 @@
+/* P:\sofemci\sofemci\sofemci\static\admin\css\production.css */
+
+/* STYLES COMMUNS POUR TOUTES LES SECTIONS DE PRODUCTION */
+
+/* 1. TABLEAU DE LISTE PRINCIPAL */
+#result_list {
+    font-size: 12px !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* 2. EN-TÊTES DE COLONNES - Couleurs par section */
+#result_list th {
+    color: white !important;
+    font-weight: 600 !important;
+    padding: 8px 5px !important;
+    text-align: center !important;
+    border: 1px solid transparent !important;
+    white-space: nowrap !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+}
+
+/* Extrusion - Bleu */
+.model-productionextrusion #result_list th {
+    background: linear-gradient(to bottom, #2c5282, #1a365d) !important;
+}
+
+/* Imprimerie - Violet */
+.model-productionimprimerie #result_list th {
+    background: linear-gradient(to bottom, #11021c, #1d0639) !important;
+}
+
+/* Soudure - Orange */
+.model-productionsoudure #result_list th {
+    background: linear-gradient(to bottom, #1c1009, #120805) !important;
+}
+
+/* Recyclage - Vert */
+.model-productionrecyclage #result_list th {
+    background: linear-gradient(to bottom, #2E7D32, #1B5E20) !important;
+}
+
+/* 3. CELLULES DU TABLEAU */
+#result_list td {
+    padding: 6px 4px !important;
+    border: 1px solid #e2e8f0 !important;
+    vertical-align: middle !important;
+    max-width: 100px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+
+/* P:\sofemci\sofemci\sofemci\static\admin\css\production.css */
+
+/* ... styles existants ... */
+
+/* Soudure - Orange */
+.model-productionsoudure #result_list th {
+    background: linear-gradient(to bottom, #170c06, #0f0502) !important;
+}
+
+/* Recyclage - Vert */
+.model-productionrecyclage #result_list th {
+    background: linear-gradient(to bottom, #2E7D32, #1B5E20) !important;
+}
+
+/* Styles spécifiques pour les colonnes de soudure */
+.field-get_bretelles,
+.field-get_rema,
+.field-get_batta,
+.field-get_sac_emballage {
+    text-align: center !important;
+    font-family: 'Consolas', 'Monaco', monospace !important;
+    font-weight: 600 !important;
+    min-width: 70px !important;
+    max-width: 80px !important;
+    color: #2d3748 !important;
+}
+
+/* Styles spécifiques pour les colonnes de recyclage */
+.field-get_moulinex,
+.field-get_broyage,
+.field-get_bache_noire,
+.field-get_production_par_moulinex {
+    text-align: center !important;
+    font-family: 'Consolas', 'Monaco', monospace !important;
+    font-weight: 600 !important;
+    min-width: 70px !important;
+    max-width: 80px !important;
+    color: #2d3748 !important;
+}
+
+/* Colonne taux transformation recyclage */
+.field-get_taux_transformation {
+    text-align: center !important;
+    min-width: 80px !important;
+    max-width: 90px !important;
+    font-weight: bold !important;
+    font-size: 11px !important;
+    padding: 5px !important;
+    border-radius: 4px !important;
+}
+
+/* P:\sofemci\sofemci\sofemci\static\admin\css\production.css */
+
+/* STYLES COMMUNS POUR TOUTES LES SECTIONS DE PRODUCTION */
+
+/* 1. TABLEAU DE LISTE PRINCIPAL */
+#result_list {
+    font-size: 12px !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* 2. EN-TÊTES DE COLONNES - Couleurs par section */
+#result_list th {
+    color: white !important;
+    font-weight: 600 !important;
+    padding: 8px 5px !important;
+    text-align: center !important;
+    border: 1px solid transparent !important;
+    white-space: nowrap !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+}
+
+/* Extrusion - Bleu */
+.model-productionextrusion #result_list th {
+    background: linear-gradient(to bottom, #2c5282, #1a365d) !important;
+}
+
+/* Imprimerie - Violet */
+.model-productionimprimerie #result_list th {
+    background: linear-gradient(to bottom, #6A0DAD, #4B0082) !important;
+}
+
+/* Soudure - Orange/Brun */
+.model-productionsoudure #result_list th {
+    background: linear-gradient(to bottom, #170a03, #170702) !important;
+}
+
+/* Recyclage - Vert */
+.model-productionrecyclage #result_list th {
+    background: linear-gradient(to bottom, #2E7D32, #1B5E20) !important;
+}
+
+/* 3. CELLULES DU TABLEAU - Style compact */
+#result_list td {
+    padding: 6px 4px !important;
+    border: 1px solid #e2e8f0 !important;
+    vertical-align: middle !important;
+    max-width: 100px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+/* 4. COLONNES SPÉCIFIQUES - Style identique pour toutes les sections */
+
+/* Colonnes date */
+.field-date_production_short {
+    text-align: center !important;
+    font-weight: bold !important;
+    background-color: #f8fafc !important;
+    color: #2d3748 !important;
+    min-width: 60px !important;
+}
+
+/* Colonnes équipe */
+.field-get_equipe_compact,
+.field-get_heures_creneau {
+    text-align: center !important;
+    background-color: #edf2f7 !important;
+    font-weight: 600 !important;
+    color: #4a5568 !important;
+    min-width: 60px !important;
+}
+
+/* Colonnes machines */
+.field-get_machines_actives,
+.field-get_moulinex {
+    text-align: center !important;
+    background-color: #e6fffa !important;
+    color: #234e52 !important;
+    font-weight: bold !important;
+    min-width: 55px !important;
+}
+
+/* Colonnes quantités (kg) - Style compact avec emojis */
+.field-get_matiere_premiere,
+.field-get_bobines_finies,
+.field-get_bobines,
+.field-get_finis,
+.field-get_semi_finis,
+.field-get_dechets,
+.field-get_total_production,
+.field-get_bretelles,
+.field-get_rema,
+.field-get_batta,
+.field-get_sac_emballage,
+.field-get_broyage,
+.field-get_bache_noire,
+.field-get_bobines_semi,
+.field-get_production_par_moulinex {
+    text-align: center !important;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+    font-weight: 600 !important;
+    color: #2d3748 !important;
+    background-color: #f7fafc !important;
+    min-width: 70px !important;
+    font-size: 11px !important;
+}
+
+/* Colonnes rendement/taux - Couleurs selon performance */
+.field-get_rendement,
+.field-get_taux_dechet,
+.field-get_taux_transformation {
+    text-align: center !important;
+    min-width: 75px !important;
+    font-weight: bold !important;
+    font-size: 11px !important;
+    padding: 4px !important;
+    border-radius: 4px !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+/* Bon rendement (vert) */
+td.field-get_rendement:contains("%") {
+    background-color: #c6f6d5 !important;
+    color: #22543d !important;
+}
+
+/* Rendement moyen (orange) */
+td.field-get_rendement[style*="orange"] {
+    background-color: #fed7d7 !important;
+    color: #c53030 !important;
+}
+
+/* Mauvais rendement (rouge) */
+td.field-get_rendement[style*="red"] {
+    background-color: #fed7d7 !important;
+    color: #c53030 !important;
+}
+
+/* Colonne statut */
+.field-get_status_icon {
+    text-align: center !important;
+    min-width: 80px !important;
+    font-weight: bold !important;
+    padding: 4px !important;
+    border-radius: 4px !important;
+}
+
+/* Statut validé */
+td.field-get_status_icon:contains("Validé") {
+    background-color: #c6f6d5 !important;
+    color: #22543d !important;
+    border: 1px solid #9ae6b4 !important;
+}
+
+/* Statut en attente */
+td.field-get_status_icon:contains("En attente") {
+    background-color: #fed7d7 !important;
+    color: #c53030 !important;
+    border: 1px solid #fc8181 !important;
+}
+
+/* 5. ALTERNANCE DES LIGNES */
+#result_list tbody tr:nth-child(odd) {
+    background-color: #ffffff !important;
+}
+
+#result_list tbody tr:nth-child(even) {
+    background-color: #f8fafc !important;
+}
+
+/* 6. HOVER SUR LES LIGNES */
+#result_list tbody tr:hover {
+    background-color: #ebf8ff !important;
+    transition: background-color 0.2s ease;
+}
+
+/* 7. LIENS DE LA LISTE (colonnes cliquables) */
+#result_list td a {
+    color: #2b6cb0 !important;
+    font-weight: 600 !important;
+    text-decoration: none !important;
+}
+
+#result_list td a:hover {
+    color: #1a365d !important;
+    text-decoration: underline !important;
+}
+
+/* 8. FILTRES ET PAGINATION */
+.actions {
+    background-color: #225d31 !important;
+    padding: 10px !important;
+    border: 1px solid #1c562b !important;
+    border-radius: 4px !important;
+    margin-bottom: 10px !important;
+}
+
+.paginator {
+    background-color: #f7f3ed !important;
+    padding: 8px !important;
+    border-top: 2px solid #cbd5e0 !important;
+    font-size: 11px !important;
+}
+
+/* 9. RESPONSIVE - pour les petits écrans */
+@media (max-width: 1200px) {
+    #result_list th,
+    #result_list td {
+        font-size: 11px !important;
+        padding: 4px 3px !important;
+    }
+    
+    .field-date_production_short {
+        min-width: 55px !important;
+    }
+    
+    .field-get_matiere_premiere,
+    .field-get_bobines_finies {
+        min-width: 60px !important;
+    }
+}

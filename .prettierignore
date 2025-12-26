@@ -1,0 +1,16 @@
+*.min.js
+*.min.css
+*.py
+*.sql
+*.json
+*.md
+*.txt
+*.yml
+*.yaml
+.env
+node_modules/
+static/
+media/
+__pycache__/
+*.pyc
+.DS_Store
