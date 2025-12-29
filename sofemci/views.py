@@ -210,7 +210,7 @@ def saisie_sections_view(request):
         'equipes': equipes,
     }
     
-    return render(request, 'production/saisie_sections.html', context)
+    return render(request, 'saisie_sections.html', context)
 
 @login_required
 def saisie_imprimerie_ajax(request):

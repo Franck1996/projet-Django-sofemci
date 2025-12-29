@@ -119,7 +119,6 @@ class Migration(migrations.Migration):
                 ),
                 ("telephone", models.CharField(blank=True, max_length=20)),
                 ("date_embauche", models.DateField(blank=True, null=True)),
-                ("actif", models.BooleanField(default=True)),
                 (
                     "groups",
                     models.ManyToManyField(

@@ -263,6 +263,14 @@
                       🤖 IA Prédictive
                     </a>
                     {% endif %}
+
+                    {% if user.is_staff or user.is_superuser %}
+                    <li class="nav-item">
+                    <a class="nav-link {% if '/admin/' in request.path %}active{% endif %}" href="/admin/">
+                        <i class="fas fa-user-shield me-1"></i>Espace Admin
+                    </a>
+</li>
+{% endif %}
                 </div>
                 
                 <!-- Info utilisateur -->

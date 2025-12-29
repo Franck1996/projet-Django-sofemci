@@ -33,11 +33,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.humanize',  # Pour formater les nombres
+    'django.contrib.humanize',  
     
    
     
-    # Our main application
     'sofemci',
 ]
 
@@ -149,8 +148,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Créez ces dossiers s'ils n'existent pas
 STATICFILES_DIRS = [
-    # BASE_DIR / 'sofemci' / 'static',  # Décommentez quand le dossier existe
-    # BASE_DIR / 'static',  # Décommentez quand le dossier existe
+BASE_DIR / 'static',  # Décommentez quand le dossier existe
 ]
 
 # Media files configuration

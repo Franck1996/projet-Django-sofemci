@@ -24,7 +24,6 @@ class CustomUser(AbstractUser):
     role = models.CharField(max_length=20, choices=ROLES, default='superviseur')
     telephone = models.CharField(max_length=20, blank=True)
     date_embauche = models.DateField(null=True, blank=True)
-    actif = models.BooleanField(default=True)
     
     class Meta:
         verbose_name = "Utilisateur"
