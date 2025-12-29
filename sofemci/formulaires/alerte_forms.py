@@ -1,3 +1,6 @@
+"""
+Formulaires liés aux alertes et notifications
+"""
 from django import forms
 from ..models import Alerte, CustomUser
 

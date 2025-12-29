@@ -1,19 +1,20 @@
+"""
+Formulaires liés aux machines et équipements
+"""
 from django import forms
-from django.core.exceptions import ValidationError
-
 from ..models import Machine, ZoneExtrusion
 
 class MachineForm(forms.ModelForm):
-    """Formulaire gestion machines - AVEC PROVENANCE ET EST_NOUVELLE"""
+    """Formulaire gestion machines"""
     
     # Champs personnalisés pour la zone d'extrusion
     zone_numero = forms.IntegerField(
         required=False,
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Numéro de zone (1-10)',
+            'placeholder': 'Numéro de zone (1-5)',
             'min': 1,
-            'max': 10
+            'max': 5
         }),
         label='Numéro de Zone'
     )
@@ -30,33 +31,19 @@ class MachineForm(forms.ModelForm):
     class Meta:
         model = Machine
         fields = [
-            'numero', 'type_machine', 'section', 
-            'provenance', 'est_nouvelle',
-            'etat', 'capacite_horaire', 'date_installation', 
+            'numero', 'type_machine', 'section', 'etat', 
+            'capacite_horaire', 'date_installation', 
             'derniere_maintenance', 'observations'
         ]
         
         widgets = {
             'numero': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Ex: EXT-01, IMP-05, SOU-03'
+                'placeholder': 'Ex: EXT-Z1-M1, IMP-05, SOU-03'
             }),
-            'type_machine': forms.Select(attrs={
-                'class': 'form-control'
-            }),
-            'section': forms.Select(attrs={
-                'class': 'form-control'
-            }),
-            'provenance': forms.Select(attrs={
-                'class': 'form-control'
-            }),
-            'est_nouvelle': forms.CheckboxInput(attrs={
-                'class': 'form-check-input',
-                'id': 'id_est_nouvelle'
-            }),
-            'etat': forms.Select(attrs={
-                'class': 'form-control'
-            }),
+            'type_machine': forms.Select(attrs={'class': 'form-control'}),
+            'section': forms.Select(attrs={'class': 'form-control'}),
+            'etat': forms.Select(attrs={'class': 'form-control'}),
             'capacite_horaire': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
@@ -73,33 +60,13 @@ class MachineForm(forms.ModelForm):
             }),
             'observations': forms.Textarea(attrs={
                 'class': 'form-control',
-                'rows': 4,
+                'rows': 3,
                 'placeholder': 'Particularités, historique, recommandations...'
             }),
-        }
-        
-        labels = {
-            'numero': 'Numéro de la machine',
-            'type_machine': 'Type de machine',
-            'section': 'Section',
-            'provenance': 'Pays d\'origine',
-            'est_nouvelle': 'Machine neuve',
-            'etat': 'État actuel',
-            'capacite_horaire': 'Capacité horaire (kg/h)',
-            'date_installation': 'Date d\'installation',
-            'derniere_maintenance': 'Dernière maintenance',
-            'observations': 'Observations / Notes',
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
-        # Champ caché pour zone_extrusion
-        self.fields['zone_extrusion'] = forms.ModelChoiceField(
-            queryset=ZoneExtrusion.objects.filter(active=True),
-            required=False,
-            widget=forms.HiddenInput()
-        )
         
         # Si modification, pré-remplir les champs zone
         if self.instance and self.instance.pk and self.instance.zone_extrusion:
@@ -112,25 +79,23 @@ class MachineForm(forms.ModelForm):
         zone_numero = cleaned_data.get('zone_numero')
         zone_nom = cleaned_data.get('zone_nom')
         
-        # VALIDATION : Zone obligatoire pour Extrusion
         if section == 'extrusion':
             if not zone_numero:
-                raise ValidationError({
+                raise forms.ValidationError({
                     'zone_numero': 'Le numéro de zone est obligatoire pour une machine d\'extrusion.'
                 })
             if not zone_nom:
-                raise ValidationError({
+                raise forms.ValidationError({
                     'zone_nom': 'Le nom de la zone est obligatoire pour une machine d\'extrusion.'
                 })
             
             # Créer ou récupérer la zone
             zone, created = ZoneExtrusion.objects.get_or_create(
                 numero=zone_numero,
-                defaults={'nom': zone_nom, 'nombre_machines_max': 4, 'active': True}
+                defaults={'nom': zone_nom, 'nombre_machines_max': 4}
             )
             cleaned_data['zone_extrusion'] = zone
         else:
-            # Pour les autres sections, pas de zone
             cleaned_data['zone_extrusion'] = None
         
         return cleaned_data

@@ -1,3 +1,6 @@
+"""
+Formulaires d'authentification et de connexion
+"""
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 

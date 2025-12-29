@@ -55,7 +55,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'sofemci.urls'
+ROOT_URLCONF = 'urls'
 
 # ==========================================
 # TEMPLATES CONFIGURATION
@@ -85,8 +85,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'sofemci.wsgi.application'
-
+WSGI_APPLICATION = 'wsgi.application'
+ASGI_APPLICATION = 'asgi.application'
 # ==========================================
 # DATABASE CONFIGURATION
 # ==========================================
