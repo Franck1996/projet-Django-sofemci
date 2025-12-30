@@ -287,13 +287,14 @@ def get_recyclage_details_jour(date):
         total=Sum('total_production_kg')
     )
     
-    broyage = aggregats['broyage'] or 0
-    bache = aggregats['bache'] or 0
-    total = aggregats['total'] or 0
-    moulinex_avg = aggregats['moulinex'] or 1
+    # Convertir en Decimal pour éviter les erreurs de type
+    broyage = Decimal(str(aggregats['broyage'] or 0))
+    bache = Decimal(str(aggregats['bache'] or 0))
+    total = Decimal(str(aggregats['total'] or 0))
+    moulinex_avg = Decimal(str(aggregats['moulinex'] or 1))
     
-    taux_transformation = (bache / broyage * 100) if broyage > 0 else 0
-    productivite = (total / moulinex_avg) if moulinex_avg > 0 else 0
+    taux_transformation = (bache / broyage * 100) if broyage > 0 else Decimal('0')
+    productivite = (total / moulinex_avg) if moulinex_avg > 0 else Decimal('0')
     
     return {
         'moulinex_actifs': round(moulinex_avg, 0),
