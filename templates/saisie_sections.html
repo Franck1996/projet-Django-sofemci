@@ -5,6 +5,19 @@
 
 {% block content %}
 <div class="container-fluid py-4">
+    <!-- Messages d'erreur/succès -->
+    {% if messages %}
+    <div class="messages-container">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            <i class="fas fa-{% if message.tags == 'success' %}check-circle{% else %}exclamation-triangle{% endif %} me-2"></i>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- En-tête avec informations contextuelles -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
@@ -49,35 +62,57 @@
     <div class="tab-content" id="sectionTabsContent">
         <!-- Onglet Imprimerie -->
         <div class="tab-pane fade show active" id="imprimerie" role="tabpanel">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="card-title mb-0">
-                        <i class="fas fa-print me-2"></i>Saisie Production - Imprimerie
-                    </h3>
-                </div>
-                <form method="post" class="production-form">
-                    {% csrf_token %}
-                    <input type="hidden" name="section" value="imprimerie">
+            <form method="post" class="production-form" id="imprimerie-form" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="section" value="imprimerie">
+                
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="card-title mb-0">
+                            <i class="fas fa-print me-2"></i>Saisie Production - Imprimerie
+                        </h3>
+                    </div>
                     
                     <div class="card-body">
+                        <!-- Affichage des erreurs du formulaire -->
+                        {% if form_imprimerie.errors %}
+                        <div class="alert alert-danger mb-4">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            <strong>Erreurs de validation :</strong>
+                            <ul class="mb-0 mt-2">
+                                {% for field, errors in form_imprimerie.errors.items %}
+                                    {% for error in errors %}
+                                    <li><strong>{{ field|capfirst }} :</strong> {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                        
                         <div class="row">
                             <!-- Informations générales -->
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="imprimerie_date" class="form-label">Date de production</label>
-                                    <input type="date" id="imprimerie_date" name="date_production" 
-                                           value="{{ today|date:'Y-m-d' }}" required 
-                                           class="form-control form-control-lg">
+                                    <label for="{{ form_imprimerie.date_production.id_for_label }}" class="form-label required">Date de production</label>
+                                    {{ form_imprimerie.date_production }}
+                                    {% if form_imprimerie.date_production.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form_imprimerie.date_production.errors.0 }}
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="imprimerie_machines" class="form-label">
+                                    <label for="{{ form_imprimerie.nombre_machines_actives.id_for_label }}" class="form-label required">
                                         Nombre de machines actives
                                     </label>
-                                    <input type="number" id="imprimerie_machines" name="nombre_machines_actives" 
-                                           min="1" required 
-                                           class="form-control form-control-lg">
+                                    {{ form_imprimerie.nombre_machines_actives }}
+                                    {% if form_imprimerie.nombre_machines_actives.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form_imprimerie.nombre_machines_actives.errors.0 }}
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -86,16 +121,27 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="imprimerie_debut" class="form-label">Heure de début</label>
-                                    <input type="time" id="imprimerie_debut" name="heure_debut" required 
-                                           class="form-control form-control-lg">
+                                    <label for="{{ form_imprimerie.heure_debut.id_for_label }}" class="form-label required">Heure de début</label>
+                                    {{ form_imprimerie.heure_debut }}
+                                    {% if form_imprimerie.heure_debut.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form_imprimerie.heure_debut.errors.0 }}
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="imprimerie_fin" class="form-label">Heure de fin</label>
-                                    <input type="time" id="imprimerie_fin" name="heure_fin" required 
-                                           class="form-control form-control-lg">
+                                    <label for="{{ form_imprimerie.heure_fin.id_for_label }}" class="form-label required">Heure de fin</label>
+                                    {{ form_imprimerie.heure_fin }}
+                                    {% if form_imprimerie.heure_fin.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form_imprimerie.heure_fin.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Durée: <span id="imprimerie-duree">--:--</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -104,52 +150,64 @@
                         <div class="row">
                             <div class="col-md-4">
                                 <div class="mb-3">
-                                    <label for="imprimerie_finis" class="form-label">
+                                    <label for="{{ form_imprimerie.production_bobines_finies_kg.id_for_label }}" class="form-label required">
                                         Bobines finies (kg)
                                     </label>
                                     <div class="input-group">
-                                        <input type="number" id="imprimerie_finis" 
-                                               name="production_bobines_finies_kg" 
-                                               step="0.01" min="1" required 
-                                               class="form-control form-control-lg">
+                                        {{ form_imprimerie.production_bobines_finies_kg }}
                                         <span class="input-group-text">kg</span>
                                     </div>
+                                    {% if form_imprimerie.production_bobines_finies_kg.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form_imprimerie.production_bobines_finies_kg.errors.0 }}
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-3">
-                                    <label for="imprimerie_semi" class="form-label">
+                                    <label for="{{ form_imprimerie.production_bobines_semi_finies_kg.id_for_label }}" class="form-label required">
                                         Bobines semi-finies (kg)
                                     </label>
                                     <div class="input-group">
-                                        <input type="number" id="imprimerie_semi" 
-                                               name="production_bobines_semi_finies_kg" 
-                                               step="0.01" min="1" required 
-                                               class="form-control form-control-lg">
+                                        {{ form_imprimerie.production_bobines_semi_finies_kg }}
                                         <span class="input-group-text">kg</span>
                                     </div>
+                                    {% if form_imprimerie.production_bobines_semi_finies_kg.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form_imprimerie.production_bobines_semi_finies_kg.errors.0 }}
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-3">
-                                    <label for="imprimerie_dechets" class="form-label">
+                                    <label for="{{ form_imprimerie.dechets_kg.id_for_label }}" class="form-label required">
                                         Déchets (kg)
                                     </label>
                                     <div class="input-group">
-                                        <input type="number" id="imprimerie_dechets" name="dechets_kg" 
-                                               step="0.01" min="1" required 
-                                               class="form-control form-control-lg">
+                                        {{ form_imprimerie.dechets_kg }}
                                         <span class="input-group-text">kg</span>
                                     </div>
+                                    {% if form_imprimerie.dechets_kg.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form_imprimerie.dechets_kg.errors.0 }}
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
                         
+                        
+                        
                         <!-- Observations -->
                         <div class="mb-3">
-                            <label for="imprimerie_observations" class="form-label">Observations</label>
-                            <textarea id="imprimerie_observations" name="observations" rows="3" 
-                                      class="form-control" placeholder="Notes, incidents, remarques..."></textarea>
+                            <label for="{{ form_imprimerie.observations.id_for_label }}" class="form-label">Observations</label>
+                            {{ form_imprimerie.observations }}
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Notes, incidents, remarques importantes...
+                            </div>
                         </div>
                     </div>
                     
@@ -159,46 +217,68 @@
                                 <i class="fas fa-info-circle me-1"></i>
                                 Tous les champs marqués d'un astérisque (*) sont obligatoires
                             </div>
-                            <button type="submit" class="btn btn-primary btn-lg">
+                            <button type="submit" class="btn btn-primary btn-lg" id="submit-imprimerie">
                                 <i class="fas fa-save me-2"></i>Enregistrer la production
                             </button>
                         </div>
                     </div>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
 
         <!-- Onglet Soudure -->
         <div class="tab-pane fade" id="soudure" role="tabpanel">
-            <div class="card">
-                <div class="card-header bg-warning text-dark">
-                    <h3 class="card-title mb-0">
-                        <i class="fas fa-bolt me-2"></i>Saisie Production - Soudure
-                    </h3>
-                </div>
-                <form method="post" class="production-form">
-                    {% csrf_token %}
-                    <input type="hidden" name="section" value="soudure">
+            <form method="post" class="production-form" id="soudure-form" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="section" value="soudure">
+                
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h3 class="card-title mb-0">
+                            <i class="fas fa-bolt me-2"></i>Saisie Production - Soudure
+                        </h3>
+                    </div>
                     
                     <div class="card-body">
+                        <!-- Affichage des erreurs du formulaire -->
+                        {% if form_soudure.errors %}
+                        <div class="alert alert-danger mb-4">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            <strong>Erreurs de validation :</strong>
+                            <ul class="mb-0 mt-2">
+                                {% for field, errors in form_soudure.errors.items %}
+                                    {% for error in errors %}
+                                    <li><strong>{{ field|capfirst }} :</strong> {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                        
                         <div class="row">
                             <!-- Informations générales -->
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="soudure_date" class="form-label">Date de production</label>
-                                    <input type="date" id="soudure_date" name="date_production" 
-                                           value="{{ today|date:'Y-m-d' }}" required 
-                                           class="form-control form-control-lg">
+                                    <label for="{{ form_soudure.date_production.id_for_label }}" class="form-label required">Date de production</label>
+                                    {{ form_soudure.date_production }}
+                                    {% if form_soudure.date_production.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form_soudure.date_production.errors.0 }}
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="soudure_machines" class="form-label">
+                                    <label for="{{ form_soudure.nombre_machines_actives.id_for_label }}" class="form-label required">
                                         Nombre de machines actives
                                     </label>
-                                    <input type="number" id="soudure_machines" name="nombre_machines_actives" 
-                                           min="1" required 
-                                           class="form-control form-control-lg">
+                                    {{ form_soudure.nombre_machines_actives }}
+                                    {% if form_soudure.nombre_machines_actives.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form_soudure.nombre_machines_actives.errors.0 }}
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -207,16 +287,27 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="soudure_debut" class="form-label">Heure de début</label>
-                                    <input type="time" id="soudure_debut" name="heure_debut" required 
-                                           class="form-control form-control-lg">
+                                    <label for="{{ form_soudure.heure_debut.id_for_label }}" class="form-label required">Heure de début</label>
+                                    {{ form_soudure.heure_debut }}
+                                    {% if form_soudure.heure_debut.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form_soudure.heure_debut.errors.0 }}
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="soudure_fin" class="form-label">Heure de fin</label>
-                                    <input type="time" id="soudure_fin" name="heure_fin" required 
-                                           class="form-control form-control-lg">
+                                    <label for="{{ form_soudure.heure_fin.id_for_label }}" class="form-label required">Heure de fin</label>
+                                    {{ form_soudure.heure_fin }}
+                                    {% if form_soudure.heure_fin.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form_soudure.heure_fin.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Durée: <span id="soudure-duree">--:--</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -229,16 +320,34 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="soudure_finis" class="form-label">
+                                        <label for="{{ form_soudure.production_bobines_finies_kg.id_for_label }}" class="form-label required">
                                             Bobines finies (kg)
                                         </label>
                                         <div class="input-group">
-                                            <input type="number" id="soudure_finis" 
-                                                   name="production_bobines_finies_kg" 
-                                                   step="0.01" min="1" required 
-                                                   class="form-control form-control-lg">
+                                            {{ form_soudure.production_bobines_finies_kg }}
                                             <span class="input-group-text">kg</span>
                                         </div>
+                                        {% if form_soudure.production_bobines_finies_kg.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form_soudure.production_bobines_finies_kg.errors.0 }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form_soudure.dechets_kg.id_for_label }}" class="form-label required">
+                                            Déchets (kg)
+                                        </label>
+                                        <div class="input-group">
+                                            {{ form_soudure.dechets_kg }}
+                                            <span class="input-group-text">kg</span>
+                                        </div>
+                                        {% if form_soudure.dechets_kg.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form_soudure.dechets_kg.errors.0 }}
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -252,83 +361,83 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="soudure_bretelles" class="form-label">
+                                        <label for="{{ form_soudure.production_bretelles_kg.id_for_label }}" class="form-label">
                                             Bretelles (kg)
                                         </label>
                                         <div class="input-group">
-                                            <input type="number" id="soudure_bretelles" 
-                                                   name="production_bretelles_kg" 
-                                                   step="0.01" min="0" 
-                                                   class="form-control form-control-lg">
+                                            {{ form_soudure.production_bretelles_kg }}
                                             <span class="input-group-text">kg</span>
                                         </div>
+                                        {% if form_soudure.production_bretelles_kg.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form_soudure.production_bretelles_kg.errors.0 }}
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="soudure_rema" class="form-label">
+                                        <label for="{{ form_soudure.production_rema_kg.id_for_label }}" class="form-label">
                                             REMA-Plastique (kg)
                                         </label>
                                         <div class="input-group">
-                                            <input type="number" id="soudure_rema" 
-                                                   name="production_rema_kg" 
-                                                   step="0.01" min="0" 
-                                                   class="form-control form-control-lg">
+                                            {{ form_soudure.production_rema_kg }}
                                             <span class="input-group-text">kg</span>
                                         </div>
+                                        {% if form_soudure.production_rema_kg.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form_soudure.production_rema_kg.errors.0 }}
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="soudure_batta" class="form-label">
+                                        <label for="{{ form_soudure.production_batta_kg.id_for_label }}" class="form-label">
                                             BATTA (kg)
                                         </label>
                                         <div class="input-group">
-                                            <input type="number" id="soudure_batta" 
-                                                   name="production_batta_kg" 
-                                                   step="0.01" min="0" 
-                                                   class="form-control form-control-lg">
+                                            {{ form_soudure.production_batta_kg }}
                                             <span class="input-group-text">kg</span>
                                         </div>
+                                        {% if form_soudure.production_batta_kg.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form_soudure.production_batta_kg.errors.0 }}
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="id_production_sac_emballage_kg" class="form-label">
+                                        <label for="{{ form_soudure.production_sac_emballage_kg.id_for_label }}" class="form-label">
                                             Sac d'emballage imprimé (kg)
                                         </label>
                                         <div class="input-group">
                                             {{ form_soudure.production_sac_emballage_kg }}
                                             <span class="input-group-text">kg</span>
                                         </div>
+                                        {% if form_soudure.production_sac_emballage_kg.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form_soudure.production_sac_emballage_kg.errors.0 }}
+                                        </div>
+                                        {% endif %}
                                         <small class="form-text text-muted">Sacs avec impression</small>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Déchets -->
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="soudure_dechets" class="form-label">
-                                        Déchets (kg)
-                                    </label>
-                                    <div class="input-group">
-                                        <input type="number" id="soudure_dechets" name="dechets_kg" 
-                                               step="0.01" min="1" required 
-                                               class="form-control form-control-lg">
-                                        <span class="input-group-text">kg</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <!-- Indicateurs -->
+                        
                         
                         <!-- Observations -->
                         <div class="mb-3">
-                            <label for="soudure_observations" class="form-label">Observations</label>
-                            <textarea id="soudure_observations" name="observations" rows="3" 
-                                      class="form-control" placeholder="Notes, incidents, remarques..."></textarea>
+                            <label for="{{ form_soudure.observations.id_for_label }}" class="form-label">Observations</label>
+                            {{ form_soudure.observations }}
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Notes, incidents, remarques importantes...
+                            </div>
                         </div>
                     </div>
                     
@@ -338,58 +447,79 @@
                                 <i class="fas fa-info-circle me-1"></i>
                                 Tous les champs marqués d'un astérisque (*) sont obligatoires
                             </div>
-                            <button type="submit" class="btn btn-warning btn-lg">
+                            <button type="submit" class="btn btn-warning btn-lg" id="submit-soudure">
                                 <i class="fas fa-save me-2"></i>Enregistrer la production
                             </button>
                         </div>
                     </div>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
 
         <!-- Onglet Recyclage -->
         <div class="tab-pane fade" id="recyclage" role="tabpanel">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h3 class="card-title mb-0">
-                        <i class="fas fa-recycle me-2"></i>Saisie Production - Recyclage
-                    </h3>
-                </div>
-                <form method="post" class="production-form">
-                    {% csrf_token %}
-                    <input type="hidden" name="section" value="recyclage">
+            <form method="post" class="production-form" id="recyclage-form" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="section" value="recyclage">
+                
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h3 class="card-title mb-0">
+                            <i class="fas fa-recycle me-2"></i>Saisie Production - Recyclage
+                        </h3>
+                    </div>
                     
                     <div class="card-body">
+                        <!-- Affichage des erreurs du formulaire -->
+                        {% if form_recyclage.errors %}
+                        <div class="alert alert-danger mb-4">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            <strong>Erreurs de validation :</strong>
+                            <ul class="mb-0 mt-2">
+                                {% for field, errors in form_recyclage.errors.items %}
+                                    {% for error in errors %}
+                                    <li><strong>{{ field|capfirst }} :</strong> {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                        
                         <div class="row">
                             <!-- Informations générales -->
                             <div class="col-md-4">
                                 <div class="mb-3">
-                                    <label for="recyclage_date" class="form-label">Date de production</label>
-                                    <input type="date" id="recyclage_date" name="date_production" 
-                                           value="{{ today|date:'Y-m-d' }}" required 
-                                           class="form-control form-control-lg">
+                                    <label for="{{ form_recyclage.date_production.id_for_label }}" class="form-label required">Date de production</label>
+                                    {{ form_recyclage.date_production }}
+                                    {% if form_recyclage.date_production.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form_recyclage.date_production.errors.0 }}
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-3">
-                                    <label for="recyclage_equipe" class="form-label">Équipe</label>
-                                    <select id="recyclage_equipe" name="equipe" required 
-                                            class="form-select form-select-lg">
-                                        <option value="">Sélectionnez l'équipe</option>
-                                        {% for equipe in equipes %}
-                                        <option value="{{ equipe.id }}">{{ equipe.get_nom_display }}</option>
-                                        {% endfor %}
-                                    </select>
+                                    <label for="{{ form_recyclage.equipe.id_for_label }}" class="form-label required">Équipe</label>
+                                    {{ form_recyclage.equipe }}
+                                    {% if form_recyclage.equipe.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form_recyclage.equipe.errors.0 }}
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-3">
-                                    <label for="recyclage_moulinex" class="form-label">
+                                    <label for="{{ form_recyclage.nombre_moulinex.id_for_label }}" class="form-label required">
                                         Nombre de moulinex
                                     </label>
-                                    <input type="number" id="recyclage_moulinex" name="nombre_moulinex" 
-                                           min="1"  required 
-                                           class="form-control form-control-lg">
+                                    {{ form_recyclage.nombre_moulinex }}
+                                    {% if form_recyclage.nombre_moulinex.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form_recyclage.nombre_moulinex.errors.0 }}
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -398,39 +528,49 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="recyclage_broyage" class="form-label">
+                                    <label for="{{ form_recyclage.production_broyage_kg.id_for_label }}" class="form-label required">
                                         Production broyage (kg)
                                     </label>
                                     <div class="input-group">
-                                        <input type="number" id="recyclage_broyage" 
-                                               name="production_broyage_kg" 
-                                               step="0.01" min="1" required 
-                                               class="form-control form-control-lg">
+                                        {{ form_recyclage.production_broyage_kg }}
                                         <span class="input-group-text">kg</span>
                                     </div>
+                                    {% if form_recyclage.production_broyage_kg.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form_recyclage.production_broyage_kg.errors.0 }}
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="recyclage_bache" class="form-label">
+                                    <label for="{{ form_recyclage.production_bache_noir_kg.id_for_label }}" class="form-label required">
                                         Bâche noire (kg)
                                     </label>
                                     <div class="input-group">
-                                        <input type="number" id="recyclage_bache" 
-                                               name="production_bache_noir_kg" 
-                                               step="0.01" min="1" required 
-                                               class="form-control form-control-lg">
+                                        {{ form_recyclage.production_bache_noir_kg }}
                                         <span class="input-group-text">kg</span>
                                     </div>
+                                    {% if form_recyclage.production_bache_noir_kg.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form_recyclage.production_bache_noir_kg.errors.0 }}
+                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
                         
+                        <!-- Indicateurs -->
+                        
+                        
                         <!-- Observations -->
                         <div class="mb-3">
-                            <label for="recyclage_observations" class="form-label">Observations</label>
-                            <textarea id="recyclage_observations" name="observations" rows="3" 
-                                      class="form-control" placeholder="Notes, incidents, remarques..."></textarea>
+                            <label for="{{ form_recyclage.observations.id_for_label }}" class="form-label">Observations</label>
+                            {{ form_recyclage.observations }}
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Notes, incidents, remarques importantes...
+                            </div>
                         </div>
                     </div>
                     
@@ -440,13 +580,13 @@
                                 <i class="fas fa-info-circle me-1"></i>
                                 Tous les champs marqués d'un astérisque (*) sont obligatoires
                             </div>
-                            <button type="submit" class="btn btn-success btn-lg">
+                            <button type="submit" class="btn btn-success btn-lg" id="submit-recyclage">
                                 <i class="fas fa-save me-2"></i>Enregistrer la production
                             </button>
                         </div>
                     </div>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -460,6 +600,7 @@
     padding: 12px 20px;
     border: none;
     border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
 }
 
 .nav-tabs-custom .nav-link.active {
@@ -468,13 +609,19 @@
     color: var(--bs-primary);
 }
 
-.nav-tabs-custom .nav-link:hover {
-    border-color: var(--bs-primary);
+.nav-tabs-custom .nav-link:hover:not(.active) {
+    border-color: #dee2e6;
+    color: #495057;
 }
 
 .card {
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
     border: 1px solid rgba(0, 0, 0, 0.125);
+    transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 }
 
 .card-header {
@@ -482,18 +629,25 @@
     font-weight: 600;
 }
 
-.form-control-lg {
+.form-control-lg, .form-control, .form-select {
     border-radius: 0.375rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
 
 .btn-lg {
     padding: 0.75rem 1.5rem;
     font-weight: 500;
+    border-radius: 0.375rem;
 }
 
 .input-group-text {
     background-color: #f8f9fa;
     border: 1px solid #ced4da;
+    font-weight: 500;
 }
 
 .border-bottom {
@@ -506,8 +660,37 @@
     margin-bottom: 0.5rem;
 }
 
+.form-label.required::after {
+    content: " *";
+    color: #dc3545;
+}
+
 .text-muted.small {
     font-size: 0.75rem;
+}
+
+/* Indicateurs */
+.card.bg-light .fs-4 {
+    color: #0d6efd;
+}
+
+/* Styles pour les messages d'erreur */
+.alert-danger {
+    border-left: 4px solid #dc3545;
+}
+
+.invalid-feedback {
+    color: #dc3545;
+    font-size: 0.875em;
+    margin-top: 0.25rem;
+}
+
+.form-control.is-invalid {
+    border-color: #dc3545;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
 }
 
 /* Responsive */
@@ -528,65 +711,447 @@
     
     .d-flex.justify-content-between {
         flex-direction: column;
+        gap: 1rem;
     }
+    
+    .nav-tabs-custom .nav-link {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+    }
+    
+    .row > .col-md-4,
+    .row > .col-md-6 {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Animation pour les onglets */
+.tab-pane {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Animation pour les indicateurs */
+@keyframes countUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fs-4.fw-bold {
+    animation: countUp 0.5s ease-out;
+}
+
+/* Custom scrollbar pour les textarea */
+textarea.form-control {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Style pour les champs modifiés */
+.form-control.modified {
+    background-color: rgba(25, 135, 84, 0.05);
+    border-color: #198754;
+}
+
+/* Style pour les groupes d'inputs */
+.input-group:focus-within {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    border-radius: 0.375rem;
 }
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Validation des formulaires
-document.addEventListener('DOMContentLoaded', function() {
-    // Validation des heures (fin > début)
-    const forms = document.querySelectorAll('.production-form');
+// Fonctions de calcul pour chaque section
+function calculerImprimerie() {
+    const finies = parseFloat(document.getElementById('{{ form_imprimerie.production_bobines_finies_kg.id_for_label }}').value) || 0;
+    const semiFinies = parseFloat(document.getElementById('{{ form_imprimerie.production_bobines_semi_finies_kg.id_for_label }}').value) || 0;
+    const dechets = parseFloat(document.getElementById('{{ form_imprimerie.dechets_kg.id_for_label }}').value) || 0;
+    const heureDebut = document.getElementById('{{ form_imprimerie.heure_debut.id_for_label }}').value;
+    const heureFin = document.getElementById('{{ form_imprimerie.heure_fin.id_for_label }}').value;
     
-    forms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-            const debut = form.querySelector('input[name="heure_debut"]');
-            const fin = form.querySelector('input[name="heure_fin"]');
-            
-            if (debut && fin && debut.value && fin.value) {
-                if (debut.value >= fin.value) {
-                    e.preventDefault();
-                    alert('L\'heure de fin doit être postérieure à l\'heure de début.');
-                    fin.focus();
-                }
-            }
-        });
-    });
-    
-    // Calcul automatique du temps de production
-    const timeInputs = document.querySelectorAll('input[type="time"]');
-    timeInputs.forEach(input => {
-        input.addEventListener('change', function() {
-            const form = this.closest('form');
-            const debut = form.querySelector('input[name="heure_debut"]');
-            const fin = form.querySelector('input[name="heure_fin"]');
-            
-            if (debut.value && fin.value && debut.value < fin.value) {
-                // Optionnel: Afficher la durée calculée
-                console.log('Durée de production:', calculateDuration(debut.value, fin.value));
-            }
-        });
-    });
-    
-    function calculateDuration(start, end) {
-        const startDate = new Date('2000-01-01T' + start);
-        const endDate = new Date('2000-01-01T' + end);
-        const diff = endDate - startDate;
-        const hours = Math.floor(diff / 3600000);
-        const minutes = Math.floor((diff % 3600000) / 60000);
-        return `${hours}h${minutes.toString().padStart(2, '0')}`;
+    // Calcul durée
+    let dureeHeures = 0;
+    if (heureDebut && heureFin) {
+        const debut = new Date('2000-01-01T' + heureDebut + ':00');
+        const fin = new Date('2000-01-01T' + heureFin + ':00');
+        
+        if (fin < debut) fin.setHours(fin.getHours() + 24);
+        dureeHeures = (fin - debut) / (1000 * 60 * 60);
+        
+        // Affichage durée
+        const heures = Math.floor(dureeHeures);
+        const minutes = Math.round((dureeHeures - heures) * 60);
+        document.getElementById('imprimerie-duree').textContent = `${heures}h${minutes.toString().padStart(2, '0')}`;
     }
     
-    // Mise en évidence des champs obligatoires
-    const requiredInputs = document.querySelectorAll('input[required], select[required]');
-    requiredInputs.forEach(input => {
-        const label = input.closest('.mb-3').querySelector('.form-label');
-        if (label) {
-            label.innerHTML += ' <span class="text-danger">*</span>';
+    // Calcul indicateurs
+    const total = finies + semiFinies;
+    const debit = dureeHeures > 0 ? total / dureeHeures : 0;
+    const taux = (total + dechets) > 0 ? (dechets / (total + dechets)) * 100 : 0;
+    
+    // Mise à jour affichage
+    document.getElementById('imprimerie-total').textContent = total.toFixed(2);
+    document.getElementById('imprimerie-debit').textContent = debit.toFixed(2);
+    document.getElementById('imprimerie-taux').textContent = taux.toFixed(2) + '%';
+}
+
+function calculerSoudure() {
+    const finies = parseFloat(document.getElementById('{{ form_soudure.production_bobines_finies_kg.id_for_label }}').value) || 0;
+    const bretelles = parseFloat(document.getElementById('{{ form_soudure.production_bretelles_kg.id_for_label }}').value) || 0;
+    const rema = parseFloat(document.getElementById('{{ form_soudure.production_rema_kg.id_for_label }}').value) || 0;
+    const batta = parseFloat(document.getElementById('{{ form_soudure.production_batta_kg.id_for_label }}').value) || 0;
+    const sacs = parseFloat(document.getElementById('{{ form_soudure.production_sac_emballage_kg.id_for_label }}').value) || 0;
+    const dechets = parseFloat(document.getElementById('{{ form_soudure.dechets_kg.id_for_label }}').value) || 0;
+    const machines = parseInt(document.getElementById('{{ form_soudure.nombre_machines_actives.id_for_label }}').value) || 0;
+    const heureDebut = document.getElementById('{{ form_soudure.heure_debut.id_for_label }}').value;
+    const heureFin = document.getElementById('{{ form_soudure.heure_fin.id_for_label }}').value;
+    
+    // Calcul durée
+    let dureeHeures = 0;
+    if (heureDebut && heureFin) {
+        const debut = new Date('2000-01-01T' + heureDebut + ':00');
+        const fin = new Date('2000-01-01T' + heureFin + ':00');
+        
+        if (fin < debut) fin.setHours(fin.getHours() + 24);
+        dureeHeures = (fin - debut) / (1000 * 60 * 60);
+        
+        // Affichage durée
+        const heures = Math.floor(dureeHeures);
+        const minutes = Math.round((dureeHeures - heures) * 60);
+        document.getElementById('soudure-duree').textContent = `${heures}h${minutes.toString().padStart(2, '0')}`;
+    }
+    
+    // Calcul indicateurs
+    const total = finies + bretelles + rema + batta + sacs;
+    const debit = dureeHeures > 0 ? total / dureeHeures : 0;
+    const taux = (total + dechets) > 0 ? (dechets / (total + dechets)) * 100 : 0;
+    const prodMachine = machines > 0 ? total / machines : 0;
+    
+    // Mise à jour affichage
+    document.getElementById('soudure-total').textContent = total.toFixed(2);
+    document.getElementById('soudure-debit').textContent = debit.toFixed(2);
+    document.getElementById('soudure-taux').textContent = taux.toFixed(2) + '%';
+    document.getElementById('soudure-machine').textContent = prodMachine.toFixed(2);
+}
+
+function calculerRecyclage() {
+    const broyage = parseFloat(document.getElementById('{{ form_recyclage.production_broyage_kg.id_for_label }}').value) || 0;
+    const bache = parseFloat(document.getElementById('{{ form_recyclage.production_bache_noir_kg.id_for_label }}').value) || 0;
+    const moulinex = parseInt(document.getElementById('{{ form_recyclage.nombre_moulinex.id_for_label }}').value) || 0;
+    
+    // Calcul indicateurs
+    const total = bache;
+    const transformation = broyage > 0 ? (bache / broyage) * 100 : 0;
+    const prodMoulinex = moulinex > 0 ? bache / moulinex : 0;
+    
+    // Mise à jour affichage
+    document.getElementById('recyclage-total').textContent = total.toFixed(2);
+    document.getElementById('recyclage-transformation').textContent = transformation.toFixed(2) + '%';
+    document.getElementById('recyclage-moulinex').textContent = prodMoulinex.toFixed(2);
+    
+    // Alerte si transformation > 100%
+    if (transformation > 100) {
+        const element = document.getElementById('recyclage-transformation');
+        element.classList.add('text-danger');
+        element.classList.remove('text-success');
+    } else {
+        const element = document.getElementById('recyclage-transformation');
+        element.classList.remove('text-danger');
+        element.classList.add('text-success');
+    }
+}
+
+// Fonctions de validation
+function validerImprimerie() {
+    const heureDebut = document.getElementById('{{ form_imprimerie.heure_debut.id_for_label }}').value;
+    const heureFin = document.getElementById('{{ form_imprimerie.heure_fin.id_for_label }}').value;
+    const finies = parseFloat(document.getElementById('{{ form_imprimerie.production_bobines_finies_kg.id_for_label }}').value) || 0;
+    const semiFinies = parseFloat(document.getElementById('{{ form_imprimerie.production_bobines_semi_finies_kg.id_for_label }}').value) || 0;
+    const dechets = parseFloat(document.getElementById('{{ form_imprimerie.dechets_kg.id_for_label }}').value) || 0;
+    const machines = parseInt(document.getElementById('{{ form_imprimerie.nombre_machines_actives.id_for_label }}').value) || 0;
+    
+    let erreurs = [];
+    
+    // Validation heures
+    if (heureDebut && heureFin) {
+        const debut = new Date('2000-01-01T' + heureDebut + ':00');
+        let fin = new Date('2000-01-01T' + heureFin + ':00');
+        
+        if (fin < debut) fin.setHours(fin.getHours() + 24);
+        const dureeHeures = (fin - debut) / (1000 * 60 * 60);
+        
+        if (dureeHeures <= 0) {
+            erreurs.push('Heure de fin doit être après heure de début');
+        } else if (dureeHeures > 12) {
+            erreurs.push(`Durée de travail trop longue: ${dureeHeures.toFixed(1)}h (max 12h)`);
+        } else if (dureeHeures < 1) {
+            erreurs.push(`Durée de travail trop courte: ${dureeHeures.toFixed(1)}h (min 1h)`);
+        }
+    }
+    
+    // Validation valeurs négatives
+    if (finies < 0) erreurs.push('Bobines finies: valeur négative');
+    if (semiFinies < 0) erreurs.push('Bobines semi-finies: valeur négative');
+    if (dechets < 0) erreurs.push('Déchets: valeur négative');
+    if (machines < 0) erreurs.push('Machines actives: valeur négative');
+    
+    return erreurs;
+}
+
+function validerSoudure() {
+    const heureDebut = document.getElementById('{{ form_soudure.heure_debut.id_for_label }}').value;
+    const heureFin = document.getElementById('{{ form_soudure.heure_fin.id_for_label }}').value;
+    const finies = parseFloat(document.getElementById('{{ form_soudure.production_bobines_finies_kg.id_for_label }}').value) || 0;
+    const dechets = parseFloat(document.getElementById('{{ form_soudure.dechets_kg.id_for_label }}').value) || 0;
+    const machines = parseInt(document.getElementById('{{ form_soudure.nombre_machines_actives.id_for_label }}').value) || 0;
+    
+    let erreurs = [];
+    
+    // Validation heures
+    if (heureDebut && heureFin) {
+        const debut = new Date('2000-01-01T' + heureDebut + ':00');
+        let fin = new Date('2000-01-01T' + heureFin + ':00');
+        
+        if (fin < debut) fin.setHours(fin.getHours() + 24);
+        const dureeHeures = (fin - debut) / (1000 * 60 * 60);
+        
+        if (dureeHeures <= 0) {
+            erreurs.push('Heure de fin doit être après heure de début');
+        } else if (dureeHeures > 12) {
+            erreurs.push(`Durée de travail trop longue: ${dureeHeures.toFixed(1)}h (max 12h)`);
+        } else if (dureeHeures < 1) {
+            erreurs.push(`Durée de travail trop courte: ${dureeHeures.toFixed(1)}h (min 1h)`);
+        }
+    }
+    
+    // Validation valeurs négatives
+    if (finies < 0) erreurs.push('Bobines finies: valeur négative');
+    if (dechets < 0) erreurs.push('Déchets: valeur négative');
+    if (machines < 0) erreurs.push('Machines actives: valeur négative');
+    
+    return erreurs;
+}
+
+function validerRecyclage() {
+    const broyage = parseFloat(document.getElementById('{{ form_recyclage.production_broyage_kg.id_for_label }}').value) || 0;
+    const bache = parseFloat(document.getElementById('{{ form_recyclage.production_bache_noir_kg.id_for_label }}').value) || 0;
+    const moulinex = parseInt(document.getElementById('{{ form_recyclage.nombre_moulinex.id_for_label }}').value) || 0;
+    
+    let erreurs = [];
+    
+    // Validation transformation
+    if (broyage > 0 && bache > broyage) {
+        erreurs.push(`Bâche noire (${bache} kg) > Broyage (${broyage} kg)`);
+    }
+    
+    // Validation valeurs négatives
+    if (broyage < 0) erreurs.push('Production broyage: valeur négative');
+    if (bache < 0) erreurs.push('Bâche noire: valeur négative');
+    if (moulinex < 0) erreurs.push('Nombre de moulinex: valeur négative');
+    
+    return erreurs;
+}
+
+// Gestion des événements
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM chargé, initialisation des formulaires sections');
+    
+    // Initialisation des calculs
+    calculerImprimerie();
+    calculerSoudure();
+    calculerRecyclage();
+    
+    // Configuration des événements pour l'Imprimerie
+    const imprimerieInputs = [
+        '{{ form_imprimerie.production_bobines_finies_kg.id_for_label }}',
+        '{{ form_imprimerie.production_bobines_semi_finies_kg.id_for_label }}',
+        '{{ form_imprimerie.dechets_kg.id_for_label }}',
+        '{{ form_imprimerie.heure_debut.id_for_label }}',
+        '{{ form_imprimerie.heure_fin.id_for_label }}',
+        '{{ form_imprimerie.nombre_machines_actives.id_for_label }}'
+    ];
+    
+    imprimerieInputs.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('input', function() {
+                if (id.includes('nombre_machines_actives')) {
+                    calculerSoudure(); // Pour soudure aussi
+                }
+                calculerImprimerie();
+                this.classList.add('modified');
+            });
         }
     });
+    
+    // Validation du formulaire Imprimerie
+    const imprimerieForm = document.getElementById('imprimerie-form');
+    if (imprimerieForm) {
+        imprimerieForm.addEventListener('submit', function(e) {
+            const erreurs = validerImprimerie();
+            if (erreurs.length > 0) {
+                e.preventDefault();
+                afficherErreurs('Imprimerie', erreurs);
+            }
+        });
+    }
+    
+    // Configuration des événements pour la Soudure
+    const soudureInputs = [
+        '{{ form_soudure.production_bobines_finies_kg.id_for_label }}',
+        '{{ form_soudure.production_bretelles_kg.id_for_label }}',
+        '{{ form_soudure.production_rema_kg.id_for_label }}',
+        '{{ form_soudure.production_batta_kg.id_for_label }}',
+        '{{ form_soudure.production_sac_emballage_kg.id_for_label }}',
+        '{{ form_soudure.dechets_kg.id_for_label }}',
+        '{{ form_soudure.nombre_machines_actives.id_for_label }}',
+        '{{ form_soudure.heure_debut.id_for_label }}',
+        '{{ form_soudure.heure_fin.id_for_label }}'
+    ];
+    
+    soudureInputs.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('input', function() {
+                calculerSoudure();
+                this.classList.add('modified');
+            });
+        }
+    });
+    
+    // Validation du formulaire Soudure
+    const soudureForm = document.getElementById('soudure-form');
+    if (soudureForm) {
+        soudureForm.addEventListener('submit', function(e) {
+            const erreurs = validerSoudure();
+            if (erreurs.length > 0) {
+                e.preventDefault();
+                afficherErreurs('Soudure', erreurs);
+            }
+        });
+    }
+    
+    // Configuration des événements pour le Recyclage
+    const recyclageInputs = [
+        '{{ form_recyclage.production_broyage_kg.id_for_label }}',
+        '{{ form_recyclage.production_bache_noir_kg.id_for_label }}',
+        '{{ form_recyclage.nombre_moulinex.id_for_label }}'
+    ];
+    
+    recyclageInputs.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('input', function() {
+                calculerRecyclage();
+                this.classList.add('modified');
+            });
+        }
+    });
+    
+    // Validation du formulaire Recyclage
+    const recyclageForm = document.getElementById('recyclage-form');
+    if (recyclageForm) {
+        recyclageForm.addEventListener('submit', function(e) {
+            const erreurs = validerRecyclage();
+            if (erreurs.length > 0) {
+                e.preventDefault();
+                afficherErreurs('Recyclage', erreurs);
+            }
+        });
+    }
+    
+    // MARQUAGE DES CHAMPS REQUIS
+    const requiredInputs = document.querySelectorAll('[required]');
+    requiredInputs.forEach(input => {
+        const label = input.closest('.mb-3')?.querySelector('.form-label');
+        if (label && !label.classList.contains('required')) {
+            label.classList.add('required');
+        }
+    });
+    
+    // Gestion des champs numériques - empêcher les valeurs négatives
+    const numberInputs = document.querySelectorAll('input[type="number"]');
+    numberInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            if (this.value < 0) {
+                this.value = 0;
+                // Déclencher le calcul approprié
+                if (this.closest('#imprimerie')) calculerImprimerie();
+                if (this.closest('#soudure')) calculerSoudure();
+                if (this.closest('#recyclage')) calculerRecyclage();
+            }
+        });
+    });
+    
+    // Sauvegarde automatique des données en cours (optionnel)
+    const forms = document.querySelectorAll('.production-form');
+    forms.forEach(form => {
+        const inputs = form.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+            const storageKey = `autosave_${form.id}_${input.name}`;
+            const savedValue = localStorage.getItem(storageKey);
+            if (savedValue !== null) {
+                input.value = savedValue;
+                // Déclencher les calculs après chargement des valeurs sauvegardées
+                setTimeout(() => {
+                    if (form.id === 'imprimerie-form') calculerImprimerie();
+                    if (form.id === 'soudure-form') calculerSoudure();
+                    if (form.id === 'recyclage-form') calculerRecyclage();
+                }, 100);
+            }
+            
+            input.addEventListener('input', function() {
+                localStorage.setItem(storageKey, this.value);
+            });
+        });
+        
+        // Nettoyer le localStorage après soumission
+        form.addEventListener('submit', function() {
+            inputs.forEach(input => {
+                const storageKey = `autosave_${form.id}_${input.name}`;
+                localStorage.removeItem(storageKey);
+            });
+        });
+    });
 });
+
+// Fonction d'affichage des erreurs
+function afficherErreurs(section, erreurs) {
+    let erreursHtml = `<strong>Erreurs de validation (${section}):</strong><ul class="mb-0 mt-2">`;
+    erreurs.forEach(erreur => {
+        erreursHtml += `<li>${erreur}</li>`;
+    });
+    erreursHtml += '</ul>';
+    
+    // Utilisation de SweetAlert2 si disponible, sinon alert standard
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Erreurs de validation',
+            html: erreursHtml,
+            icon: 'error',
+            confirmButtonText: 'Corriger',
+            confirmButtonColor: '#dc3545'
+        });
+    } else {
+        alert(`ERREURS DE VALIDATION (${section}):\n\n` + erreurs.join('\n• '));
+    }
+}
+
+// Fonction pour vider le localStorage (pour débogage)
+function viderSauvegardeAuto() {
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+        if (key.startsWith('autosave_')) {
+            localStorage.removeItem(key);
+        }
+    });
+    alert('Sauvegarde automatique effacée !');
+}
 </script>
 {% endblock %}

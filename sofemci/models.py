@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator
 from django.utils import timezone
 from decimal import Decimal
 from datetime import datetime, timedelta
@@ -59,7 +59,7 @@ class Equipe(models.Model):
 
 class ZoneExtrusion(models.Model):
     """Zones d'extrusion (1 à 5)"""
-    numero = models.IntegerField(unique=True, validators=[MinValueValidator(1), MaxValueValidator(5)])
+    numero = models.IntegerField(unique=True, validators=[MinValueValidator(1)])
     nom = models.CharField(max_length=50)
     nombre_machines_max = models.IntegerField(default=4)
     chef_zone = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
@@ -635,7 +635,7 @@ class ProductionExtrusion(models.Model):
         verbose_name="Matière première utilisée (kg)"
     )
     nombre_machines_actives = models.IntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(4)],
+        validators=[MinValueValidator(0)],
         verbose_name="Nombre moyen de machines actives"
     )
     nombre_machinistes = models.IntegerField(
@@ -712,7 +712,7 @@ class ProductionImprimerie(models.Model):
     
     # Ressources
     nombre_machines_actives = models.IntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(10)],
+        validators=[MinValueValidator(0)],
         verbose_name="Nombre moyen de machines actives"
     )
     
@@ -772,7 +772,7 @@ class ProductionSoudure(models.Model):
     
     # Ressources
     nombre_machines_actives = models.IntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(8)],
+        validators=[MinValueValidator(0)],
         verbose_name="Nombre moyen de machines actives"
     )
     
@@ -887,7 +887,7 @@ class ProductionSoudure(models.Model):
     
     # Ressources
     nombre_machines_actives = models.IntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(8)],
+        validators=[MinValueValidator(0)],
         verbose_name="Nombre moyen de machines actives"
     )
     
@@ -966,7 +966,7 @@ class ProductionRecyclage(models.Model):
     
     # Ressources
     nombre_moulinex = models.IntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(5)],
+        validators=[MinValueValidator(0)],
         verbose_name="Nombre de moulinex"
     )
     
