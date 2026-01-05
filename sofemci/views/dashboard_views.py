@@ -49,6 +49,34 @@ def dashboard_view(request):
             selected_date = timezone.now().date()
     else:
         selected_date = timezone.now().date()
+
+    try:
+        extrusion_stats = get_extrusion_details_jour(selected_date)
+        print("✓ get_extrusion_details_jour OK")
+    except Exception as e:
+        print(f"✗ get_extrusion_details_jour erreur: {e}")
+        extrusion_stats = {}
+    
+    try:
+        imprimerie_stats = get_imprimerie_details_jour(selected_date)
+        print("✓ get_imprimerie_details_jour OK")
+    except Exception as e:
+        print(f"✗ get_imprimerie_details_jour erreur: {e}")
+        imprimerie_stats = {}
+    
+    try:
+        soudure_stats = get_soudure_details_jour(selected_date)
+        print("✓ get_soudure_details_jour OK")
+    except Exception as e:
+        print(f"✗ get_soudure_details_jour erreur: {e}")
+        soudure_stats = {}
+    
+    try:
+        recyclage_stats = get_recyclage_details_jour(selected_date)
+        print("✓ get_recyclage_details_jour OK")
+    except Exception as e:
+        print(f"✗ get_recyclage_details_jour erreur: {e}")
+        recyclage_stats = {}
     
     context = {
         'today': selected_date,

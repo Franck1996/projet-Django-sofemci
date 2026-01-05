@@ -8,6 +8,8 @@ from django.utils import timezone
 # Ceci configure l'environnement Django lorsque le script est exécuté directement
 import os
 import django
+
+from sofemci.models import CustomUser
 if __name__ == '__main__':
     # Remplacez 'votre_projet.settings' par le chemin réel de votre settings.py
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sofemci.settings') 
@@ -15,9 +17,8 @@ if __name__ == '__main__':
 # ---------------------------------------------
 
 # Assurez-vous d'importer vos modèles depuis le bon chemin
-from sofemci.models.production import ProductionExtrusion
-from sofemci.models.base import ZoneExtrusion, Equipe
-from sofemci.models.users import CustomUser
+from sofemci.models import ProductionExtrusion
+from sofemci.models import ZoneExtrusion, Equipe
 
 # Définir la précision pour les calculs en Decimal
 # COMMENTÉ: getcontext().prec = 4 car une précision aussi basse peut causer des InvalidOperation
