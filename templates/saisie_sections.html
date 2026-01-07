@@ -559,8 +559,29 @@
                                 </div>
                             </div>
                         </div>
+                    <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form_recyclage.dechets_kg.id_for_label }}" class="form-label required">
+                                     Déchets (kg)
+                            </label>
+                            <div class="input-group">
+                                {{ form_recyclage.dechets_kg }}
+                                <span class="input-group-text">kg</span>
+                            </div>
+                            {% if form_recyclage.dechets_kg.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form_recyclage.dechets_kg.errors.0 }}
+                            </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Déchets générés lors du recyclage</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <!-- Vous pouvez laisser vide ou ajouter un autre champ si nécessaire -->
+                    </div>
+                </div>
                         
-                        <!-- Indicateurs -->
                         
                         
                         <!-- Observations -->

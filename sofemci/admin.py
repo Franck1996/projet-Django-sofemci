@@ -1,4 +1,4 @@
-# sofemci/admin.py - VERSION COMPLÈTE CORRIGÉE ET OPTIMISÉE
+# sofemci/admin.py - VERSION COMPLÈTE OPTIMISÉE AVEC PDF IDENTIQUES AUX IMAGES
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
@@ -25,11 +25,11 @@ from reportlab.lib.units import cm
 from django.utils.safestring import mark_safe
 
 # ==========================================
-# FONCTIONS PDF (Inchangées - gardées telles quelles)
+# FONCTIONS PDF OPTIMISÉES - IDENTIQUES AUX IMAGES
 # ==========================================
 
-def create_ultra_professional_pdf(title, queryset, filename):
-    """Crée une fiche de production ULTRA professionnelle"""
+def create_pdf_extrusion(title, queryset, filename):
+    """PDF Extrusion avec les mêmes entêtes que les images fournies"""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer, 
@@ -44,7 +44,7 @@ def create_ultra_professional_pdf(title, queryset, filename):
     
     # En-tête
     header_style = ParagraphStyle(
-        'CorporateHeader',
+        'Header',
         parent=styles['Heading1'],
         fontSize=18,
         textColor=colors.black,
@@ -53,28 +53,27 @@ def create_ultra_professional_pdf(title, queryset, filename):
         fontName='Helvetica-Bold'
     )
     
-    header_content = f"<b>{title}</b>"
-    elements.append(Paragraph(header_content, header_style))
+    elements.append(Paragraph(f"<b>{title}</b>", header_style))
     
-    # Informations
+    # Période analysée
     dates = [obj.date_production for obj in queryset]
     if dates:
         min_date = min(dates).strftime('%d/%m/%Y')
         max_date = max(dates).strftime('%d/%m/%Y')
-        period_text = f"<b>Période :</b> {min_date} - {max_date}" if min_date != max_date else f"<b>Date :</b> {min_date}"
+        period_text = f"<b>Période analysée :</b> Du {min_date} au {max_date}"
     else:
         period_text = f"<b>Date :</b> {datetime.now().strftime('%d/%m/%Y')}"
     
-    info_text = f"{period_text} | <b>Enregistrements :</b> {len(queryset)} | <b>Généré :</b> {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+    info_text = f"{period_text} | <b>Nombre d'enregistrements :</b> {len(queryset)} | <b>Généré le :</b> {datetime.now().strftime('%d/%m/%Y à %H:%M')}"
     elements.append(Paragraph(info_text, ParagraphStyle('InfoStyle', fontSize=10, 
                                                       textColor=colors.HexColor('#333333'),
                                                       spaceAfter=1.0*cm,
                                                       alignment=1)))
     
-    # Tableau
+    # Tableau avec EN-TÊTES EXACTES comme dans l'image
     headers = [
         'Date', 'Zone', 'Équipe', 'Matière P', 'Machines', 'Personnel',
-        'Bobines', 'Finis', 'Semi', 'Déchets', 'Total', 'Rend (%)'
+        'Bobines', 'Finis', 'Semi-Finis', 'Déchets', 'Total', 'yield (%)'
     ]
     
     table_data = [headers]
@@ -84,21 +83,21 @@ def create_ultra_professional_pdf(title, queryset, filename):
         
         row_data = [
             obj.date_production.strftime('%d/%m/%Y'),
-            str(obj.zone),
-            str(obj.equipe)[:15],
-            f"{float(obj.matiere_premiere_kg):,.0f}",
+            str(obj.zone)[:15] if obj.zone else "-",
+            str(obj.equipe)[:20] if obj.equipe else "-",
+            f"{float(obj.matiere_premiere_kg):,.0f}".replace(',', ' '),
             str(obj.nombre_machines_actives),
             str(obj.nombre_machinistes),
-            f"{float(obj.nombre_bobines_kg):,.0f}",
-            f"{float(obj.production_finis_kg):,.0f}",
-            f"{float(obj.production_semi_finis_kg):,.0f}",
-            f"{float(obj.dechets_kg):,.0f}",
-            f"{float(obj.total_production_kg):,.0f}" if obj.total_production_kg else "0",
+            f"{float(obj.nombre_bobines_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.production_finis_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.production_semi_finis_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.dechets_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.total_production_kg):,.0f}".replace(',', ' ') if obj.total_production_kg else "0",
             f"{rendement:.1f}"
         ]
         table_data.append(row_data)
     
-    col_widths = [2.8*cm, 3.2*cm, 5.0*cm, 2.5*cm, 2.0*cm, 2.0*cm, 
+    col_widths = [2.5*cm, 3.5*cm, 4.5*cm, 2.5*cm, 2.0*cm, 2.0*cm, 
                   2.0*cm, 2.0*cm, 2.0*cm, 2.0*cm, 2.0*cm, 2.0*cm]
     
     table = Table(table_data, colWidths=col_widths, repeatRows=1)
@@ -107,14 +106,13 @@ def create_ultra_professional_pdf(title, queryset, filename):
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#404040')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('FONTSIZE', (0, 0), (-1, 0), 11),
         ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
         ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
         ('TOPPADDING', (0, 0), (-1, 0), 8),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
         ('ALIGN', (0, 1), (0, -1), 'CENTER'),
-        ('ALIGN', (1, 1), (1, -1), 'LEFT'),
-        ('ALIGN', (2, 1), (2, -1), 'LEFT'),
+        ('ALIGN', (1, 1), (2, -1), 'LEFT'),
         ('ALIGN', (3, 1), (10, -1), 'RIGHT'),
         ('ALIGN', (11, 1), (11, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -122,23 +120,22 @@ def create_ultra_professional_pdf(title, queryset, filename):
         ('RIGHTPADDING', (0, 1), (-1, -1), 6),
         ('TOPPADDING', (0, 1), (-1, -1), 6),
         ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
-        ('BOX', (0, 0), (-1, -1), 1.5, colors.black),
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-        ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
-        ('ROWBACKGROUNDS', (1, 1), (-1, -1), [colors.white, colors.HexColor('#F9F9F9')]),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F9F9F9')]),
     ]))
     
     elements.append(table)
     elements.append(Spacer(1, 1.5*cm))
     
-    # Footer
+    # Footer identique à l'image
     footer_text = f"""
-    <b>SOFEM-CI</b> | Usine de Production | Abidjan, Côte d'Ivoire<br/>
+    <b>SOFEM-CI</b> | Usine de Production d'Emballage | Abidjan, Côte d'Ivoire<br/>
     <i>Document confidentiel - Réf: PROD-{datetime.now().strftime('%Y%m%d')}-001 | Page 1/1</i>
     """
     
     footer_para = Paragraph(footer_text, ParagraphStyle(
-        'ProfessionalFooter',
+        'Footer',
         fontSize=9,
         textColor=colors.HexColor('#666666'),
         alignment=1,
@@ -154,63 +151,92 @@ def create_ultra_professional_pdf(title, queryset, filename):
     response['Content-Disposition'] = f'attachment; filename="{filename}.pdf"'
     return response
 
-def create_ultra_professional_pdf_imprimerie(title, queryset, filename):
-    """PDF Imprimerie simplifié"""
+def create_pdf_imprimerie(title, queryset, filename):
+    """PDF Imprimerie identique à l'image"""
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), 
-                           rightMargin=1.0*cm, leftMargin=1.0*cm, 
-                           topMargin=2.0*cm, bottomMargin=1.5*cm)
+    doc = SimpleDocTemplate(
+        buffer, 
+        pagesize=landscape(A4),
+        rightMargin=1.5*cm,
+        leftMargin=1.5*cm,
+        topMargin=2.5*cm, 
+        bottomMargin=2*cm
+    )
     elements = []
     styles = getSampleStyleSheet()
     
-    header_style = ParagraphStyle(
-        'Header',
-        parent=styles['Heading1'],
-        fontSize=16,
-        textColor=colors.HexColor('#2c3e50'),
-        alignment=1,
-        spaceAfter=1*cm
-    )
+    # En-tête
+    elements.append(Paragraph(f"<b>{title}</b>", ParagraphStyle(
+        'Header', fontSize=18, textColor=colors.black, alignment=1,
+        fontName='Helvetica-Bold', spaceAfter=0.3*cm
+    )))
     
-    elements.append(Paragraph(f"<b>{title}</b>", header_style))
+    # Période analysée
+    dates = [obj.date_production for obj in queryset]
+    if dates:
+        min_date = min(dates).strftime('%d/%m/%Y')
+        max_date = max(dates).strftime('%d/%m/%Y')
+        period_text = f"<b>PÉRIODE ANALYSÉE :</b> Du {min_date} au {max_date}"
+    else:
+        period_text = f"<b>DATE :</b> {datetime.now().strftime('%d/%m/%Y')}"
     
-    # Tableau simplifié
-    headers = ['Date', 'Heures', 'Machines', 'Finies (kg)', 'Semi (kg)', 'Déchets (kg)', 'Total (kg)', 'Taux Déchet']
+    info_text = f"{period_text} | <b>ENREGISTREMENTS :</b> {len(queryset)} | <b>GÉNÉRÉ LE :</b> {datetime.now().strftime('%d/%m/%Y à %H:%M')}"
+    elements.append(Paragraph(info_text, ParagraphStyle('InfoStyle', fontSize=10, 
+                                                      textColor=colors.HexColor('#333333'),
+                                                      spaceAfter=1.0*cm,
+                                                      alignment=1)))
+    
+    # Tableau avec EN-TÊTES EXACTES comme dans l'image
+    headers = [
+        'DATE', 'CRÉNEAU HORAIRE', 'MACHINES', 'BOBINES FINIES (kg)', 
+        'BOBINES SEMI (kg)', 'DÉCHETS (kg)', 'TOTAL (kg)', 'TAUX DÉCHET (%)'
+    ]
+    
     table_data = [headers]
     
     for obj in queryset.order_by('date_production'):
         heure_debut = obj.heure_debut.strftime('%H:%M') if obj.heure_debut else "--:--"
         heure_fin = obj.heure_fin.strftime('%H:%M') if obj.heure_fin else "--:--"
-        heures = f"{heure_debut}→{heure_fin}"
+        heures = f"{heure_debut} - {heure_fin}"
         
         row_data = [
             obj.date_production.strftime('%d/%m/%Y'),
             heures,
             str(obj.nombre_machines_actives),
-            f"{float(obj.production_bobines_finies_kg):,.0f}",
-            f"{float(obj.production_bobines_semi_finies_kg):,.0f}",
-            f"{float(obj.dechets_kg):,.0f}",
-            f"{float(obj.total_production_kg):,.0f}" if obj.total_production_kg else "0",
+            f"{float(obj.production_bobines_finies_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.production_bobines_semi_finies_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.dechets_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.total_production_kg):,.0f}".replace(',', ' ') if obj.total_production_kg else "0",
             f"{float(obj.taux_dechet_pourcentage):.1f}%" if obj.taux_dechet_pourcentage else "0.0%"
         ]
         table_data.append(row_data)
     
-    table = Table(table_data, repeatRows=1)
+    col_widths = [2.5*cm, 3.5*cm, 2.0*cm, 3.0*cm, 3.0*cm, 2.5*cm, 2.5*cm, 2.5*cm]
+    
+    table = Table(table_data, colWidths=col_widths, repeatRows=1)
+    
     table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3498db')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#404040')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('ALIGN', (0, 1), (2, -1), 'CENTER'),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, 0), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('ALIGN', (0, 1), (1, -1), 'CENTER'),
+        ('ALIGN', (2, 1), (2, -1), 'CENTER'),
         ('ALIGN', (3, 1), (6, -1), 'RIGHT'),
         ('ALIGN', (7, 1), (7, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F9F9F9')]),
     ]))
     
     elements.append(table)
+    elements.append(Spacer(1, 1.5*cm))
+    
     doc.build(elements)
     buffer.seek(0)
     
@@ -218,94 +244,185 @@ def create_ultra_professional_pdf_imprimerie(title, queryset, filename):
     response['Content-Disposition'] = f'attachment; filename="{filename}.pdf"'
     return response
 
-def create_ultra_professional_pdf_soudure(title, queryset, filename):
-    """PDF Soudure simplifié"""
+def create_pdf_recyclage(title, queryset, filename):
+    """PDF Recyclage identique à l'image"""
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), 
-                           rightMargin=1.0*cm, leftMargin=1.0*cm, 
-                           topMargin=2.0*cm, bottomMargin=1.5*cm)
+    doc = SimpleDocTemplate(
+        buffer, 
+        pagesize=landscape(A4),
+        rightMargin=1.5*cm,
+        leftMargin=1.5*cm,
+        topMargin=2.5*cm, 
+        bottomMargin=2*cm
+    )
     elements = []
     styles = getSampleStyleSheet()
     
+    # En-tête
     elements.append(Paragraph(f"<b>{title}</b>", ParagraphStyle(
-        'Header', fontSize=16, textColor=colors.HexColor('#2c3e50'), alignment=1
+        'Header', fontSize=18, textColor=colors.black, alignment=1,
+        fontName='Helvetica-Bold', spaceAfter=0.3*cm
     )))
     
-    headers = ['Date', 'Heures', 'Machines', 'Bobines', 'Bretelles', 'Rema', 'Batta', 'Sac', 'Déchets', 'Total']
+    # Date unique comme dans l'image
+    if queryset.exists():
+        unique_dates = set(obj.date_production for obj in queryset)
+        if len(unique_dates) == 1:
+            date_text = f"<b>DATE :</b> {list(unique_dates)[0].strftime('%d/%m/%Y')}"
+        else:
+            date_text = f"<b>PÉRIODE :</b> Multiple"
+    else:
+        date_text = f"<b>DATE :</b> {datetime.now().strftime('%d/%m/%Y')}"
+    
+    info_text = f"{date_text} | <b>ENREGISTREMENTS :</b> {len(queryset)} | <b>GÉNÉRÉ LE :</b> {datetime.now().strftime('%d/%m/%Y à %H:%M')}"
+    elements.append(Paragraph(info_text, ParagraphStyle('InfoStyle', fontSize=10, 
+                                                      textColor=colors.HexColor('#333333'),
+                                                      spaceAfter=1.0*cm,
+                                                      alignment=1)))
+    
+    # Tableau avec EN-TÊTES EXACTES comme dans l'image
+    headers = [
+        'DATE', 'ÉQUIPE', 'MOULINEX', 'BROYAGE (kg)', 'BÂCHE NOIRE (kg)', 
+        'TOTAL (kg)', 'PROD/MOULINEX', 'TAUX TRANSFO (%)'
+    ]
+    
     table_data = [headers]
     
-    for obj in queryset.order_by('date_production'):
-        heure_debut = obj.heure_debut.strftime('%H:%M') if obj.heure_debut else "--:--"
-        heure_fin = obj.heure_fin.strftime('%H:%M') if obj.heure_fin else "--:--"
-        heures = f"{heure_debut}→{heure_fin}"
-        
+    for obj in queryset.order_by('date_production', 'equipe'):
         row_data = [
             obj.date_production.strftime('%d/%m/%Y'),
-            heures,
-            str(obj.nombre_machines_actives),
-            f"{float(obj.production_bobines_finies_kg):,.0f}",
-            f"{float(obj.production_bretelles_kg):,.0f}",
-            f"{float(obj.production_rema_kg):,.0f}",
-            f"{float(obj.production_batta_kg):,.0f}",
-            f"{float(obj.production_sac_emballage_kg):,.0f}",
-            f"{float(obj.dechets_kg):,.0f}",
-            f"{float(obj.total_production_kg):,.0f}" if obj.total_production_kg else "0"
-        ]
-        table_data.append(row_data)
-    
-    table = Table(table_data, repeatRows=1)
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e74c3c')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-    ]))
-    
-    elements.append(table)
-    doc.build(elements)
-    buffer.seek(0)
-    
-    response = HttpResponse(buffer, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{filename}.pdf"'
-    return response
-
-def create_ultra_professional_pdf_recyclage(title, queryset, filename):
-    """PDF Recyclage simplifié"""
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), 
-                           rightMargin=1.0*cm, leftMargin=1.0*cm, 
-                           topMargin=2.0*cm, bottomMargin=1.5*cm)
-    elements = []
-    
-    elements.append(Paragraph(f"<b>{title}</b>", ParagraphStyle(
-        'Header', fontSize=16, textColor=colors.HexColor('#27ae60'), alignment=1
-    )))
-    
-    headers = ['Date', 'Équipe', 'Moulinex', 'Broyage (kg)', 'Bâche Noire (kg)', 'Total (kg)', 'Prod/Moul', 'Taux Transfo']
-    table_data = [headers]
-    
-    for obj in queryset.order_by('date_production'):
-        row_data = [
-            obj.date_production.strftime('%d/%m/%Y'),
-            str(obj.equipe)[:15] if obj.equipe else "-",
+            str(obj.equipe)[:20] if obj.equipe else "-",
             str(obj.nombre_moulinex),
-            f"{float(obj.production_broyage_kg):,.0f}",
-            f"{float(obj.production_bache_noir_kg):,.0f}",
-            f"{float(obj.total_production_kg):,.0f}" if obj.total_production_kg else "0",
-            f"{float(obj.production_par_moulinex):,.0f}" if obj.production_par_moulinex else "0",
+            f"{float(obj.production_broyage_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.production_bache_noir_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.total_production_kg):,.0f}".replace(',', ' ') if obj.total_production_kg else "0",
+            f"{float(obj.production_par_moulinex):,.0f}".replace(',', ' ') if obj.production_par_moulinex else "0",
             f"{float(obj.taux_transformation_pourcentage):.1f}%" if obj.taux_transformation_pourcentage else "0.0%"
         ]
         table_data.append(row_data)
     
-    table = Table(table_data, repeatRows=1)
+    col_widths = [2.5*cm, 3.5*cm, 2.5*cm, 2.5*cm, 3.0*cm, 2.5*cm, 3.0*cm, 2.5*cm]
+    
+    table = Table(table_data, colWidths=col_widths, repeatRows=1)
+    
     table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#27ae60')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#404040')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
         ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, 0), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('ALIGN', (0, 1), (1, -1), 'CENTER'),
+        ('ALIGN', (2, 1), (2, -1), 'CENTER'),
+        ('ALIGN', (3, 1), (6, -1), 'RIGHT'),
+        ('ALIGN', (7, 1), (7, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F9F9F9')]),
     ]))
     
     elements.append(table)
+    elements.append(Spacer(1, 1.5*cm))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}.pdf"'
+    return response
+
+def create_pdf_soudure(title, queryset, filename):
+    """PDF Soudure identique à l'image"""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, 
+        pagesize=landscape(A4),
+        rightMargin=1.5*cm,
+        leftMargin=1.5*cm,
+        topMargin=2.5*cm, 
+        bottomMargin=2*cm
+    )
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # En-tête
+    elements.append(Paragraph(f"<b>{title}</b>", ParagraphStyle(
+        'Header', fontSize=18, textColor=colors.black, alignment=1,
+        fontName='Helvetica-Bold', spaceAfter=0.3*cm
+    )))
+    
+    # Période analysée
+    dates = [obj.date_production for obj in queryset]
+    if dates:
+        min_date = min(dates).strftime('%d/%m/%Y')
+        max_date = max(dates).strftime('%d/%m/%Y')
+        period_text = f"<b>PÉRIODE ANALYSÉE :</b> Du {min_date} au {max_date}"
+    else:
+        period_text = f"<b>DATE :</b> {datetime.now().strftime('%d/%m/%Y')}"
+    
+    info_text = f"{period_text} | <b>ENREGISTREMENTS :</b> {len(queryset)} | <b>GÉNÉRÉ LE :</b> {datetime.now().strftime('%d/%m/%Y à %H:%M')}"
+    elements.append(Paragraph(info_text, ParagraphStyle('InfoStyle', fontSize=10, 
+                                                      textColor=colors.HexColor('#333333'),
+                                                      spaceAfter=1.0*cm,
+                                                      alignment=1)))
+    
+    # Tableau avec EN-TÊTES EXACTES comme dans l'image
+    headers = [
+        'DATE', 'CRÉNEAU', 'MACHINES', 'BOBINES (kg)', 'RET(E)LLES (kg)', 
+        'REMA (kg)', 'BATTA (kg)', 'SAC (kg)', 'DÉCHETS (kg)', 'TOTAL (kg)'
+    ]
+    
+    table_data = [headers]
+    
+    for obj in queryset.order_by('date_production'):
+        # Format heure comme dans l'image (06h, 14h, etc.)
+        heure_text = ""
+        if obj.heure_debut:
+            heure_text = obj.heure_debut.strftime('%Hh')
+            if obj.heure_debut.minute > 0:
+                heure_text += obj.heure_debut.strftime('%M')
+        
+        row_data = [
+            obj.date_production.strftime('%d/%m/%Y'),
+            heure_text,
+            str(obj.nombre_machines_actives),
+            f"{float(obj.production_bobines_finies_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.production_bretelles_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.production_rema_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.production_batta_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.production_sac_emballage_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.dechets_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.total_production_kg):,.0f}".replace(',', ' ') if obj.total_production_kg else "0"
+        ]
+        table_data.append(row_data)
+    
+    col_widths = [2.5*cm, 2.0*cm, 2.0*cm, 2.5*cm, 2.5*cm, 2.0*cm, 2.0*cm, 2.0*cm, 2.0*cm, 2.5*cm]
+    
+    table = Table(table_data, colWidths=col_widths, repeatRows=1)
+    
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#404040')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, 0), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('ALIGN', (0, 1), (2, -1), 'CENTER'),
+        ('ALIGN', (3, 1), (-1, -1), 'RIGHT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F9F9F9')]),
+    ]))
+    
+    elements.append(table)
+    elements.append(Spacer(1, 1.5*cm))
+    
     doc.build(elements)
     buffer.seek(0)
     
@@ -354,7 +471,7 @@ class MachineAdmin(admin.ModelAdmin):
     readonly_fields = ['derniere_mise_a_jour_donnees']
 
 # ==========================================
-# ADMINISTRATION PRODUCTION EXTRUSION - CORRIGÉ
+# ADMINISTRATION PRODUCTION EXTRUSION - OPTIMISÉ
 # ==========================================
 
 @admin.register(ProductionExtrusion)
@@ -404,7 +521,7 @@ class ProductionExtrusionAdmin(admin.ModelAdmin):
     
     def get_matiere_premiere(self, obj):
         return f"{float(obj.matiere_premiere_kg):,.0f}"
-    get_matiere_premiere.short_description = "⚙️ Matière (kg)"
+    get_matiere_premiere.short_description = "⚙️ Matière P"
     get_matiere_premiere.admin_order_field = 'matiere_premiere_kg'
     
     def get_machines_actives(self, obj):
@@ -419,33 +536,32 @@ class ProductionExtrusionAdmin(admin.ModelAdmin):
     
     def get_bobines(self, obj):
         return f"{float(obj.nombre_bobines_kg):,.0f}"
-    get_bobines.short_description = "📦 Bobines (kg)"
+    get_bobines.short_description = "📦 Bobines"
     get_bobines.admin_order_field = 'nombre_bobines_kg'
     
     def get_finis(self, obj):
         return f"{float(obj.production_finis_kg):,.0f}"
-    get_finis.short_description = "✅ Finis (kg)"
+    get_finis.short_description = "✅ Finis"
     get_finis.admin_order_field = 'production_finis_kg'
     
     def get_semi_finis(self, obj):
         return f"{float(obj.production_semi_finis_kg):,.0f}"
-    get_semi_finis.short_description = "🔄 Semi (kg)"
+    get_semi_finis.short_description = "🔄 Semi-Finis"
     get_semi_finis.admin_order_field = 'production_semi_finis_kg'
     
     def get_dechets(self, obj):
         return f"{float(obj.dechets_kg):,.0f}"
-    get_dechets.short_description = "🗑️ Déchets (kg)"
+    get_dechets.short_description = "🗑️ Déchets"
     get_dechets.admin_order_field = 'dechets_kg'
     
     def get_total_production(self, obj):
         if obj.total_production_kg:
             return f"{float(obj.total_production_kg):,.0f}"
         return "0"
-    get_total_production.short_description = "🏭 Total (kg)"
+    get_total_production.short_description = "🏭 Total"
     get_total_production.admin_order_field = 'total_production_kg'
     
     def get_rendement(self, obj):
-        """Rendement formaté avec couleur - CORRIGÉ"""
         if not obj.rendement_pourcentage:
             return "0.0%"
         
@@ -460,7 +576,7 @@ class ProductionExtrusionAdmin(admin.ModelAdmin):
         else:
             html = f'<span style="color: red; font-weight: bold;">{rendement:.1f}%</span>'
             return mark_safe(html)
-    get_rendement.short_description = "📈 Rendement"
+    get_rendement.short_description = "📈 yield"
     get_rendement.admin_order_field = 'rendement_pourcentage'
     
     def get_status_icon(self, obj):
@@ -496,7 +612,7 @@ class ProductionExtrusionAdmin(admin.ModelAdmin):
         })
     )
     
-    actions = ['valider_production', 'invalider_production', 'export_pdf_fiche_production_ultra', 'export_excel_fiche_production']
+    actions = ['valider_production', 'invalider_production', 'export_pdf_extrusion', 'export_excel_fiche_production']
     
     def save_model(self, request, obj, form, change):
         if not obj.pk:
@@ -513,18 +629,18 @@ class ProductionExtrusionAdmin(admin.ModelAdmin):
         self.message_user(request, f'{updated} production(s) invalidée(s).', messages.WARNING)
     invalider_production.short_description = "❌ Invalider la production"
     
-    def export_pdf_fiche_production_ultra(self, request, queryset):
+    def export_pdf_extrusion(self, request, queryset):
         if not queryset.exists():
             self.message_user(request, "Aucune donnée à exporter.", messages.WARNING)
             return None
         title = "FICHE DE PRODUCTION EXTRUSION"
         filename = f"Fiche_Production_Extrusion_{datetime.now().strftime('%Y%m%d_%H%M')}"
         try:
-            return create_ultra_professional_pdf(title, queryset, filename)
+            return create_pdf_extrusion(title, queryset, filename)
         except Exception as e:
             self.message_user(request, f"Erreur PDF: {str(e)}", messages.ERROR)
             return None
-    export_pdf_fiche_production_ultra.short_description = "📄 Export PDF"
+    export_pdf_extrusion.short_description = "📄 Export PDF Extrusion"
     
     def export_excel_fiche_production(self, request, queryset):
         if not queryset.exists():
@@ -532,10 +648,9 @@ class ProductionExtrusionAdmin(admin.ModelAdmin):
             return None
         self.message_user(request, "Export Excel disponible", messages.INFO)
         return None
-    export_excel_fiche_production.short_description = "📊 Export Excel"
 
 # ==========================================
-# ADMINISTRATION PRODUCTION RECYCLAGE - CORRIGÉ
+# ADMINISTRATION PRODUCTION RECYCLAGE - OPTIMISÉ
 # ==========================================
 
 @admin.register(ProductionRecyclage)
@@ -553,47 +668,46 @@ class ProductionRecyclageAdmin(admin.ModelAdmin):
     
     def date_production_short(self, obj):
         return obj.date_production.strftime('%d/%m/%Y')
-    date_production_short.short_description = "📅 Date"
+    date_production_short.short_description = "📅 DATE"
     date_production_short.admin_order_field = 'date_production'
     
     def get_equipe_compact(self, obj):
         if obj.equipe:
             return str(obj.equipe)[:15]
         return "-"
-    get_equipe_compact.short_description = "👥 Équipe"
+    get_equipe_compact.short_description = "👥 ÉQUIPE"
     get_equipe_compact.admin_order_field = 'equipe__nom'
     
     def get_moulinex(self, obj):
         return obj.nombre_moulinex
-    get_moulinex.short_description = "⚙️ Moulinex"
+    get_moulinex.short_description = "⚙️ MOULINEX"
     get_moulinex.admin_order_field = 'nombre_moulinex'
     
     def get_broyage(self, obj):
         return f"{float(obj.production_broyage_kg):,.0f}"
-    get_broyage.short_description = "🔄 Broyage (kg)"
+    get_broyage.short_description = "🔄 BROYAGE"
     get_broyage.admin_order_field = 'production_broyage_kg'
     
     def get_bache_noire(self, obj):
         return f"{float(obj.production_bache_noir_kg):,.0f}"
-    get_bache_noire.short_description = "⬛ Bâche (kg)"
+    get_bache_noire.short_description = "⬛ BÂCHE NOIRE"
     get_bache_noire.admin_order_field = 'production_bache_noir_kg'
     
     def get_total_production(self, obj):
         if obj.total_production_kg:
             return f"{float(obj.total_production_kg):,.0f}"
         return "0"
-    get_total_production.short_description = "🏭 Total (kg)"
+    get_total_production.short_description = "🏭 TOTAL"
     get_total_production.admin_order_field = 'total_production_kg'
     
     def get_production_par_moulinex(self, obj):
         if obj.production_par_moulinex:
             return f"{float(obj.production_par_moulinex):,.0f}"
         return "0"
-    get_production_par_moulinex.short_description = "📊 Prod/Moul (kg)"
+    get_production_par_moulinex.short_description = "📊 PROD/MOULINEX"
     get_production_par_moulinex.admin_order_field = 'production_par_moulinex'
     
     def get_taux_transformation(self, obj):
-        """Taux de transformation formaté avec couleur - CORRIGÉ"""
         if not obj.taux_transformation_pourcentage:
             return "0.0%"
         
@@ -608,7 +722,7 @@ class ProductionRecyclageAdmin(admin.ModelAdmin):
         else:
             html = f'<span style="color: red; font-weight: bold;">{taux:.1f}%</span>'
             return mark_safe(html)
-    get_taux_transformation.short_description = "📈 Taux Transfo"
+    get_taux_transformation.short_description = "📈 TAUX TRANSFO"
     get_taux_transformation.admin_order_field = 'taux_transformation_pourcentage'
     
     def get_status_icon(self, obj):
@@ -641,7 +755,7 @@ class ProductionRecyclageAdmin(admin.ModelAdmin):
         })
     )
     
-    actions = ['valider_production', 'invalider_production', 'export_pdf_fiche_recyclage_ultra', 'export_excel_fiche_recyclage']
+    actions = ['valider_production', 'invalider_production', 'export_pdf_recyclage', 'export_excel_fiche_recyclage']
     
     def save_model(self, request, obj, form, change):
         if not obj.pk:
@@ -658,18 +772,18 @@ class ProductionRecyclageAdmin(admin.ModelAdmin):
         self.message_user(request, f'{updated} production(s) recyclage invalidée(s).', messages.WARNING)
     invalider_production.short_description = "❌ Invalider"
     
-    def export_pdf_fiche_recyclage_ultra(self, request, queryset):
+    def export_pdf_recyclage(self, request, queryset):
         if not queryset.exists():
             self.message_user(request, "Aucune donnée.", messages.WARNING)
             return None
-        title = "FICHE PRODUCTION RECYCLAGE"
+        title = "FICHE DE PRODUCTION RECYCLAGE"
         filename = f"Fiche_Recyclage_{datetime.now().strftime('%Y%m%d_%H%M')}"
         try:
-            return create_ultra_professional_pdf_recyclage(title, queryset, filename)
+            return create_pdf_recyclage(title, queryset, filename)
         except Exception as e:
             self.message_user(request, f"Erreur: {str(e)}", messages.ERROR)
             return None
-    export_pdf_fiche_recyclage_ultra.short_description = "📄 Export PDF"
+    export_pdf_recyclage.short_description = "📄 Export PDF Recyclage"
     
     def export_excel_fiche_recyclage(self, request, queryset):
         if not queryset.exists():
@@ -677,10 +791,9 @@ class ProductionRecyclageAdmin(admin.ModelAdmin):
             return None
         self.message_user(request, "Export Excel disponible", messages.INFO)
         return None
-    export_excel_fiche_recyclage.short_description = "📊 Export Excel"
 
 # ==========================================
-# ADMINISTRATION PRODUCTION IMPRIMERIE - CORRIGÉ
+# ADMINISTRATION PRODUCTION IMPRIMERIE - OPTIMISÉ
 # ==========================================
 
 @admin.register(ProductionImprimerie)
@@ -697,44 +810,43 @@ class ProductionImprimerieAdmin(admin.ModelAdmin):
     
     def date_production_short(self, obj):
         return obj.date_production.strftime('%d/%m/%Y')
-    date_production_short.short_description = "📅 Date"
+    date_production_short.short_description = "📅 DATE"
     date_production_short.admin_order_field = 'date_production'
     
     def get_heures_creneau(self, obj):
         heure_debut = obj.heure_debut.strftime('%Hh%M') if obj.heure_debut else "--:--"
         heure_fin = obj.heure_fin.strftime('%Hh%M') if obj.heure_fin else "--:--"
-        return f"{heure_debut}→{heure_fin}"
-    get_heures_creneau.short_description = "🕒 Créneau"
+        return f"{heure_debut} - {heure_fin}"
+    get_heures_creneau.short_description = "🕒 CRÉNEAU"
     
     def get_machines_actives(self, obj):
         return obj.nombre_machines_actives
-    get_machines_actives.short_description = "🖥️ Machines"
+    get_machines_actives.short_description = "🖥️ MACHINES"
     get_machines_actives.admin_order_field = 'nombre_machines_actives'
     
     def get_bobines_finies(self, obj):
         return f"{float(obj.production_bobines_finies_kg):,.0f}"
-    get_bobines_finies.short_description = "✅ Finies (kg)"
+    get_bobines_finies.short_description = "✅ BOBINES FINIES"
     get_bobines_finies.admin_order_field = 'production_bobines_finies_kg'
     
     def get_bobines_semi(self, obj):
         return f"{float(obj.production_bobines_semi_finies_kg):,.0f}"
-    get_bobines_semi.short_description = "🔄 Semi (kg)"
+    get_bobines_semi.short_description = "🔄 BOBINES SEMI"
     get_bobines_semi.admin_order_field = 'production_bobines_semi_finies_kg'
     
     def get_dechets(self, obj):
         return f"{float(obj.dechets_kg):,.0f}"
-    get_dechets.short_description = "🗑️ Déchets (kg)"
+    get_dechets.short_description = "🗑️ DÉCHETS"
     get_dechets.admin_order_field = 'dechets_kg'
     
     def get_total_production(self, obj):
         if obj.total_production_kg:
             return f"{float(obj.total_production_kg):,.0f}"
         return "0"
-    get_total_production.short_description = "🏭 Total (kg)"
+    get_total_production.short_description = "🏭 TOTAL"
     get_total_production.admin_order_field = 'total_production_kg'
     
     def get_taux_dechet(self, obj):
-        """Taux de déchet formaté avec couleur - CORRIGÉ"""
         if not obj.taux_dechet_pourcentage:
             return "0.0%"
         
@@ -749,7 +861,7 @@ class ProductionImprimerieAdmin(admin.ModelAdmin):
         else:
             html = f'<span style="color: red; font-weight: bold;">{taux:.1f}%</span>'
             return mark_safe(html)
-    get_taux_dechet.short_description = "📉 Taux Déchet"
+    get_taux_dechet.short_description = "📉 TAUX DÉCHET"
     get_taux_dechet.admin_order_field = 'taux_dechet_pourcentage'
     
     def get_status_icon(self, obj):
@@ -778,7 +890,7 @@ class ProductionImprimerieAdmin(admin.ModelAdmin):
         })
     )
     
-    actions = ['valider_production', 'invalider_production', 'export_pdf_fiche_imprimerie_ultra', 'export_excel_fiche_imprimerie']
+    actions = ['valider_production', 'invalider_production', 'export_pdf_imprimerie', 'export_excel_fiche_imprimerie']
     
     def save_model(self, request, obj, form, change):
         if not obj.pk:
@@ -795,18 +907,18 @@ class ProductionImprimerieAdmin(admin.ModelAdmin):
         self.message_user(request, f'{updated} production(s) imprimerie invalidée(s).', messages.WARNING)
     invalider_production.short_description = "❌ Invalider"
     
-    def export_pdf_fiche_imprimerie_ultra(self, request, queryset):
+    def export_pdf_imprimerie(self, request, queryset):
         if not queryset.exists():
             self.message_user(request, "Aucune donnée.", messages.WARNING)
             return None
-        title = "FICHE PRODUCTION IMPRIMERIE"
+        title = "FICHE DE PRODUCTION IMPRIMERIE"
         filename = f"Fiche_Imprimerie_{datetime.now().strftime('%Y%m%d_%H%M')}"
         try:
-            return create_ultra_professional_pdf_imprimerie(title, queryset, filename)
+            return create_pdf_imprimerie(title, queryset, filename)
         except Exception as e:
             self.message_user(request, f"Erreur: {str(e)}", messages.ERROR)
             return None
-    export_pdf_fiche_imprimerie_ultra.short_description = "📄 Export PDF"
+    export_pdf_imprimerie.short_description = "📄 Export PDF Imprimerie"
     
     def export_excel_fiche_imprimerie(self, request, queryset):
         if not queryset.exists():
@@ -814,10 +926,9 @@ class ProductionImprimerieAdmin(admin.ModelAdmin):
             return None
         self.message_user(request, "Export Excel disponible", messages.INFO)
         return None
-    export_excel_fiche_imprimerie.short_description = "📊 Export Excel"
 
 # ==========================================
-# ADMINISTRATION PRODUCTION SOUDURE - CORRIGÉ
+# ADMINISTRATION PRODUCTION SOUDURE - OPTIMISÉ
 # ==========================================
 
 @admin.register(ProductionSoudure)
@@ -835,55 +946,58 @@ class ProductionSoudureAdmin(admin.ModelAdmin):
     
     def date_production_short(self, obj):
         return obj.date_production.strftime('%d/%m/%Y')
-    date_production_short.short_description = "📅 Date"
+    date_production_short.short_description = "📅 DATE"
     date_production_short.admin_order_field = 'date_production'
     
     def get_heures_creneau(self, obj):
-        heure_debut = obj.heure_debut.strftime('%Hh%M') if obj.heure_debut else "--:--"
-        heure_fin = obj.heure_fin.strftime('%Hh%M') if obj.heure_fin else "--:--"
-        return f"{heure_debut}→{heure_fin}"
-    get_heures_creneau.short_description = "🕒 Créneau"
+        heure_text = ""
+        if obj.heure_debut:
+            heure_text = obj.heure_debut.strftime('%Hh')
+            if obj.heure_debut.minute > 0:
+                heure_text += obj.heure_debut.strftime('%M')
+        return heure_text
+    get_heures_creneau.short_description = "🕒 CRÉNEAU"
     
     def get_machines_actives(self, obj):
         return obj.nombre_machines_actives
-    get_machines_actives.short_description = "🖥️ Machines"
+    get_machines_actives.short_description = "🖥️ MACHINES"
     get_machines_actives.admin_order_field = 'nombre_machines_actives'
     
     def get_bobines_finies(self, obj):
         return f"{float(obj.production_bobines_finies_kg):,.0f}"
-    get_bobines_finies.short_description = "✅ Bobines (kg)"
+    get_bobines_finies.short_description = "✅ BOBINES"
     get_bobines_finies.admin_order_field = 'production_bobines_finies_kg'
     
     def get_bretelles(self, obj):
         return f"{float(obj.production_bretelles_kg):,.0f}"
-    get_bretelles.short_description = "🔗 Bretelles (kg)"
+    get_bretelles.short_description = "🔗 RET(E)LLES"
     get_bretelles.admin_order_field = 'production_bretelles_kg'
     
     def get_rema(self, obj):
         return f"{float(obj.production_rema_kg):,.0f}"
-    get_rema.short_description = "🔄 Rema (kg)"
+    get_rema.short_description = "🔄 REMA"
     get_rema.admin_order_field = 'production_rema_kg'
     
     def get_batta(self, obj):
         return f"{float(obj.production_batta_kg):,.0f}"
-    get_batta.short_description = "📦 Batta (kg)"
+    get_batta.short_description = "📦 BATTA"
     get_batta.admin_order_field = 'production_batta_kg'
     
     def get_sac_emballage(self, obj):
         return f"{float(obj.production_sac_emballage_kg):,.0f}"
-    get_sac_emballage.short_description = "🛍️ Sac (kg)"
+    get_sac_emballage.short_description = "🛍️ SAC"
     get_sac_emballage.admin_order_field = 'production_sac_emballage_kg'
     
     def get_dechets(self, obj):
         return f"{float(obj.dechets_kg):,.0f}"
-    get_dechets.short_description = "🗑️ Déchets (kg)"
+    get_dechets.short_description = "🗑️ DÉCHETS"
     get_dechets.admin_order_field = 'dechets_kg'
     
     def get_total_production(self, obj):
         if obj.total_production_kg:
             return f"{float(obj.total_production_kg):,.0f}"
         return "0"
-    get_total_production.short_description = "🏭 Total (kg)"
+    get_total_production.short_description = "🏭 TOTAL"
     get_total_production.admin_order_field = 'total_production_kg'
     
     def get_status_icon(self, obj):
@@ -922,7 +1036,7 @@ class ProductionSoudureAdmin(admin.ModelAdmin):
         })
     )
     
-    actions = ['valider_production', 'invalider_production', 'export_pdf_fiche_soudure_ultra', 'export_excel_fiche_soudure']
+    actions = ['valider_production', 'invalider_production', 'export_pdf_soudure', 'export_excel_fiche_soudure']
     
     def save_model(self, request, obj, form, change):
         if not obj.pk:
@@ -939,18 +1053,18 @@ class ProductionSoudureAdmin(admin.ModelAdmin):
         self.message_user(request, f'{updated} production(s) soudure invalidée(s).', messages.WARNING)
     invalider_production.short_description = "❌ Invalider"
     
-    def export_pdf_fiche_soudure_ultra(self, request, queryset):
+    def export_pdf_soudure(self, request, queryset):
         if not queryset.exists():
             self.message_user(request, "Aucune donnée.", messages.WARNING)
             return None
-        title = "FICHE PRODUCTION SOUDURE"
+        title = "FICHE DE PRODUCTION SOUDURE"
         filename = f"Fiche_Soudure_{datetime.now().strftime('%Y%m%d_%H%M')}"
         try:
-            return create_ultra_professional_pdf_soudure(title, queryset, filename)
+            return create_pdf_soudure(title, queryset, filename)
         except Exception as e:
             self.message_user(request, f"Erreur: {str(e)}", messages.ERROR)
             return None
-    export_pdf_fiche_soudure_ultra.short_description = "📄 Export PDF"
+    export_pdf_soudure.short_description = "📄 Export PDF Soudure"
     
     def export_excel_fiche_soudure(self, request, queryset):
         if not queryset.exists():
@@ -958,7 +1072,6 @@ class ProductionSoudureAdmin(admin.ModelAdmin):
             return None
         self.message_user(request, "Export Excel disponible", messages.INFO)
         return None
-    export_excel_fiche_soudure.short_description = "📊 Export Excel"
 
 # ==========================================
 # ADMINISTRATION SYSTÈME

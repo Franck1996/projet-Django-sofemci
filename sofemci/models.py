@@ -1186,6 +1186,14 @@ class ProductionRecyclage(models.Model):
         verbose_name="Bâche noire produite (kg)",
         validators=[MinValueValidator(0)]
     )
+
+    dechets_kg = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Déchets générés (kg)",
+        validators=[MinValueValidator(0)],
+        default=0.00  # Valeur par défaut
+    )
     
     # === CALCULS AUTOMATIQUES ===
     total_production_kg = models.DecimalField(
@@ -1208,6 +1216,14 @@ class ProductionRecyclage(models.Model):
         max_digits=5,
         decimal_places=2,
         verbose_name="Taux de transformation (%)",
+        default=0.00,
+        editable=False
+    )
+
+    taux_dechet_pourcentage = models.DecimalField(  # AJOUTER CE CHAMP
+        max_digits=5,
+        decimal_places=2,
+        verbose_name="Taux de déchet (%)",
         default=0.00,
         editable=False
     )
@@ -1270,6 +1286,11 @@ class ProductionRecyclage(models.Model):
             self.taux_transformation_pourcentage = (self.production_bache_noir_kg / self.production_broyage_kg) * 100
         else:
             self.taux_transformation_pourcentage = 0
+
+        if self.total_production_kg > 0 or self.dechets_kg > 0:
+            self.taux_dechet_pourcentage = (self.dechets_kg / (self.total_production_kg + self.dechets_kg)) * 100
+        else:
+            self.taux_dechet_pourcentage = 0
         
         super().save(*args, **kwargs)
 

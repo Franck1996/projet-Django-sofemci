@@ -110,12 +110,6 @@ urlpatterns = [
     path('api/ia/statistiques/', api_statistiques_ia, name='api_statistiques_ia'),
 ]
 
-# ==========================================
-# APIs SUPPLÉMENTAIRES (si non implémentées)
-# ==========================================
-# Si api_valider_production n'existe pas encore, commentez cette ligne
-# path('api/production/<str:section>/<int:production_id>/valider/', 
-#      api_valider_production, name='api_valider_production'),
 
 # ==========================================
 # DEBUG TOOLBAR (Développement)

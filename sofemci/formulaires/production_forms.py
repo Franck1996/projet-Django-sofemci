@@ -9,8 +9,7 @@ from ..models import (
     ProductionImprimerie,
     ProductionSoudure,
     ProductionRecyclage,
-    Equipe,
-    ZoneExtrusion
+    
 )
 
 
@@ -485,7 +484,7 @@ class ProductionRecyclageForm(forms.ModelForm):
         model = ProductionRecyclage
         fields = [
             'date_production', 'equipe', 'nombre_moulinex',
-            'production_broyage_kg', 'production_bache_noir_kg', 'observations'
+            'production_broyage_kg', 'production_bache_noir_kg','dechets_kg','observations'
         ]
 
         widgets = {
@@ -515,6 +514,14 @@ class ProductionRecyclageForm(forms.ModelForm):
                 'placeholder': '0.00',
                 'id': 'recyclage_bache_noir'
             }),
+            'dechets_kg': forms.NumberInput(attrs={  # AJOUTER CE WIDGET
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '0.00',
+                'id': 'recyclage_dechets'
+            }),
+
+
             'observations': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 3,
@@ -556,12 +563,20 @@ class ProductionRecyclageForm(forms.ModelForm):
             if taux_transformation > 100:
                 self.add_error('production_bache_noir_kg',
                     f"Erreur: Bâche ({production_bache} kg) > Broyage ({production_broyage} kg)")
+        if dechets and production_broyage:
+            if dechets > production_broyage:
+                self.add_error('dechets_kg',
+                    f"Erreur: Déchets ({dechets} kg) > Broyage ({production_broyage} kg)")
         
+
+
         # Validation valeurs positives
         if production_broyage and production_broyage < 0:
             self.add_error('production_broyage_kg', "La production broyage ne peut pas être négative")
         if production_bache and production_bache < 0:
             self.add_error('production_bache_noir_kg', "La bâche noire ne peut pas être négative")
+        if dechets and dechets < 0:
+            self.add_error('dechets_kg', "Les déchets ne peuvent pas être négatifs")
         if moulinex and moulinex < 0:
             self.add_error('nombre_moulinex', "Le nombre de moulinex ne peut pas être négatif")
         
