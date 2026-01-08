@@ -926,17 +926,17 @@ def get_dechets_totaux_jour(date=None):
     # Déchets extrusion
     dechets_extrusion = ProductionExtrusion.objects.filter(
         date_production=date
-    ).aggregate(total=Sum('dechets_kg'))['total'] or 0
+    ).aggregate(total=Sum('dechets'))['total'] or 0
     
     # Déchets imprimerie
     dechets_imprimerie = ProductionImprimerie.objects.filter(
         date_production=date
-    ).aggregate(total=Sum('dechets_kg'))['total'] or 0
+    ).aggregate(total=Sum('dechets'))['total'] or 0
     
     # Déchets soudure
     dechets_soudure = ProductionSoudure.objects.filter(
         date_production=date
-    ).aggregate(total=Sum('dechets_kg'))['total'] or 0
+    ).aggregate(total=Sum('dechets'))['total'] or 0
     
     return float(dechets_extrusion + dechets_imprimerie + dechets_soudure)
 
@@ -945,15 +945,15 @@ def get_dechets_periode(date_debut, date_fin):
     
     dechets_extrusion = ProductionExtrusion.objects.filter(
         date_production__range=[date_debut, date_fin]
-    ).aggregate(total=Sum('dechets_kg'))['total'] or 0
+    ).aggregate(total=Sum('dechets'))['total'] or 0
     
     dechets_imprimerie = ProductionImprimerie.objects.filter(
         date_production__range=[date_debut, date_fin]
-    ).aggregate(total=Sum('dechets_kg'))['total'] or 0
+    ).aggregate(total=Sum('dechets'))['total'] or 0
     
     dechets_soudure = ProductionSoudure.objects.filter(
         date_production__range=[date_debut, date_fin]
-    ).aggregate(total=Sum('dechets_kg'))['total'] or 0
+    ).aggregate(total=Sum('dechets'))['total'] or 0
     
     return {
         'extrusion': float(dechets_extrusion),
@@ -970,15 +970,15 @@ def get_dechets_section_jour(section, date=None):
     if section.upper() == 'EXTRUSION':
         dechets = ProductionExtrusion.objects.filter(
             date_production=date
-        ).aggregate(total=Sum('dechets_kg'))['total'] or 0
+        ).aggregate(total=Sum('dechets'))['total'] or 0
     elif section.upper() == 'IMPRIMERIE':
         dechets = ProductionImprimerie.objects.filter(
             date_production=date
-        ).aggregate(total=Sum('dechets_kg'))['total'] or 0
+        ).aggregate(total=Sum('dechets'))['total'] or 0
     elif section.upper() == 'SOUDURE':
         dechets = ProductionSoudure.objects.filter(
             date_production=date
-        ).aggregate(total=Sum('dechets_kg'))['total'] or 0
+        ).aggregate(total=Sum('dechets'))['total'] or 0
     else:
         dechets = 0
     
@@ -990,15 +990,15 @@ def get_dechets_section_periode(section, date_debut, date_fin):
     if section.upper() == 'EXTRUSION':
         dechets = ProductionExtrusion.objects.filter(
             date_production__range=[date_debut, date_fin]
-        ).aggregate(total=Sum('dechets_kg'))['total'] or 0
+        ).aggregate(total=Sum('dechets'))['total'] or 0
     elif section.upper() == 'IMPRIMERIE':
         dechets = ProductionImprimerie.objects.filter(
             date_production__range=[date_debut, date_fin]
-        ).aggregate(total=Sum('dechets_kg'))['total'] or 0
+        ).aggregate(total=Sum('dechets'))['total'] or 0
     elif section.upper() == 'SOUDURE':
         dechets = ProductionSoudure.objects.filter(
             date_production__range=[date_debut, date_fin]
-        ).aggregate(total=Sum('dechets_kg'))['total'] or 0
+        ).aggregate(total=Sum('dechets'))['total'] or 0
     else:
         dechets = 0
     
@@ -1864,7 +1864,7 @@ def get_extrusion_details_jour(date=None):
     productions = ProductionExtrusion.objects.filter(date_production=date)
     
     total_production = productions.aggregate(total=Sum('total_production_kg'))['total'] or 0
-    total_dechets = productions.aggregate(total=Sum('dechets_kg'))['total'] or 0
+    total_dechets = productions.aggregate(total=Sum('dechets'))['total'] or 0
     rendement_moyen = productions.aggregate(avg=Avg('rendement_pourcentage'))['avg'] or 0
     matiere_premiere = productions.aggregate(total=Sum('matiere_premiere_kg'))['total'] or 0
     
@@ -1897,7 +1897,7 @@ def get_imprimerie_details_jour(date=None):
     productions = ProductionImprimerie.objects.filter(date_production=date)
     
     total_production = productions.aggregate(total=Sum('total_production_kg'))['total'] or 0
-    total_dechets = productions.aggregate(total=Sum('dechets_kg'))['total'] or 0
+    total_dechets = productions.aggregate(total=Sum('dechets'))['total'] or 0
     bobines_finies = productions.aggregate(total=Sum('production_bobines_finies_kg'))['total'] or 0
     bobines_semi = productions.aggregate(total=Sum('production_bobines_semi_finies_kg'))['total'] or 0
     
@@ -1935,7 +1935,7 @@ def get_soudure_details_jour(date=None):
     productions = ProductionSoudure.objects.filter(date_production=date)
     
     total_production = productions.aggregate(total=Sum('total_production_kg'))['total'] or 0
-    total_dechets = productions.aggregate(total=Sum('dechets_kg'))['total'] or 0
+    total_dechets = productions.aggregate(total=Sum('dechets'))['total'] or 0
     bobines_finies = productions.aggregate(total=Sum('production_bobines_finies_kg'))['total'] or 0
     
     # Calcul d'efficacité (simplifié)
@@ -2365,7 +2365,7 @@ def calculate_extrusion_metrics(production_instance):
         # Calcul du taux de déchet
         if production_instance.total_production_kg and production_instance.total_production_kg > 0:
             metrics['taux_dechet_pourcentage'] = (
-                production_instance.dechets_kg / 
+                production_instance.dechets / 
                 production_instance.total_production_kg * 100
             )
         
@@ -2402,7 +2402,7 @@ def calculate_imprimerie_metrics(production_instance):
     try:
         # CORRECTION : Vérifier si le champ existe
         matiere_entree = getattr(production_instance, 'matiere_entree_kg', 0)
-        dechets = getattr(production_instance, 'dechets_kg', 0)
+        dechets = getattr(production_instance, 'dechets', 0)
         total_prod = getattr(production_instance, 'total_production_kg', 0)
         bobines_finies = getattr(production_instance, 'production_bobines_finies_kg', 0)
         
@@ -2459,7 +2459,7 @@ def calculate_soudure_metrics(production_instance):
         # Calcul du taux de déchet
         if production_instance.total_production_kg and production_instance.total_production_kg > 0:
             metrics['taux_dechet_pourcentage'] = (
-                production_instance.dechets_kg / 
+                production_instance.dechets / 
                 production_instance.total_production_kg * 100
             )
         

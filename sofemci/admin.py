@@ -91,7 +91,7 @@ def create_pdf_extrusion(title, queryset, filename):
             f"{float(obj.nombre_bobines_kg):,.0f}".replace(',', ' '),
             f"{float(obj.production_finis_kg):,.0f}".replace(',', ' '),
             f"{float(obj.production_semi_finis_kg):,.0f}".replace(',', ' '),
-            f"{float(obj.dechets_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.dechets):,.0f}".replace(',', ' '),
             f"{float(obj.total_production_kg):,.0f}".replace(',', ' ') if obj.total_production_kg else "0",
             f"{rendement:.1f}"
         ]
@@ -205,7 +205,7 @@ def create_pdf_imprimerie(title, queryset, filename):
             str(obj.nombre_machines_actives),
             f"{float(obj.production_bobines_finies_kg):,.0f}".replace(',', ' '),
             f"{float(obj.production_bobines_semi_finies_kg):,.0f}".replace(',', ' '),
-            f"{float(obj.dechets_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.dechets):,.0f}".replace(',', ' '),
             f"{float(obj.total_production_kg):,.0f}".replace(',', ' ') if obj.total_production_kg else "0",
             f"{float(obj.taux_dechet_pourcentage):.1f}%" if obj.taux_dechet_pourcentage else "0.0%"
         ]
@@ -295,7 +295,7 @@ def create_pdf_recyclage(title, queryset, filename):
             str(obj.nombre_moulinex),
             f"{float(obj.production_broyage_kg):,.0f}".replace(',', ' '),
             f"{float(obj.production_bache_noir_kg):,.0f}".replace(',', ' '),
-            f"{float(obj.dechets_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.dechets):,.0f}".replace(',', ' '),
             f"{float(obj.total_production_kg):,.0f}".replace(',', ' ') if obj.total_production_kg else "0",
             f"{float(obj.production_par_moulinex):,.0f}".replace(',', ' ') if obj.production_par_moulinex else "0",
             f"{float(obj.taux_transformation_pourcentage):.1f}%" if obj.taux_transformation_pourcentage else "0.0%"
@@ -395,7 +395,7 @@ def create_pdf_soudure(title, queryset, filename):
             f"{float(obj.production_rema_kg):,.0f}".replace(',', ' '),
             f"{float(obj.production_batta_kg):,.0f}".replace(',', ' '),
             f"{float(obj.production_sac_emballage_kg):,.0f}".replace(',', ' '),
-            f"{float(obj.dechets_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.dechets):,.0f}".replace(',', ' '),
             f"{float(obj.total_production_kg):,.0f}".replace(',', ' ') if obj.total_production_kg else "0"
         ]
         table_data.append(row_data)
@@ -551,9 +551,9 @@ class ProductionExtrusionAdmin(admin.ModelAdmin):
     get_semi_finis.admin_order_field = 'production_semi_finis_kg'
     
     def get_dechets(self, obj):
-        return f"{float(obj.dechets_kg):,.0f}"
+        return f"{float(obj.dechets):,.0f}"
     get_dechets.short_description = "🗑️ Déchets"
-    get_dechets.admin_order_field = 'dechets_kg'
+    get_dechets.admin_order_field = 'dechets'
     
     def get_total_production(self, obj):
         if obj.total_production_kg:
@@ -602,7 +602,7 @@ class ProductionExtrusionAdmin(admin.ModelAdmin):
             'fields': ('matiere_premiere_kg', 'nombre_machines_actives', 'nombre_machinistes')
         }),
         ('📦 Production détaillée', {
-            'fields': ('nombre_bobines_kg', 'production_finis_kg', 'production_semi_finis_kg', 'dechets_kg')
+            'fields': ('nombre_bobines_kg', 'production_finis_kg', 'production_semi_finis_kg', 'dechets')
         }),
         ('📊 Calculs automatiques', {
             'fields': ('total_production_kg', 'rendement_pourcentage', 'taux_dechet_pourcentage', 'production_par_machine'),
@@ -696,9 +696,9 @@ class ProductionRecyclageAdmin(admin.ModelAdmin):
     get_bache_noire.admin_order_field = 'production_bache_noir_kg'
     
     def get_dechets(self, obj):  # NOUVELLE MÉTHODE
-        return f"{float(obj.dechets_kg):,.0f}" if hasattr(obj, 'dechets_kg') else "0"
+        return f"{float(obj.dechets):,.0f}" if hasattr(obj, 'dechets') else "0"
     get_dechets.short_description = "🗑️ DÉCHETS"
-    get_dechets.admin_order_field = 'dechets_kg'
+    get_dechets.admin_order_field = 'dechets'
     
     def get_total_production(self, obj):
         if obj.total_production_kg:
@@ -770,7 +770,7 @@ class ProductionRecyclageAdmin(admin.ModelAdmin):
             'fields': ('date_production', 'equipe', 'nombre_moulinex')
         }),
         ('♻️ Production recyclage', {
-            'fields': ('production_broyage_kg', 'production_bache_noir_kg', 'dechets_kg')  # AJOUTER dechets_kg
+            'fields': ('production_broyage_kg', 'production_bache_noir_kg', 'dechets')  # AJOUTER dechets
         }),
         ('📊 Calculs automatiques', {
             'fields': ('total_production_kg', 'production_par_moulinex', 
@@ -789,7 +789,7 @@ class ProductionRecyclageAdmin(admin.ModelAdmin):
             obj.cree_par = request.user
         
         # S'assurer que les calculs sont faits avant sauvegarde
-        if hasattr(obj, 'dechets_kg'):
+        if hasattr(obj, 'dechets'):
             # Production totale = bâche noire produite
             obj.total_production_kg = obj.production_bache_noir_kg
             
@@ -806,8 +806,8 @@ class ProductionRecyclageAdmin(admin.ModelAdmin):
                 obj.taux_transformation_pourcentage = 0
             
             # Taux de déchet
-            if obj.total_production_kg > 0 or obj.dechets_kg > 0:
-                obj.taux_dechet_pourcentage = (obj.dechets_kg / (obj.total_production_kg + obj.dechets_kg)) * 100
+            if obj.total_production_kg > 0 or obj.dechets > 0:
+                obj.taux_dechet_pourcentage = (obj.dechets / (obj.total_production_kg + obj.dechets)) * 100
             else:
                 obj.taux_dechet_pourcentage = 0
         
@@ -888,9 +888,9 @@ class ProductionImprimerieAdmin(admin.ModelAdmin):
     get_bobines_semi.admin_order_field = 'production_bobines_semi_finies_kg'
     
     def get_dechets(self, obj):
-        return f"{float(obj.dechets_kg):,.0f}"
+        return f"{float(obj.dechets):,.0f}"
     get_dechets.short_description = "🗑️ DÉCHETS"
-    get_dechets.admin_order_field = 'dechets_kg'
+    get_dechets.admin_order_field = 'dechets'
     
     def get_total_production(self, obj):
         if obj.total_production_kg:
@@ -932,7 +932,7 @@ class ProductionImprimerieAdmin(admin.ModelAdmin):
             'fields': ('date_production', 'heure_debut', 'heure_fin', 'nombre_machines_actives')
         }),
         ('📦 Production détaillée', {
-            'fields': ('production_bobines_finies_kg', 'production_bobines_semi_finies_kg', 'dechets_kg')
+            'fields': ('production_bobines_finies_kg', 'production_bobines_semi_finies_kg', 'dechets')
         }),
         ('📊 Calculs automatiques', {
             'fields': ('total_production_kg', 'taux_dechet_pourcentage'),
@@ -1042,9 +1042,9 @@ class ProductionSoudureAdmin(admin.ModelAdmin):
     get_sac_emballage.admin_order_field = 'production_sac_emballage_kg'
     
     def get_dechets(self, obj):
-        return f"{float(obj.dechets_kg):,.0f}"
+        return f"{float(obj.dechets):,.0f}"
     get_dechets.short_description = "🗑️ DÉCHETS"
-    get_dechets.admin_order_field = 'dechets_kg'
+    get_dechets.admin_order_field = 'dechets'
     
     def get_total_production(self, obj):
         if obj.total_production_kg:
@@ -1078,7 +1078,7 @@ class ProductionSoudureAdmin(admin.ModelAdmin):
             'fields': ('production_bretelles_kg', 'production_rema_kg', 'production_batta_kg', 'production_sac_emballage_kg')
         }),
         ('🗑️ Gestion déchets', {
-            'fields': ('dechets_kg',)
+            'fields': ('dechets',)
         }),
         ('📊 Calculs automatiques', {
             'fields': ('total_production_specifique_kg', 'total_production_kg', 'taux_dechet_pourcentage'),

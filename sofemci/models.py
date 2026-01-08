@@ -17,16 +17,18 @@ class CustomUser(AbstractUser):
     """Utilisateur personnalisé pour SOFEM-CI"""
     
     ROLE_CHOICES = [
-        ('ADMIN', 'Administrateur'),
+         ('ADMIN', 'Administrateur'),
         ('SUPERVISEUR', 'Superviseur'),
-        ('CHEF_ZONE', 'Chef de Zone'),
-        ('OPERATEUR', 'Opérateur'),
-        ('TECHNICIEN', 'Technicien'),
-        ('QUALITE', 'Contrôle Qualité'),
-        ('LOGISTIQUE', 'Logistique'),
-        ('COMPTABLE', 'Comptable'),
-        ('RH', 'Ressources Humaines'),
+        ('CHEF_EXT1', 'Chef de Zone1'),
+        ('CHEF_EXT2', 'Chef de Zone2'),
+        ('CHEF_EXT3', 'Chef de Zone3'),
+        ('CHEF_EXT4', 'Chef de Zone4'),
+        ('CHEF_EXT5', 'Chef de Zone5'),
+        ('CHEF_RECYCL', 'Chef RECYCLAGE'),
+        ('CHEF_IMPRIM', 'Chef IMPRIMERIE'),
+        ('CHEF_SOUD', 'Chef SOUDURE'),
         ('VISITEUR', 'Visiteur'),
+        ('DIRECTION', 'Direction'),
     ]
     
     role = models.CharField(
@@ -120,8 +122,6 @@ class Equipe(models.Model):
         ('MATIN', 'Équipe Matin (06h-14h)'),
         ('SOIR', 'Équipe Soir (14h-22h)'),
         ('NUIT', 'Équipe Nuit (22h-06h)'),
-        ('JOUR', 'Équipe Jour (08h-17h)'),
-        ('SPECIALE', 'Équipe Spéciale'),
     ]
     
     nom = models.CharField(
@@ -377,7 +377,6 @@ class Machine(models.Model):
         max_digits=10,
         decimal_places=2,
         verbose_name="Capacité horaire (kg/h)",
-        default=0.00
     )
     
     observations = models.TextField(
@@ -409,14 +408,12 @@ class Machine(models.Model):
         max_digits=12,
         decimal_places=2,
         verbose_name="Heures fonctionnement totales",
-        default=0.00
     )
     
     heures_depuis_derniere_maintenance = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         verbose_name="Heures depuis dernière maintenance",
-        default=0.00
     )
     
     # === HISTORIQUE PANNES ===
@@ -445,7 +442,6 @@ class Machine(models.Model):
         max_digits=5,
         decimal_places=2,
         verbose_name="Durée moyenne réparation (heures)",
-        default=0.00
     )
     
     # === CONSOMMATION ET TEMPÉRATURE ===
@@ -453,28 +449,24 @@ class Machine(models.Model):
         max_digits=10,
         decimal_places=2,
         verbose_name="Consommation électrique (kWh)",
-        default=0.00
     )
     
     consommation_electrique_nominale = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         verbose_name="Consommation nominale (kWh)",
-        default=0.00
     )
     
     temperature_actuelle = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         verbose_name="Température actuelle (°C)",
-        default=0.00
     )
     
     temperature_nominale = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         verbose_name="Température nominale (°C)",
-        default=0.00
     )
     
     temperature_max_autorisee = models.DecimalField(
@@ -497,7 +489,6 @@ class Machine(models.Model):
         max_digits=5,
         decimal_places=2,
         verbose_name="Probabilité panne (7 jours, %)",
-        default=0.00,
         validators=[MinValueValidator(0), MaxValueValidator(100)]
     )
     
@@ -505,7 +496,6 @@ class Machine(models.Model):
         max_digits=5,
         decimal_places=2,
         verbose_name="Probabilité panne (30 jours, %)",
-        default=0.00,
         validators=[MinValueValidator(0), MaxValueValidator(100)]
     )
     
@@ -638,14 +628,12 @@ class HistoriqueMachine(models.Model):
         max_digits=5,
         decimal_places=2,
         verbose_name="Durée intervention (heures)",
-        default=0.00
     )
     
     cout_intervention = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         verbose_name="Coût intervention (FCFA)",
-        default=0.00
     )
     
     pieces_utilisees = models.TextField(
@@ -755,7 +743,7 @@ class ProductionExtrusion(models.Model):
         validators=[MinValueValidator(0)]
     )
     
-    dechets_kg = models.DecimalField(
+    dechets = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         verbose_name="Déchets générés (kg)",
@@ -767,7 +755,6 @@ class ProductionExtrusion(models.Model):
         max_digits=10,
         decimal_places=2,
         verbose_name="Production totale (kg)",
-        default=0.00,
         editable=False
     )
     
@@ -775,7 +762,6 @@ class ProductionExtrusion(models.Model):
         max_digits=5,
         decimal_places=2,
         verbose_name="Rendement matière (%)",
-        default=0.00,
         editable=False
     )
     
@@ -783,7 +769,6 @@ class ProductionExtrusion(models.Model):
         max_digits=5,
         decimal_places=2,
         verbose_name="Taux de déchet (%)",
-        default=0.00,
         editable=False
     )
     
@@ -791,7 +776,6 @@ class ProductionExtrusion(models.Model):
         max_digits=10,
         decimal_places=2,
         verbose_name="Production par machine (kg)",
-        default=0.00,
         editable=False
     )
     
@@ -851,7 +835,7 @@ class ProductionExtrusion(models.Model):
         
         # Taux de déchet
         if self.total_production_kg > 0:
-            self.taux_dechet_pourcentage = (self.dechets_kg / (self.total_production_kg + self.dechets_kg)) * 100
+            self.taux_dechet_pourcentage = (self.dechets / (self.total_production_kg + self.dechets)) * 100
         else:
             self.taux_dechet_pourcentage = 0
         
@@ -913,7 +897,7 @@ class ProductionImprimerie(models.Model):
         validators=[MinValueValidator(0)]
     )
     
-    dechets_kg = models.DecimalField(
+    dechets = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         verbose_name="Déchets générés (kg)",
@@ -925,7 +909,6 @@ class ProductionImprimerie(models.Model):
         max_digits=10,
         decimal_places=2,
         verbose_name="Production totale (kg)",
-        default=0.00,
         editable=False
     )
     
@@ -933,7 +916,6 @@ class ProductionImprimerie(models.Model):
         max_digits=5,
         decimal_places=2,
         verbose_name="Taux de déchet (%)",
-        default=0.00,
         editable=False
     )
     
@@ -984,7 +966,7 @@ class ProductionImprimerie(models.Model):
         self.total_production_kg = self.production_bobines_finies_kg + self.production_bobines_semi_finies_kg
         
         if self.total_production_kg > 0:
-            self.taux_dechet_pourcentage = (self.dechets_kg / (self.total_production_kg + self.dechets_kg)) * 100
+            self.taux_dechet_pourcentage = (self.dechets / (self.total_production_kg + self.dechets)) * 100
         else:
             self.taux_dechet_pourcentage = 0
         
@@ -1033,7 +1015,6 @@ class ProductionSoudure(models.Model):
         decimal_places=2,
         verbose_name="Production bretelles (kg)",
         validators=[MinValueValidator(0)],
-        default=0.00
     )
     
     production_rema_kg = models.DecimalField(
@@ -1041,7 +1022,6 @@ class ProductionSoudure(models.Model):
         decimal_places=2,
         verbose_name="Production REMA-Plastique (kg)",
         validators=[MinValueValidator(0)],
-        default=0.00
     )
     
     production_batta_kg = models.DecimalField(
@@ -1049,7 +1029,6 @@ class ProductionSoudure(models.Model):
         decimal_places=2,
         verbose_name="Production BATTA (kg)",
         validators=[MinValueValidator(0)],
-        default=0.00
     )
     
     production_sac_emballage_kg = models.DecimalField(
@@ -1057,10 +1036,9 @@ class ProductionSoudure(models.Model):
         decimal_places=2,
         verbose_name="Production sac d'emballage imprimé (kg)",
         validators=[MinValueValidator(0)],
-        default=0.00
     )
     
-    dechets_kg = models.DecimalField(
+    dechets = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         verbose_name="Déchets générés (kg)",
@@ -1072,7 +1050,6 @@ class ProductionSoudure(models.Model):
         max_digits=10,
         decimal_places=2,
         verbose_name="Production spécifique totale (kg)",
-        default=0.00,
         editable=False
     )
     
@@ -1080,7 +1057,6 @@ class ProductionSoudure(models.Model):
         max_digits=10,
         decimal_places=2,
         verbose_name="Production totale (kg)",
-        default=0.00,
         editable=False
     )
     
@@ -1088,7 +1064,6 @@ class ProductionSoudure(models.Model):
         max_digits=5,
         decimal_places=2,
         verbose_name="Taux de déchet (%)",
-        default=0.00,
         editable=False
     )
     
@@ -1149,7 +1124,7 @@ class ProductionSoudure(models.Model):
         
         # Taux de déchet
         if self.total_production_kg > 0:
-            self.taux_dechet_pourcentage = (self.dechets_kg / (self.total_production_kg + self.dechets_kg)) * 100
+            self.taux_dechet_pourcentage = (self.dechets / (self.total_production_kg + self.dechets)) * 100
         else:
             self.taux_dechet_pourcentage = 0
         
@@ -1187,12 +1162,12 @@ class ProductionRecyclage(models.Model):
         validators=[MinValueValidator(0)]
     )
 
-    dechets_kg = models.DecimalField(
+    dechets = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         verbose_name="Déchets générés (kg)",
         validators=[MinValueValidator(0)],
-        default=0.00  # Valeur par défaut
+      
     )
     
     # === CALCULS AUTOMATIQUES ===
@@ -1200,7 +1175,6 @@ class ProductionRecyclage(models.Model):
         max_digits=10,
         decimal_places=2,
         verbose_name="Production totale (kg)",
-        default=0.00,
         editable=False
     )
     
@@ -1208,7 +1182,6 @@ class ProductionRecyclage(models.Model):
         max_digits=10,
         decimal_places=2,
         verbose_name="Production par moulinex (kg)",
-        default=0.00,
         editable=False
     )
     
@@ -1216,7 +1189,6 @@ class ProductionRecyclage(models.Model):
         max_digits=5,
         decimal_places=2,
         verbose_name="Taux de transformation (%)",
-        default=0.00,
         editable=False
     )
 
@@ -1224,7 +1196,6 @@ class ProductionRecyclage(models.Model):
         max_digits=5,
         decimal_places=2,
         verbose_name="Taux de déchet (%)",
-        default=0.00,
         editable=False
     )
     
@@ -1287,8 +1258,8 @@ class ProductionRecyclage(models.Model):
         else:
             self.taux_transformation_pourcentage = 0
 
-        if self.total_production_kg > 0 or self.dechets_kg > 0:
-            self.taux_dechet_pourcentage = (self.dechets_kg / (self.total_production_kg + self.dechets_kg)) * 100
+        if self.total_production_kg > 0 or self.dechets > 0:
+            self.taux_dechet_pourcentage = (self.dechets / (self.total_production_kg + self.dechets)) * 100
         else:
             self.taux_dechet_pourcentage = 0
         
@@ -1666,7 +1637,7 @@ def get_kpi_production(date_debut, date_fin):
         'production_totale': float(productions.aggregate(Sum('total_production_kg'))['total_production_kg__sum'] or 0),
         'matiere_totale': float(productions.aggregate(Sum('matiere_premiere_kg'))['matiere_premiere_kg__sum'] or 0),
         'rendement_moyen': float(productions.aggregate(Avg('rendement_pourcentage'))['rendement_pourcentage__avg'] or 0),
-        'dechets_totaux': float(productions.aggregate(Sum('dechets_kg'))['dechets_kg__sum'] or 0),
+        'dechets_totaux': float(productions.aggregate(Sum('dechets'))['dechets__sum'] or 0),
         'nb_jours': productions.count(),
     }
     

@@ -22,7 +22,7 @@ class ProductionExtrusionForm(forms.ModelForm):
             'date_production', 'zone', 'equipe', 'heure_debut', 'heure_fin',
             'matiere_premiere_kg', 'nombre_machines_actives', 'nombre_machinistes',
             'nombre_bobines_kg', 'production_finis_kg', 'production_semi_finis_kg',
-            'dechets_kg', 'chef_zone', 'observations'
+            'dechets', 'chef_zone', 'observations'
         ]
 
         widgets = {
@@ -52,7 +52,6 @@ class ProductionExtrusionForm(forms.ModelForm):
             'matiere_premiere_kg': forms.NumberInput(attrs={
                 'class': 'form-control form-control-lg',
                 'step': '0.01',
-                'placeholder': '0.00',
                 'id': 'matiere_premiere_kg'
             }),
             'nombre_machines_actives': forms.NumberInput(attrs={
@@ -68,26 +67,22 @@ class ProductionExtrusionForm(forms.ModelForm):
             'nombre_bobines_kg': forms.NumberInput(attrs={
                 'class': 'form-control form-control-lg',
                 'step': '0.01',
-                'placeholder': '0.00',
                 'id': 'nombre_bobines_kg'
             }),
             'production_finis_kg': forms.NumberInput(attrs={
                 'class': 'form-control form-control-lg',
                 'step': '0.01',
-                'placeholder': '0.00',
                 'id': 'production_finis_kg'
             }),
             'production_semi_finis_kg': forms.NumberInput(attrs={
                 'class': 'form-control form-control-lg',
                 'step': '0.01',
-                'placeholder': '0.00',
                 'id': 'production_semi_finis_kg'
             }),
-            'dechets_kg': forms.NumberInput(attrs={
+            'dechets': forms.NumberInput(attrs={
                 'class': 'form-control form-control-lg',
                 'step': '0.01',
-                'placeholder': '0.00',
-                'id': 'dechets_kg'
+                'id': 'dechets'
             }),
             'chef_zone': forms.TextInput(attrs={
                 'class': 'form-control form-control-lg',
@@ -136,7 +131,7 @@ class ProductionExtrusionForm(forms.ModelForm):
         matiere = cleaned_data.get('matiere_premiere_kg')
         finis = cleaned_data.get('production_finis_kg')
         semi_finis = cleaned_data.get('production_semi_finis_kg')
-        dechets = cleaned_data.get('dechets_kg')
+        dechets = cleaned_data.get('dechets')
         heure_debut = cleaned_data.get('heure_debut')
         heure_fin = cleaned_data.get('heure_fin')
         
@@ -152,7 +147,7 @@ class ProductionExtrusionForm(forms.ModelForm):
         # 2. Validation déchets cohérents
         if matiere and dechets:
             if dechets > matiere:
-                self.add_error('dechets_kg',
+                self.add_error('dechets',
                     f"Erreur: Déchets ({dechets} kg) > Matière première ({matiere} kg)")
         
         # 3. Validation des heures
@@ -202,7 +197,7 @@ class ProductionExtrusionForm(forms.ModelForm):
         if semi_finis and semi_finis < 0:
             self.add_error('production_semi_finis_kg', "Les produits semi-finis ne peuvent pas être négatifs")
         if dechets and dechets < 0:
-            self.add_error('dechets_kg', "Les déchets ne peuvent pas être négatifs")
+            self.add_error('dechets', "Les déchets ne peuvent pas être négatifs")
         if machines and machines < 0:
             self.add_error('nombre_machines_actives', "Le nombre de machines ne peut pas être négatif")
         if machinistes and machinistes < 0:
@@ -219,7 +214,7 @@ class ProductionImprimerieForm(forms.ModelForm):
         fields = [
             'date_production', 'heure_debut', 'heure_fin',
             'nombre_machines_actives', 'production_bobines_finies_kg',
-            'production_bobines_semi_finies_kg', 'dechets_kg', 'observations'
+            'production_bobines_semi_finies_kg', 'dechets', 'observations'
         ]
 
         widgets = {
@@ -246,19 +241,16 @@ class ProductionImprimerieForm(forms.ModelForm):
             'production_bobines_finies_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
-                'placeholder': '0.00',
                 'id': 'imprimerie_finies'
             }),
             'production_bobines_semi_finies_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
-                'placeholder': '0.00',
                 'id': 'imprimerie_semi_finies'
             }),
-            'dechets_kg': forms.NumberInput(attrs={
+            'dechets': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
-                'placeholder': '0.00',
                 'id': 'imprimerie_dechets'
             }),
             'observations': forms.Textarea(attrs={
@@ -276,6 +268,7 @@ class ProductionImprimerieForm(forms.ModelForm):
         
         if self.user and not self.instance.pk:
             self.fields['date_production'].initial = timezone.now().date()
+            self.fields['dechets'].initial = 0
     
     def clean_date_production(self):
         """Validation de la date"""
@@ -297,7 +290,7 @@ class ProductionImprimerieForm(forms.ModelForm):
         machines = cleaned_data.get('nombre_machines_actives')
         finies = cleaned_data.get('production_bobines_finies_kg')
         semi_finies = cleaned_data.get('production_bobines_semi_finies_kg')
-        dechets = cleaned_data.get('dechets_kg')
+        dechets = cleaned_data.get('dechets')
         
         # Validation des heures
         if heure_debut and heure_fin:
@@ -331,7 +324,7 @@ class ProductionImprimerieForm(forms.ModelForm):
         if semi_finies and semi_finies < 0:
             self.add_error('production_bobines_semi_finies_kg', "Les bobines semi-finies ne peuvent pas être négatives")
         if dechets and dechets < 0:
-            self.add_error('dechets_kg', "Les déchets ne peuvent pas être négatifs")
+            self.add_error('dechets', "Les déchets ne peuvent pas être négatifs")
         
         return cleaned_data
 
@@ -345,7 +338,7 @@ class ProductionSoudureForm(forms.ModelForm):
             'date_production', 'heure_debut', 'heure_fin',
             'nombre_machines_actives', 'production_bobines_finies_kg',
             'production_bretelles_kg', 'production_rema_kg', 'production_batta_kg',
-            'production_sac_emballage_kg', 'dechets_kg', 'observations'
+            'production_sac_emballage_kg', 'dechets', 'observations'
         ]
 
         widgets = {
@@ -372,37 +365,31 @@ class ProductionSoudureForm(forms.ModelForm):
             'production_bobines_finies_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
-                'placeholder': '0.00',
                 'id': 'soudure_bobines_finies'
             }),
             'production_bretelles_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
-                'placeholder': '0.00',
                 'id': 'soudure_bretelles'
             }),
             'production_rema_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
-                'placeholder': '0.00',
                 'id': 'soudure_rema'
             }),
             'production_batta_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
-                'placeholder': '0.00',
                 'id': 'soudure_batta'
             }),
             'production_sac_emballage_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
-                'placeholder': '0.00',
                 'id': 'soudure_sac_emballage'
             }),
-            'dechets_kg': forms.NumberInput(attrs={
+            'dechets': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
-                'placeholder': '0.00',
                 'id': 'soudure_dechets'
             }),
             'observations': forms.Textarea(attrs={
@@ -440,7 +427,7 @@ class ProductionSoudureForm(forms.ModelForm):
         heure_fin = cleaned_data.get('heure_fin')
         machines = cleaned_data.get('nombre_machines_actives')
         finies = cleaned_data.get('production_bobines_finies_kg')
-        dechets = cleaned_data.get('dechets_kg')
+        dechets = cleaned_data.get('dechets')
         
         # Validation des heures
         if heure_debut and heure_fin:
@@ -472,7 +459,7 @@ class ProductionSoudureForm(forms.ModelForm):
         if finies and finies < 0:
             self.add_error('production_bobines_finies_kg', "Les bobines finies ne peuvent pas être négatives")
         if dechets and dechets < 0:
-            self.add_error('dechets_kg', "Les déchets ne peuvent pas être négatifs")
+            self.add_error('dechets', "Les déchets ne peuvent pas être négatifs")
         
         return cleaned_data
 
@@ -484,7 +471,7 @@ class ProductionRecyclageForm(forms.ModelForm):
         model = ProductionRecyclage
         fields = [
             'date_production', 'equipe', 'nombre_moulinex',
-            'production_broyage_kg', 'production_bache_noir_kg','dechets_kg','observations'
+            'production_broyage_kg', 'production_bache_noir_kg','dechets','observations'
         ]
 
         widgets = {
@@ -505,19 +492,16 @@ class ProductionRecyclageForm(forms.ModelForm):
             'production_broyage_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
-                'placeholder': '0.00',
                 'id': 'recyclage_broyage'
             }),
             'production_bache_noir_kg': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
-                'placeholder': '0.00',
                 'id': 'recyclage_bache_noir'
             }),
-            'dechets_kg': forms.NumberInput(attrs={  # AJOUTER CE WIDGET
+            'dechets': forms.NumberInput(attrs={  
                 'class': 'form-control',
                 'step': '0.01',
-                'placeholder': '0.00',
                 'id': 'recyclage_dechets'
             }),
 
@@ -565,7 +549,7 @@ class ProductionRecyclageForm(forms.ModelForm):
                     f"Erreur: Bâche ({production_bache} kg) > Broyage ({production_broyage} kg)")
         if dechets and production_broyage:
             if dechets > production_broyage:
-                self.add_error('dechets_kg',
+                self.add_error('dechets',
                     f"Erreur: Déchets ({dechets} kg) > Broyage ({production_broyage} kg)")
         
 
@@ -576,7 +560,7 @@ class ProductionRecyclageForm(forms.ModelForm):
         if production_bache and production_bache < 0:
             self.add_error('production_bache_noir_kg', "La bâche noire ne peut pas être négative")
         if dechets and dechets < 0:
-            self.add_error('dechets_kg', "Les déchets ne peuvent pas être négatifs")
+            self.add_error('dechets', "Les déchets ne peuvent pas être négatifs")
         if moulinex and moulinex < 0:
             self.add_error('nombre_moulinex', "Le nombre de moulinex ne peut pas être négatif")
         

@@ -182,16 +182,16 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-3">
-                                    <label for="{{ form_imprimerie.dechets_kg.id_for_label }}" class="form-label required">
+                                    <label for="{{ form_imprimerie.dechets.id_for_label }}" class="form-label required">
                                         Déchets (kg)
                                     </label>
                                     <div class="input-group">
-                                        {{ form_imprimerie.dechets_kg }}
+                                        {{ form_imprimerie.dechets }}
                                         <span class="input-group-text">kg</span>
                                     </div>
-                                    {% if form_imprimerie.dechets_kg.errors %}
+                                    {% if form_imprimerie.dechets.errors %}
                                     <div class="invalid-feedback d-block">
-                                        {{ form_imprimerie.dechets_kg.errors.0 }}
+                                        {{ form_imprimerie.dechets.errors.0 }}
                                     </div>
                                     {% endif %}
                                 </div>
@@ -336,16 +336,16 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="{{ form_soudure.dechets_kg.id_for_label }}" class="form-label required">
+                                        <label for="{{ form_soudure.dechets.id_for_label }}" class="form-label required">
                                             Déchets (kg)
                                         </label>
                                         <div class="input-group">
-                                            {{ form_soudure.dechets_kg }}
+                                            {{ form_soudure.dechets }}
                                             <span class="input-group-text">kg</span>
                                         </div>
-                                        {% if form_soudure.dechets_kg.errors %}
+                                        {% if form_soudure.dechets.errors %}
                                         <div class="invalid-feedback d-block">
-                                            {{ form_soudure.dechets_kg.errors.0 }}
+                                            {{ form_soudure.dechets.errors.0 }}
                                         </div>
                                         {% endif %}
                                     </div>
@@ -562,16 +562,16 @@
                     <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="{{ form_recyclage.dechets_kg.id_for_label }}" class="form-label required">
+                            <label for="{{ form_recyclage.dechets.id_for_label }}" class="form-label required">
                                      Déchets (kg)
                             </label>
                             <div class="input-group">
-                                {{ form_recyclage.dechets_kg }}
+                                {{ form_recyclage.dechets }}
                                 <span class="input-group-text">kg</span>
                             </div>
-                            {% if form_recyclage.dechets_kg.errors %}
+                            {% if form_recyclage.dechets.errors %}
                             <div class="invalid-feedback d-block">
-                                {{ form_recyclage.dechets_kg.errors.0 }}
+                                {{ form_recyclage.dechets.errors.0 }}
                             </div>
                             {% endif %}
                             <small class="form-text text-muted">Déchets générés lors du recyclage</small>
@@ -792,7 +792,7 @@ textarea.form-control {
 function calculerImprimerie() {
     const finies = parseFloat(document.getElementById('{{ form_imprimerie.production_bobines_finies_kg.id_for_label }}').value) || 0;
     const semiFinies = parseFloat(document.getElementById('{{ form_imprimerie.production_bobines_semi_finies_kg.id_for_label }}').value) || 0;
-    const dechets = parseFloat(document.getElementById('{{ form_imprimerie.dechets_kg.id_for_label }}').value) || 0;
+    const dechets = parseFloat(document.getElementById('{{ form_imprimerie.dechets.id_for_label }}').value) || 0;
     const heureDebut = document.getElementById('{{ form_imprimerie.heure_debut.id_for_label }}').value;
     const heureFin = document.getElementById('{{ form_imprimerie.heure_fin.id_for_label }}').value;
     
@@ -828,7 +828,7 @@ function calculerSoudure() {
     const rema = parseFloat(document.getElementById('{{ form_soudure.production_rema_kg.id_for_label }}').value) || 0;
     const batta = parseFloat(document.getElementById('{{ form_soudure.production_batta_kg.id_for_label }}').value) || 0;
     const sacs = parseFloat(document.getElementById('{{ form_soudure.production_sac_emballage_kg.id_for_label }}').value) || 0;
-    const dechets = parseFloat(document.getElementById('{{ form_soudure.dechets_kg.id_for_label }}').value) || 0;
+    const dechets = parseFloat(document.getElementById('{{ form_soudure.dechets.id_for_label }}').value) || 0;
     const machines = parseInt(document.getElementById('{{ form_soudure.nombre_machines_actives.id_for_label }}').value) || 0;
     const heureDebut = document.getElementById('{{ form_soudure.heure_debut.id_for_label }}').value;
     const heureFin = document.getElementById('{{ form_soudure.heure_fin.id_for_label }}').value;
@@ -863,7 +863,7 @@ function calculerSoudure() {
 
 function calculerRecyclage() {
     const broyage = parseFloat(document.getElementById('{{ form_recyclage.production_broyage_kg.id_for_label }}').value) || 0;
-    const dechets = parseFloat(document.getElementById('{{ form_recyclage.dechets_kg.id_for_label }}').value) || 0;
+    const dechets = parseFloat(document.getElementById('{{ form_recyclage.dechets.id_for_label }}').value) || 0;
     const bache = parseFloat(document.getElementById('{{ form_recyclage.production_bache_noir_kg.id_for_label }}').value) || 0;
     const moulinex = parseInt(document.getElementById('{{ form_recyclage.nombre_moulinex.id_for_label }}').value) || 0;
     
@@ -916,7 +916,7 @@ function validerImprimerie() {
     const heureFin = document.getElementById('{{ form_imprimerie.heure_fin.id_for_label }}').value;
     const finies = parseFloat(document.getElementById('{{ form_imprimerie.production_bobines_finies_kg.id_for_label }}').value) || 0;
     const semiFinies = parseFloat(document.getElementById('{{ form_imprimerie.production_bobines_semi_finies_kg.id_for_label }}').value) || 0;
-    const dechets = parseFloat(document.getElementById('{{ form_imprimerie.dechets_kg.id_for_label }}').value) || 0;
+    const dechets = parseFloat(document.getElementById('{{ form_imprimerie.dechets.id_for_label }}').value) || 0;
     const machines = parseInt(document.getElementById('{{ form_imprimerie.nombre_machines_actives.id_for_label }}').value) || 0;
     
     let erreurs = [];
@@ -951,7 +951,7 @@ function validerSoudure() {
     const heureDebut = document.getElementById('{{ form_soudure.heure_debut.id_for_label }}').value;
     const heureFin = document.getElementById('{{ form_soudure.heure_fin.id_for_label }}').value;
     const finies = parseFloat(document.getElementById('{{ form_soudure.production_bobines_finies_kg.id_for_label }}').value) || 0;
-    const dechets = parseFloat(document.getElementById('{{ form_soudure.dechets_kg.id_for_label }}').value) || 0;
+    const dechets = parseFloat(document.getElementById('{{ form_soudure.dechets.id_for_label }}').value) || 0;
     const machines = parseInt(document.getElementById('{{ form_soudure.nombre_machines_actives.id_for_label }}').value) || 0;
     
     let erreurs = [];
@@ -984,7 +984,7 @@ function validerSoudure() {
 function validerRecyclage() {
     const broyage = parseFloat(document.getElementById('{{ form_recyclage.production_broyage_kg.id_for_label }}').value) || 0;
     const bache = parseFloat(document.getElementById('{{ form_recyclage.production_bache_noir_kg.id_for_label }}').value) || 0;
-    const dechets = parseFloat(document.getElementById('{{ form_recyclage.dechets_kg.id_for_label }}').value) || 0;
+    const dechets = parseFloat(document.getElementById('{{ form_recyclage.dechets.id_for_label }}').value) || 0;
     const moulinex = parseInt(document.getElementById('{{ form_recyclage.nombre_moulinex.id_for_label }}').value) || 0;
     
     let erreurs = [];
@@ -1027,7 +1027,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const imprimerieInputs = [
         '{{ form_imprimerie.production_bobines_finies_kg.id_for_label }}',
         '{{ form_imprimerie.production_bobines_semi_finies_kg.id_for_label }}',
-        '{{ form_imprimerie.dechets_kg.id_for_label }}',
+        '{{ form_imprimerie.dechets.id_for_label }}',
         '{{ form_imprimerie.heure_debut.id_for_label }}',
         '{{ form_imprimerie.heure_fin.id_for_label }}',
         '{{ form_imprimerie.nombre_machines_actives.id_for_label }}'
@@ -1065,7 +1065,7 @@ document.addEventListener('DOMContentLoaded', function() {
         '{{ form_soudure.production_rema_kg.id_for_label }}',
         '{{ form_soudure.production_batta_kg.id_for_label }}',
         '{{ form_soudure.production_sac_emballage_kg.id_for_label }}',
-        '{{ form_soudure.dechets_kg.id_for_label }}',
+        '{{ form_soudure.dechets.id_for_label }}',
         '{{ form_soudure.nombre_machines_actives.id_for_label }}',
         '{{ form_soudure.heure_debut.id_for_label }}',
         '{{ form_soudure.heure_fin.id_for_label }}'
@@ -1097,7 +1097,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const recyclageInputs = [
         '{{ form_recyclage.production_broyage_kg.id_for_label }}',
         '{{ form_recyclage.production_bache_noir_kg.id_for_label }}',
-        '{{ form_recyclage.dechets_kg.id_for_label }}',  // AJOUTER le champ déchets
+        '{{ form_recyclage.dechets.id_for_label }}',  // AJOUTER le champ déchets
         '{{ form_recyclage.nombre_moulinex.id_for_label }}'
     ];
     

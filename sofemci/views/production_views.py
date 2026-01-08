@@ -12,9 +12,8 @@ from django.db.models import Q
 import json
 
 from ..models import (
-    ProductionExtrusion, ProductionImprimerie, 
-    ProductionSoudure, ProductionRecyclage,
-    ZoneExtrusion, Equipe
+    ProductionExtrusion, 
+    Equipe
 )
 from ..formulaires import (
     ProductionExtrusionForm, ProductionImprimerieForm,
