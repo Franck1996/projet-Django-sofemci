@@ -283,7 +283,7 @@ def create_pdf_recyclage(title, queryset, filename):
     # Tableau avec EN-TÊTES EXACTES comme dans l'image
     headers = [
         'DATE', 'ÉQUIPE', 'MOULINEX', 'BROYAGE (kg)', 'BÂCHE NOIRE (kg)', 
-        'TOTAL (kg)', 'PROD/MOULINEX', 'TAUX TRANSFO (%)'
+        'DÉCHETS (kg)','TOTAL (kg)', 'PROD/MOULINEX', 'TAUX TRANSFO (%)'
     ]
     
     table_data = [headers]
@@ -295,13 +295,14 @@ def create_pdf_recyclage(title, queryset, filename):
             str(obj.nombre_moulinex),
             f"{float(obj.production_broyage_kg):,.0f}".replace(',', ' '),
             f"{float(obj.production_bache_noir_kg):,.0f}".replace(',', ' '),
+            f"{float(obj.dechets_kg):,.0f}".replace(',', ' '),
             f"{float(obj.total_production_kg):,.0f}".replace(',', ' ') if obj.total_production_kg else "0",
             f"{float(obj.production_par_moulinex):,.0f}".replace(',', ' ') if obj.production_par_moulinex else "0",
             f"{float(obj.taux_transformation_pourcentage):.1f}%" if obj.taux_transformation_pourcentage else "0.0%"
         ]
         table_data.append(row_data)
     
-    col_widths = [2.5*cm, 3.5*cm, 2.5*cm, 2.5*cm, 3.0*cm, 2.5*cm, 3.0*cm, 2.5*cm]
+    col_widths = [3.0*cm, 4.5*cm, 3.0*cm, 3.5*cm, 3.5*cm, 3.0*cm, 3.0*cm, 3.5*cm, 3.5*cm]
     
     table = Table(table_data, colWidths=col_widths, repeatRows=1)
     
@@ -656,13 +657,14 @@ class ProductionExtrusionAdmin(admin.ModelAdmin):
 @admin.register(ProductionRecyclage)
 class ProductionRecyclageAdmin(admin.ModelAdmin):
     list_display = ['date_production_short', 'get_equipe_compact', 'get_moulinex', 
-                    'get_broyage', 'get_bache_noire', 'get_total_production', 
-                    'get_production_par_moulinex', 'get_taux_transformation', 'get_status_icon']
+                    'get_broyage', 'get_bache_noire', 'get_dechets',  # AJOUTER get_dechets
+                    'get_total_production', 'get_production_par_moulinex', 
+                    'get_taux_transformation', 'get_taux_dechet', 'get_status_icon']  # AJOUTER get_taux_dechet
     list_display_links = ['date_production_short', 'get_equipe_compact']
     list_filter = ['date_production', 'equipe', 'valide']
     search_fields = ['observations', 'equipe__nom']
     readonly_fields = ['total_production_kg', 'production_par_moulinex', 'taux_transformation_pourcentage', 
-                       'date_creation', 'date_modification', 'cree_par']
+                       'taux_dechet_pourcentage', 'date_creation', 'date_modification', 'cree_par']  # AJOUTER taux_dechet_pourcentage
     ordering = ['-date_production']
     list_per_page = 50
     
@@ -692,6 +694,11 @@ class ProductionRecyclageAdmin(admin.ModelAdmin):
         return f"{float(obj.production_bache_noir_kg):,.0f}"
     get_bache_noire.short_description = "⬛ BÂCHE NOIRE"
     get_bache_noire.admin_order_field = 'production_bache_noir_kg'
+    
+    def get_dechets(self, obj):  # NOUVELLE MÉTHODE
+        return f"{float(obj.dechets_kg):,.0f}" if hasattr(obj, 'dechets_kg') else "0"
+    get_dechets.short_description = "🗑️ DÉCHETS"
+    get_dechets.admin_order_field = 'dechets_kg'
     
     def get_total_production(self, obj):
         if obj.total_production_kg:
@@ -725,6 +732,25 @@ class ProductionRecyclageAdmin(admin.ModelAdmin):
     get_taux_transformation.short_description = "📈 TAUX TRANSFO"
     get_taux_transformation.admin_order_field = 'taux_transformation_pourcentage'
     
+    def get_taux_dechet(self, obj):  # NOUVELLE MÉTHODE
+        """Taux de déchet formaté avec couleur"""
+        if not hasattr(obj, 'taux_dechet_pourcentage') or not obj.taux_dechet_pourcentage:
+            return "0.0%"
+        
+        taux = float(obj.taux_dechet_pourcentage)
+        
+        if taux <= 5:
+            html = f'<span style="color: green; font-weight: bold;">{taux:.1f}%</span>'
+            return mark_safe(html)
+        elif taux <= 10:
+            html = f'<span style="color: orange; font-weight: bold;">{taux:.1f}%</span>'
+            return mark_safe(html)
+        else:
+            html = f'<span style="color: red; font-weight: bold;">{taux:.1f}%</span>'
+            return mark_safe(html)
+    get_taux_dechet.short_description = "📉 TAUX DÉCHET"
+    get_taux_dechet.admin_order_field = 'taux_dechet_pourcentage'
+    
     def get_status_icon(self, obj):
         if obj.valide:
             html = '<span style="color: green; font-size: 1.2em;">✅</span>'
@@ -744,10 +770,11 @@ class ProductionRecyclageAdmin(admin.ModelAdmin):
             'fields': ('date_production', 'equipe', 'nombre_moulinex')
         }),
         ('♻️ Production recyclage', {
-            'fields': ('production_broyage_kg', 'production_bache_noir_kg')
+            'fields': ('production_broyage_kg', 'production_bache_noir_kg', 'dechets_kg')  # AJOUTER dechets_kg
         }),
         ('📊 Calculs automatiques', {
-            'fields': ('total_production_kg', 'production_par_moulinex', 'taux_transformation_pourcentage'),
+            'fields': ('total_production_kg', 'production_par_moulinex', 
+                      'taux_transformation_pourcentage', 'taux_dechet_pourcentage'),  # AJOUTER taux_dechet_pourcentage
             'classes': ('collapse',)
         }),
         ('📝 Informations supplémentaires', {
@@ -760,6 +787,30 @@ class ProductionRecyclageAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         if not obj.pk:
             obj.cree_par = request.user
+        
+        # S'assurer que les calculs sont faits avant sauvegarde
+        if hasattr(obj, 'dechets_kg'):
+            # Production totale = bâche noire produite
+            obj.total_production_kg = obj.production_bache_noir_kg
+            
+            # Production par moulinex
+            if obj.nombre_moulinex > 0:
+                obj.production_par_moulinex = obj.total_production_kg / obj.nombre_moulinex
+            else:
+                obj.production_par_moulinex = 0
+            
+            # Taux de transformation
+            if obj.production_broyage_kg > 0:
+                obj.taux_transformation_pourcentage = (obj.production_bache_noir_kg / obj.production_broyage_kg) * 100
+            else:
+                obj.taux_transformation_pourcentage = 0
+            
+            # Taux de déchet
+            if obj.total_production_kg > 0 or obj.dechets_kg > 0:
+                obj.taux_dechet_pourcentage = (obj.dechets_kg / (obj.total_production_kg + obj.dechets_kg)) * 100
+            else:
+                obj.taux_dechet_pourcentage = 0
+        
         super().save_model(request, obj, form, change)
     
     def valider_production(self, request, queryset):
@@ -779,6 +830,8 @@ class ProductionRecyclageAdmin(admin.ModelAdmin):
         title = "FICHE DE PRODUCTION RECYCLAGE"
         filename = f"Fiche_Recyclage_{datetime.now().strftime('%Y%m%d_%H%M')}"
         try:
+            # Créer une fonction PDF mise à jour ou utiliser l'existante
+            from .views.production_views import create_pdf_recyclage
             return create_pdf_recyclage(title, queryset, filename)
         except Exception as e:
             self.message_user(request, f"Erreur: {str(e)}", messages.ERROR)

@@ -863,6 +863,7 @@ function calculerSoudure() {
 
 function calculerRecyclage() {
     const broyage = parseFloat(document.getElementById('{{ form_recyclage.production_broyage_kg.id_for_label }}').value) || 0;
+    const dechets = parseFloat(document.getElementById('{{ form_recyclage.dechets_kg.id_for_label }}').value) || 0;
     const bache = parseFloat(document.getElementById('{{ form_recyclage.production_bache_noir_kg.id_for_label }}').value) || 0;
     const moulinex = parseInt(document.getElementById('{{ form_recyclage.nombre_moulinex.id_for_label }}').value) || 0;
     
@@ -870,21 +871,42 @@ function calculerRecyclage() {
     const total = bache;
     const transformation = broyage > 0 ? (bache / broyage) * 100 : 0;
     const prodMoulinex = moulinex > 0 ? bache / moulinex : 0;
+    const tauxDechet = (total + dechets) > 0 ? (dechets / (total + dechets)) * 100 : 0;
     
     // Mise à jour affichage
     document.getElementById('recyclage-total').textContent = total.toFixed(2);
     document.getElementById('recyclage-transformation').textContent = transformation.toFixed(2) + '%';
     document.getElementById('recyclage-moulinex').textContent = prodMoulinex.toFixed(2);
+    document.getElementById('recyclage-taux-dechet').textContent = tauxDechet.toFixed(2) + '%';
     
-    // Alerte si transformation > 100%
+    // Couleurs des indicateurs
+    const transformationElement = document.getElementById('recyclage-transformation');
     if (transformation > 100) {
-        const element = document.getElementById('recyclage-transformation');
-        element.classList.add('text-danger');
-        element.classList.remove('text-success');
+        transformationElement.classList.add('text-danger');
+        transformationElement.classList.remove('text-success');
     } else {
-        const element = document.getElementById('recyclage-transformation');
-        element.classList.remove('text-danger');
-        element.classList.add('text-success');
+        transformationElement.classList.remove('text-danger');
+        transformationElement.classList.add('text-success');
+    }
+    
+    const tauxDechetElement = document.getElementById('recyclage-taux-dechet');
+    if (tauxDechet > 20) { // Seuil à ajuster selon vos critères
+        tauxDechetElement.classList.add('text-danger');
+        tauxDechetElement.classList.remove('text-success');
+    } else if (tauxDechet > 10) {
+        tauxDechetElement.classList.add('text-warning');
+        tauxDechetElement.classList.remove('text-success', 'text-danger');
+    } else {
+        tauxDechetElement.classList.remove('text-danger', 'text-warning');
+        tauxDechetElement.classList.add('text-success');
+    }
+    
+    // Calcul taux transformation ajusté (sans déchets)
+    const transformationAjustee = broyage > 0 ? (bache / (broyage - dechets)) * 100 : 0;
+    if (!isFinite(transformationAjustee)) {
+        document.getElementById('recyclage-transformation-ajustee').textContent = 'N/A';
+    } else if (transformationAjustee > 0) {
+        document.getElementById('recyclage-transformation-ajustee').textContent = transformationAjustee.toFixed(2) + '%';
     }
 }
 
@@ -962,6 +984,7 @@ function validerSoudure() {
 function validerRecyclage() {
     const broyage = parseFloat(document.getElementById('{{ form_recyclage.production_broyage_kg.id_for_label }}').value) || 0;
     const bache = parseFloat(document.getElementById('{{ form_recyclage.production_bache_noir_kg.id_for_label }}').value) || 0;
+    const dechets = parseFloat(document.getElementById('{{ form_recyclage.dechets_kg.id_for_label }}').value) || 0;
     const moulinex = parseInt(document.getElementById('{{ form_recyclage.nombre_moulinex.id_for_label }}').value) || 0;
     
     let erreurs = [];
@@ -971,9 +994,21 @@ function validerRecyclage() {
         erreurs.push(`Bâche noire (${bache} kg) > Broyage (${broyage} kg)`);
     }
     
+    // Validation déchets
+    if (dechets > 0 && broyage > 0 && dechets > broyage) {
+        erreurs.push(`Déchets (${dechets} kg) > Broyage (${broyage} kg)`);
+    }
+    
+    // Validation logique matière
+    if (broyage > 0 && bache + dechets > broyage) {
+        const surplus = (bache + dechets) - broyage;
+        erreurs.push(`Total sortie (${bache + dechets} kg) > Broyage (${broyage} kg) - Surplus: ${surplus.toFixed(2)} kg`);
+    }
+    
     // Validation valeurs négatives
     if (broyage < 0) erreurs.push('Production broyage: valeur négative');
     if (bache < 0) erreurs.push('Bâche noire: valeur négative');
+    if (dechets < 0) erreurs.push('Déchets: valeur négative');
     if (moulinex < 0) erreurs.push('Nombre de moulinex: valeur négative');
     
     return erreurs;
@@ -1062,6 +1097,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const recyclageInputs = [
         '{{ form_recyclage.production_broyage_kg.id_for_label }}',
         '{{ form_recyclage.production_bache_noir_kg.id_for_label }}',
+        '{{ form_recyclage.dechets_kg.id_for_label }}',  // AJOUTER le champ déchets
         '{{ form_recyclage.nombre_moulinex.id_for_label }}'
     ];
     
@@ -1140,6 +1176,17 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+    
+    // Ajouter des événements pour le bouton de calcul rapide
+    const calculerTousBouton = document.getElementById('calculer-tous');
+    if (calculerTousBouton) {
+        calculerTousBouton.addEventListener('click', function() {
+            calculerImprimerie();
+            calculerSoudure();
+            calculerRecyclage();
+            afficherNotification('Tous les indicateurs ont été recalculés !', 'success');
+        });
+    }
 });
 
 // Fonction d'affichage des erreurs
@@ -1174,5 +1221,70 @@ function viderSauvegardeAuto() {
     });
     alert('Sauvegarde automatique effacée !');
 }
+
+// Fonction pour afficher des notifications
+function afficherNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// Fonction de calcul automatique de la durée
+function calculerDureeAuto(inputDebut, inputFin, elementAffichage) {
+    if (inputDebut && inputFin && elementAffichage) {
+        inputDebut.addEventListener('change', function() {
+            if (inputFin.value) calculerDuree();
+        });
+        inputFin.addEventListener('change', function() {
+            if (inputDebut.value) calculerDuree();
+        });
+        
+        function calculerDuree() {
+            const debut = new Date('2000-01-01T' + inputDebut.value + ':00');
+            const fin = new Date('2000-01-01T' + inputFin.value + ':00');
+            
+            if (debut && fin) {
+                let finAjustee = fin;
+                if (finAjustee < debut) {
+                    finAjustee.setHours(finAjustee.getHours() + 24);
+                }
+                const dureeHeures = (finAjustee - debut) / (1000 * 60 * 60);
+                const heures = Math.floor(dureeHeures);
+                const minutes = Math.round((dureeHeures - heures) * 60);
+                elementAffichage.textContent = `${heures}h${minutes.toString().padStart(2, '0')}`;
+            }
+        }
+    }
+}
+
+// Initialiser le calcul automatique de durée pour chaque section
+document.addEventListener('DOMContentLoaded', function() {
+    // Imprimerie
+    calculerDureeAuto(
+        document.getElementById('{{ form_imprimerie.heure_debut.id_for_label }}'),
+        document.getElementById('{{ form_imprimerie.heure_fin.id_for_label }}'),
+        document.getElementById('imprimerie-duree')
+    );
+    
+    // Soudure
+    calculerDureeAuto(
+        document.getElementById('{{ form_soudure.heure_debut.id_for_label }}'),
+        document.getElementById('{{ form_soudure.heure_fin.id_for_label }}'),
+        document.getElementById('soudure-duree')
+    );
+});
 </script>
 {% endblock %}
