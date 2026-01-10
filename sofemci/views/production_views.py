@@ -27,7 +27,21 @@ from .utils_views import (
     calculate_recyclage_metrics,
 )
 
-@login_required
+def role_required(allowed_roles):
+    """Décorateur pour vérifier le rôle de l'utilisateur"""
+    def decorator(view_func):
+        @login_required
+        def wrapper(request, *args, **kwargs):
+            if request.user.role in allowed_roles or request.user.is_superuser:
+                return view_func(request, *args, **kwargs)
+            else:
+                messages.error(request, "Accès refusé. Vous n'avez pas les permissions nécessaires.")
+                return redirect('dashboard')
+        return wrapper
+    return decorator
+
+# Appliquer aux vues de saisie
+@role_required(['CHEF_EXT1', 'CHEF_EXT2', 'CHEF_EXT3', 'CHEF_EXT4', 'CHEF_EXT5', 'ADMIN', 'SUPERVISEUR'])
 def saisie_extrusion_view(request):
     """Saisie production extrusion - VERSION AMÉLIORÉE"""
     if request.user.role not in ['chef_extrusion', 'superviseur', 'admin']:

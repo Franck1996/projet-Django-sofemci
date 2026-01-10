@@ -224,58 +224,74 @@
             </div>
             
             <div class="d-flex align-items-center">
-                <!-- Menu principal -->
+                <!-- Menu principal avec contrôle d'accès basé sur le rôle -->
                 <div class="nav-menu d-flex">
+                    <!-- Dashboard - Toujours visible pour tous les utilisateurs connectés -->
                     <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                         📊 Dashboard
                     </a>
                     
-                    {% if user.role in 'chef_extrusion,superviseur,admin' %}
+                    <!-- Extrusion - Seulement pour chefs d'extrusion, superviseurs et admin -->
+                    {% if user.role in 'CHEF_EXT1,CHEF_EXT2,CHEF_EXT3,CHEF_EXT4,CHEF_EXT5,ADMIN,SUPERVISEUR' or user.role|slice:":5" == "CHEF_" and "EXT" in user.role %}
                     <a href="{% url 'saisie_extrusion' %}" class="nav-link {% if request.resolver_match.url_name == 'saisie_extrusion' %}active{% endif %}">
                         🔧 Extrusion
                     </a>
                     {% endif %}
                     
-                    {% if user.role in 'chef_imprimerie,chef_soudure,chef_recyclage,superviseur,admin' %}
+                    <!-- Autres Sections - Seulement pour chefs d'autres sections, superviseurs et admin -->
+                    {% if user.role in 'CHEF_IMPRIM,CHEF_SOUD,CHEF_RECYCL,ADMIN,SUPERVISEUR' %}
                     <a href="{% url 'saisie_sections' %}" class="nav-link {% if request.resolver_match.url_name == 'saisie_sections' %}active{% endif %}">
                         🏭 Autres Sections
                     </a>
                     {% endif %}
                     
-                    <!-- NOUVEL ONGLET MACHINES -->
-                    {% if user.role in 'superviseur,admin' %}
+                    <!-- Machines - Seulement pour superviseurs et admin -->
+                    {% if user.role in 'SUPERVISEUR,ADMIN' %}
                     <a href="{% url 'machines_list' %}" class="nav-link {% if 'machine' in request.resolver_match.url_name %}active{% endif %}">
                         🔧 Machines
                     </a>
                     {% endif %}
                     
-                
-                    
-                    
-                    {% if user.role in 'direction,admin' %}
+                    <!-- Direction - Seulement pour direction et admin -->
+                    {% if user.role in 'DIRECTION,ADMIN' %}
                     <a href="{% url 'dashboard_direction' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard_direction' %}active{% endif %}">
+                        {% if user.role == 'DIRECTION' %}
+                        👁️ Direction
+                        {% else %}
                         👑 Direction
+                        {% endif %}
                     </a>
                     {% endif %}
                     
-                    {% if user.role in 'superviseur,admin,direction' %}
-                    <a href="{% url 'dashboard_ia' %}" class="nav-link">
-                      🤖 IA Prédictive
+                    <!-- IA Prédictive - Seulement pour superviseurs, admin et direction -->
+                    {% if user.role in 'SUPERVISEUR,ADMIN,DIRECTION' %}
+                    <a href="{% url 'dashboard_ia' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard_ia' %}active{% endif %}">
+                        🤖 IA Prédictive
                     </a>
                     {% endif %}
 
+                    <!-- Espace Admin - Seulement pour staff ou superuser -->
                     {% if user.is_staff or user.is_superuser %}
-                    <li class="nav-item">
                     <a class="nav-link {% if '/admin/' in request.path %}active{% endif %}" href="/admin/">
-                        <i class="fas fa-user-shield me-1"></i>Espace Admin
+                        {% if user.role == 'DIRECTION' %}
+                        👁️ Espace Admin
+                        {% else %}
+                        ⚙️ Espace Admin
+                        {% endif %}
                     </a>
-</li>
-{% endif %}
+                    {% endif %}
                 </div>
                 
-                <!-- Info utilisateur -->
+                <!-- Info utilisateur avec badge de rôle -->
                 <div class="ms-4 user-info">
-                    <span class="badge bg-primary">{{ user.get_role_display|default:user.role }}</span>
+                    <span class="badge bg-primary position-relative">
+                        {{ user.get_role_display|default:user.role }}
+                        {% if user.role == 'DIRECTION' %}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning" style="font-size: 0.5rem;">
+                            LECTURE
+                        </span>
+                        {% endif %}
+                    </span>
                     <span class="ms-2">{{ user.get_full_name|default:user.username }}</span>
                     <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger ms-3">
                         🚪 Déconnexion
@@ -285,6 +301,16 @@
         </div>
     </div>
 </nav>
+
+<!-- Notification spéciale pour la Direction -->
+{% if user.role == 'DIRECTION' %}
+<div class="container mt-2">
+    <div class="alert alert-warning alert-dismissible fade show py-2" role="alert" style="font-size: 0.9rem;">
+        <strong>👁️ Mode Direction :</strong> Vous êtes en mode consultation seule
+        <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+</div>
+{% endif %}
 {% endif %}
     
     <!-- Messages Django -->

@@ -31,6 +31,13 @@
     🏭 BIENVENUE DANS LA BASE DE DONNÉES DE <strong style="color: #000703ff;">SOFEM-CI</strong> - SOCIÉTÉ DE FABRICATION D'EMBALLAGES 🏭
 </marquee>
 
+{% if user_role == 'DIRECTION' %}
+<div class="direction-notification">
+    <span class="notification-icon">👁️</span>
+    <span class="notification-text">Mode Direction : Lecture seule</span>
+</div>
+{% endif %}
+
 <div class="dashboard-container">
     <!-- En-tête du Dashboard -->
     <!-- Dashboard Header avec filtre intégré -->
@@ -155,7 +162,25 @@
     <!-- Vue d'ensemble des Sections - ÉLARGIE ET AMÉLIORÉE -->
     <div class="sections-overview">
         <div class="section-header-main">
-            <h2 class="section-title">🏭 Production du jour et par section</h2>
+            <h2 class="section-title">
+                {% if access_config %}
+                    {{ access_config.title }}
+                {% else %}
+                    🏭 Production du jour et par section
+                {% endif %}
+                
+                <!-- Badge pour les responsables -->
+                {% if user_role in 'CHEF_EXT1,CHEF_EXT2,CHEF_EXT3,CHEF_EXT4,CHEF_EXT5' %}
+                <span class="responsable-badge">Responsable Extrusion</span>
+                {% elif user_role == 'CHEF_IMPRIM' %}
+                <span class="responsable-badge">Responsable Imprimerie</span>
+                {% elif user_role == 'CHEF_SOUD' %}
+                <span class="responsable-badge">Responsable Soudure</span>
+                {% elif user_role == 'CHEF_RECYCL' %}
+                <span class="responsable-badge">Responsable Recyclage</span>
+                {% endif %}
+            </h2>
+            
             <div class="section-summary">
                 <div class="summary-item">
                     <span class="summary-label">Production totale sections:</span>
@@ -170,18 +195,29 @@
                     <span class="summary-label">Sections actives:</span>
                     <span class="summary-value">4/4</span>
                 </div>
+                <div class="summary-item">
+                    <span class="summary-label">Rôle:</span>
+                    <span class="summary-value">
+                        {{ user.get_role_display }}
+                    </span>
+                </div>
             </div>
         </div>
         
         <div class="sections-grid-expanded">
             <!-- Section Extrusion -->
+            {% if access_config.show_extrusion %}
             <div class="section-card-extended extrusion-card">
                 <div class="section-header-expanded">
                     <div class="section-info-main">
                         <div class="section-icon">🔧</div>
                         <div class="section-title-content">
                             <h3>Extrusion</h3>
+                            {% if user_role in 'CHEF_EXT1,CHEF_EXT2,CHEF_EXT3,CHEF_EXT4,CHEF_EXT5' %}
+                            <span class="section-status status-responsible">● Vous êtes responsable</span>
+                            {% else %}
                             <span class="section-status status-active">● Production en cours</span>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="section-production-main">
@@ -280,21 +316,32 @@
                 </div>
                 
                 <div class="section-actions-expanded">
+                    {% if can_access_extrusion or user_role in 'ADMIN,SUPERVISEUR' %}
                     <a href="{% url 'saisie_extrusion' %}" class="btn-section-action primary">
                         📊 Saisir production
                     </a>
-                    
+                    {% else %}
+                    <span class="btn-section-action secondary" style="opacity: 0.6; cursor: not-allowed;">
+                        🔒 Accès restreint
+                    </span>
+                    {% endif %}
                 </div>
             </div>
+            {% endif %}
 
             <!-- Section Imprimerie -->
+            {% if access_config.show_other_sections %}
             <div class="section-card-extended imprimerie-card">
                 <div class="section-header-expanded">
                     <div class="section-info-main">
                         <div class="section-icon">🖨️</div>
                         <div class="section-title-content">
                             <h3>Imprimerie</h3>
+                            {% if user_role == 'CHEF_IMPRIM' %}
+                            <span class="section-status status-responsible">● Vous êtes responsable</span>
+                            {% else %}
                             <span class="section-status status-active">● Production en cours</span>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="section-production-main">
@@ -393,21 +440,32 @@
                 </div>
                 
                 <div class="section-actions-expanded">
+                    {% if can_access_imprimerie or user_role in 'ADMIN,SUPERVISEUR' %}
                     <a href="{% url 'saisie_sections' %}" class="btn-section-action primary">
                         📊 Saisir production
                     </a>
-                    
+                    {% else %}
+                    <span class="btn-section-action secondary" style="opacity: 0.6; cursor: not-allowed;">
+                        🔒 Accès restreint
+                    </span>
+                    {% endif %}
                 </div>
             </div>
+            {% endif %}
 
            <!-- Section Soudure -->
+           {% if access_config.show_other_sections %}
 <div class="section-card-extended soudure-card">
     <div class="section-header-expanded">
         <div class="section-info-main">
             <div class="section-icon">🔌</div>
             <div class="section-title-content">
                 <h3>Soudure</h3>
+                {% if user_role == 'CHEF_SOUD' %}
+                <span class="section-status status-responsible">● Vous êtes responsable</span>
+                {% else %}
                 <span class="section-status status-active">● Production en cours</span>
+                {% endif %}
             </div>
         </div>
         <div class="section-production-main">
@@ -526,21 +584,32 @@
     </div>
     
     <div class="section-actions-expanded">
+        {% if can_access_soudure or user_role in 'ADMIN,SUPERVISEUR' %}
         <a href="{% url 'saisie_sections' %}" class="btn-section-action primary">
             📊 Saisir production
         </a>
-      
+        {% else %}
+        <span class="btn-section-action secondary" style="opacity: 0.6; cursor: not-allowed;">
+            🔒 Accès restreint
+        </span>
+        {% endif %}
     </div>
 </div>
+{% endif %}
 
             <!-- Section Recyclage -->
+            {% if access_config.show_other_sections %}
             <div class="section-card-extended recyclage-card">
                 <div class="section-header-expanded">
                     <div class="section-info-main">
                         <div class="section-icon">♻️</div>
                         <div class="section-title-content">
                             <h3>Recyclage</h3>
+                            {% if user_role == 'CHEF_RECYCL' %}
+                            <span class="section-status status-responsible">● Vous êtes responsable</span>
+                            {% else %}
                             <span class="section-status status-active">● Production en cours</span>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="section-production-main">
@@ -634,12 +703,18 @@
                 </div>
                 
                 <div class="section-actions-expanded">
+                    {% if can_access_recyclage or user_role in 'ADMIN,SUPERVISEUR' %}
                     <a href="{% url 'saisie_sections' %}" class="btn-section-action primary">
                         📊 Saisir production
                     </a>
-                 
+                    {% else %}
+                    <span class="btn-section-action secondary" style="opacity: 0.6; cursor: not-allowed;">
+                        🔒 Accès restreint
+                    </span>
+                    {% endif %}
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
 
@@ -794,6 +869,53 @@
             </div>
         </div>
     </div>
+
+    <!-- Section Admin pour la Direction -->
+    {% if access_config.show_admin_access %}
+    <div class="admin-access-section">
+        <div class="admin-access-card">
+            <h3>
+                {% if user_role == 'DIRECTION' %}
+                👁️ Espace Administration - Mode Consultation
+                {% else %}
+                ⚙️ Espace Administration
+                {% endif %}
+            </h3>
+            
+            <div class="admin-access-content">
+                {% if user_role == 'DIRECTION' %}
+                <div class="readonly-notice">
+                    <span class="notice-icon">👁️</span>
+                    <span class="notice-text">La Direction peut consulter mais pas modifier</span>
+                </div>
+                <div class="admin-links">
+                    <a href="/admin/" class="admin-link readonly">
+                        <span class="link-icon">📊</span>
+                        <span class="link-text">Tableau de bord Admin</span>
+                        <span class="link-badge">Lecture seule</span>
+                    </a>
+                    <a href="{% url 'machines_list' %}" class="admin-link readonly">
+                        <span class="link-icon">🔧</span>
+                        <span class="link-text">Liste des machines</span>
+                        <span class="link-badge">Lecture seule</span>
+                    </a>
+                </div>
+                {% else %}
+                <div class="admin-links">
+                    <a href="/admin/" class="admin-link">
+                        <span class="link-icon">⚙️</span>
+                        <span class="link-text">Administration complète</span>
+                    </a>
+                    <a href="{% url 'machines_list' %}" class="admin-link">
+                        <span class="link-icon">🔧</span>
+                        <span class="link-text">Gestion des machines</span>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
@@ -819,6 +941,32 @@
 }
 
 /* ==========================================
+   NOTIFICATION DIRECTION
+   ========================================== */
+.direction-notification {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    margin: 15px 0 25px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
+    animation: pulse-gold 2s infinite;
+}
+
+.notification-icon {
+    font-size: 1.5rem;
+}
+
+.notification-text {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* ==========================================
    DASHBOARD CONTAINER
    ========================================== */
 .dashboard-container {
@@ -830,6 +978,11 @@
     min-height: 100vh;
 }
 
+@keyframes pulse-gold {
+    0% { box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3); }
+    50% { box-shadow: 0 4px 20px rgba(243, 156, 18, 0.6); }
+    100% { box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3); }
+}
 /* ==========================================
    HEADER
    ========================================== */
@@ -1205,6 +1358,20 @@
     font-weight: 800;
 }
 
+.responsable-badge {
+    background: linear-gradient(135deg, #27ae60, #219653);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 10px;
+    vertical-align: middle;
+    display: inline-block;
+    animation: fadeIn 0.5s ease;
+    
+}
+
 .section-summary {
     display: flex;
     gap: 30px;
@@ -1338,6 +1505,13 @@
 .status-active { 
     background: rgba(39, 174, 96, 0.15); 
     color: var(--success-color);
+    box-shadow: 0 2px 8px rgba(39, 174, 96, 0.2);
+}
+
+.status-responsible {
+    background: rgba(39, 174, 96, 0.2);
+    color: #27ae60;
+    border: 1px solid #27ae60;
     box-shadow: 0 2px 8px rgba(39, 174, 96, 0.2);
 }
 
@@ -1886,6 +2060,123 @@
 }
 
 /* ==========================================
+   ADMIN ACCESS SECTION
+   ========================================== */
+.admin-access-section {
+    margin: 30px 0;
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+}
+
+.admin-access-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.admin-access-card h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+   
+}
+
+.readonly-notice {
+    background: rgba(243, 156, 18, 0.1);
+    border: 2px solid #f39c12;
+    color: #f39c12;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+}
+
+.notice-icon {
+    font-size: 1.2rem;
+}
+
+.notice-text {
+    font-weight: 600;
+    color: #f39c12;
+}
+
+.admin-links {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.admin-link {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    text-decoration: none;
+    color: #2c3e50;
+    transition: all 0.3s;
+    border-left: 4px solid #3498db;
+}
+
+.admin-link:hover {
+   background: #e8f4fc;
+   transform: translateX(5px);
+}
+
+.admin-link.readonly {
+    background: #f8f9fa;
+    color: #95a5a6;
+    border-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
+.admin-link.readonly:hover {
+    transform: none;
+    cursor: not-allowed;
+    background: #f8f9fa;
+}
+.link-icon {
+    font-size: 1.5rem;
+}
+
+.link-text {
+    flex: 1;
+    font-weight: 600;
+}
+
+.link-badge {
+    background: #f39c12;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.btn-section-action.disabled {
+    opacity: 0.6;
+    cursor: not-allowed !important;
+    background: #e0e0e0 !important;
+    color: #777 !important;
+    border-color: #ccc !important;
+}
+
+.btn-section-action.disabled:hover {
+    transform: none !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+/* ==========================================
    ANIMATIONS
    ========================================== */
 @keyframes fadeInUp {
@@ -1918,7 +2209,7 @@
     }
 }
 
-.status-active::before {
+.status-active::before, .status-responsible::before {
     content: '●';
     margin-right: 5px;
     animation: pulse 2s infinite;
@@ -2194,6 +2485,14 @@
         margin-left: 0;
         margin-top: 1px;
     }
+    
+    .admin-access-section {
+        padding: 20px;
+    }
+    
+    .admin-access-card {
+        padding: 20px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -2276,6 +2575,12 @@
     .indicator-percentage {
         margin-left: 0;
         margin-top: 5px;
+    }
+    
+    .responsable-badge {
+        display: block;
+        margin: 10px 0 0 0;
+        width: 100%;
     }
 }
 
@@ -2413,7 +2718,9 @@ select:focus {
 @media print {
     .dashboard-header-integrated,
     .section-actions-expanded,
-    .btn-section-action {
+    .btn-section-action,
+    .admin-access-section,
+    .direction-notification {
         display: none;
     }
     
@@ -2430,6 +2737,7 @@ select:focus {
         max-width: 100%;
         padding: 0;
     }
+}
 </style>
 {% endblock %}
 

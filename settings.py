@@ -72,13 +72,10 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                # Custom context processors (si existent)
-                # 'sofemci.context_processors.sofemci_config',
+                'sofemci.context_processors.user_access_context',
+              
             ],
-            # Retirez 'libraries' si custom_filters n'existe pas
-            # 'libraries': {
-            #     'custom_filters': 'sofemci.templatetags.custom_filters',
-            # },
+         
         },
     },
 ]
