@@ -1,5 +1,4 @@
 # sofemci/models.py
-# MODÈLES COMPLETS SOFEM-CI - VERSION OPTIMISÉE 2025
 
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -8,6 +7,8 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import datetime, timedelta
 import uuid
+import re
+from django.db import IntegrityError
 
 # ==========================================
 # MODÈLE UTILISATEUR PERSONNALISÉ
@@ -16,25 +17,39 @@ import uuid
 class CustomUser(AbstractUser):
     """Utilisateur personnalisé pour SOFEM-CI"""
     
+    # Constantes pour les rôles
+    CHEF_EXT1 = 'CHEF_EXT1'
+    CHEF_EXT2 = 'CHEF_EXT2'
+    CHEF_EXT3 = 'CHEF_EXT3'
+    CHEF_EXT4 = 'CHEF_EXT4'
+    CHEF_EXT5 = 'CHEF_EXT5'
+    CHEF_RECYCL = 'CHEF_RECYCL'
+    CHEF_IMPRIM = 'CHEF_IMPRIM'
+    CHEF_SOUD = 'CHEF_SOUD'
+    SUPERVISEUR = 'SUPERVISEUR'
+    DIRECTION = 'DIRECTION'
+    ADMIN = 'ADMIN'
+    VISITEUR = 'VISITEUR'
+    
     ROLE_CHOICES = [
-         ('ADMIN', 'Administrateur'),
-        ('SUPERVISEUR', 'Superviseur'),
-        ('CHEF_EXT1', 'Chef de Zone1'),
-        ('CHEF_EXT2', 'Chef de Zone2'),
-        ('CHEF_EXT3', 'Chef de Zone3'),
-        ('CHEF_EXT4', 'Chef de Zone4'),
-        ('CHEF_EXT5', 'Chef de Zone5'),
-        ('CHEF_RECYCL', 'Chef RECYCLAGE'),
-        ('CHEF_IMPRIM', 'Chef IMPRIMERIE'),
-        ('CHEF_SOUD', 'Chef SOUDURE'),
-        ('VISITEUR', 'Visiteur'),
-        ('DIRECTION', 'Direction'),
+        (ADMIN, 'Administrateur'),
+        (SUPERVISEUR, 'Superviseur'),
+        (CHEF_EXT1, 'Chef de Zone1'),
+        (CHEF_EXT2, 'Chef de Zone2'),
+        (CHEF_EXT3, 'Chef de Zone3'),
+        (CHEF_EXT4, 'Chef de Zone4'),
+        (CHEF_EXT5, 'Chef de Zone5'),
+        (CHEF_RECYCL, 'Chef RECYCLAGE'),
+        (CHEF_IMPRIM, 'Chef IMPRIMERIE'),
+        (CHEF_SOUD, 'Chef SOUDURE'),
+        (VISITEUR, 'Visiteur'),
+        (DIRECTION, 'Direction'),
     ]
     
     role = models.CharField(
         max_length=20,
         choices=ROLE_CHOICES,
-        default='OPERATEUR',
+        default=CHEF_EXT1,
         verbose_name="Rôle"
     )
     
@@ -61,7 +76,8 @@ class CustomUser(AbstractUser):
         unique=True,
         blank=True,
         null=True,
-        verbose_name="Matricule"
+        verbose_name="Matricule",
+        help_text="Généré automatiquement si vide. Format: SOF-YYYY-NNNN"
     )
     
     service = models.CharField(
@@ -92,6 +108,10 @@ class CustomUser(AbstractUser):
         verbose_name = "Utilisateur"
         verbose_name_plural = "Utilisateurs"
         ordering = ['last_name', 'first_name']
+        indexes = [
+            models.Index(fields=['matricule']),
+            models.Index(fields=['role']),
+        ]
     
     def __str__(self):
         return f"{self.get_full_name()} ({self.get_role_display()})"
@@ -101,16 +121,325 @@ class CustomUser(AbstractUser):
         nom_complet = f"{self.last_name or ''} {self.first_name or ''}".strip()
         return nom_complet if nom_complet else self.username
     
+    # ================= MÉTHODES UTILITAIRES POUR LES RÔLES =================
+    
+    def is_chef_extrusion(self):
+        """Vérifie si l'utilisateur est un chef d'extrusion"""
+        return self.role in [self.CHEF_EXT1, self.CHEF_EXT2, self.CHEF_EXT3, 
+                           self.CHEF_EXT4, self.CHEF_EXT5]
+    
+    def is_chef_section(self):
+        """Vérifie si l'utilisateur est un chef d'autre section"""
+        return self.role in [self.CHEF_RECYCL, self.CHEF_IMPRIM, self.CHEF_SOUD]
+    
+    def is_direction(self):
+        """Vérifie si l'utilisateur est direction"""
+        return self.role == self.DIRECTION
+    
+    def is_superviseur(self):
+        """Vérifie si l'utilisateur est superviseur"""
+        return self.role == self.SUPERVISEUR
+    
+    def is_admin(self):
+        """Vérifie si l'utilisateur est admin"""
+        return self.role == self.ADMIN or self.is_superuser
+    
+    def get_section_affectee(self):
+        """Retourne la section affectée de l'utilisateur"""
+        if self.is_chef_extrusion():
+            zone_map = {
+                self.CHEF_EXT1: 'Zone 1',
+                self.CHEF_EXT2: 'Zone 2',
+                self.CHEF_EXT3: 'Zone 3',
+                self.CHEF_EXT4: 'Zone 4',
+                self.CHEF_EXT5: 'Zone 5'
+            }
+            return zone_map.get(self.role, 'Extrusion')
+        elif self.is_chef_section():
+            section_map = {
+                self.CHEF_RECYCL: 'recyclage',
+                self.CHEF_IMPRIM: 'imprimerie',
+                self.CHEF_SOUD: 'soudure'
+            }
+            return section_map.get(self.role, 'section')
+        return None
+    
+    def is_visiteur(self):
+        """Vérifie si l'utilisateur est visiteur"""
+        return self.role == self.VISITEUR
+    
+    def is_chef_zone(self, zone_num=None):
+        """Vérifie si l'utilisateur est chef d'une zone spécifique"""
+        if not self.is_chef_extrusion():
+            return False
+        if zone_num is None:
+            return True
+        zone_map = {
+            1: self.CHEF_EXT1,
+            2: self.CHEF_EXT2,
+            3: self.CHEF_EXT3,
+            4: self.CHEF_EXT4,
+            5: self.CHEF_EXT5
+        }
+        return self.role == zone_map.get(zone_num)
+    
+    def can_access_section(self, section_name):
+        """Vérifie si l'utilisateur peut accéder à une section spécifique"""
+        if self.is_admin() or self.is_direction() or self.is_superviseur():
+            return True
+        
+        section_roles = {
+            'extrusion': [self.CHEF_EXT1, self.CHEF_EXT2, self.CHEF_EXT3, 
+                         self.CHEF_EXT4, self.CHEF_EXT5],
+            'recyclage': [self.CHEF_RECYCL],
+            'imprimerie': [self.CHEF_IMPRIM],
+            'soudure': [self.CHEF_SOUD]
+        }
+        
+        return self.role in section_roles.get(section_name.lower(), [])
+    
+    # ================= MÉTHODES POUR GESTION DES MATRICULES =================
+    
+    @classmethod
+    def _get_next_matricule_number(cls):
+        """Retourne le prochain numéro de matricule disponible pour l'année en cours"""
+        annee = timezone.now().year
+        prefixe = f"SOF-{annee}-"
+        
+        # Chercher tous les matricules de l'année en cours
+        matricules_existants = cls.objects.filter(
+            matricule__startswith=prefixe
+        ).values_list('matricule', flat=True)
+        
+        # Extraire les numéros existants
+        numeros_existants = []
+        for matricule in matricules_existants:
+            match = re.match(rf'^{re.escape(prefixe)}(\d{{4}})$', matricule)
+            if match:
+                try:
+                    numeros_existants.append(int(match.group(1)))
+                except (ValueError, TypeError):
+                    continue
+        
+        # Trouver le prochain numéro disponible
+        if numeros_existants:
+            max_numero = max(numeros_existants)
+            
+            # Chercher le premier "trou" dans la séquence
+            for i in range(1, max_numero + 2):
+                if i not in numeros_existants:
+                    return i
+            
+            # Si pas de trou, prendre le suivant
+            return max_numero + 1
+        else:
+            # Aucun matricule pour cette année
+            return 1
+    
+    @classmethod
+    def generate_matricule(cls):
+        """Génère un matricule unique"""
+        annee = timezone.now().year
+        numero = cls._get_next_matricule_number()
+        return f"SOF-{annee}-{numero:04d}"
+    
+    def clean(self):
+        """Validation avant sauvegarde"""
+        super().clean()
+        
+        # Vérifier le format du matricule s'il est fourni manuellement
+        if self.matricule and self.matricule.strip():
+            matricule = self.matricule.strip()
+            
+            # Valider le format
+            if not re.match(r'^SOF-\d{4}-\d{4}$', matricule):
+                raise ValidationError({
+                    'matricule': "Format invalide. Format attendu: SOF-YYYY-NNNN"
+                })
+            
+            # Vérifier que l'année est valide
+            try:
+                annee_matricule = int(matricule.split('-')[1])
+                annee_actuelle = timezone.now().year
+                
+                if annee_matricule < 2000 or annee_matricule > annee_actuelle + 1:
+                    raise ValidationError({
+                        'matricule': f"L'année doit être entre 2000 et {annee_actuelle + 1}"
+                    })
+            except (ValueError, IndexError):
+                raise ValidationError({
+                    'matricule': "Format d'année invalide"
+                })
+            
+            # Vérifier l'unicité (sauf pour cet utilisateur)
+            if self.pk:
+                qs = CustomUser.objects.filter(matricule=matricule).exclude(pk=self.pk)
+            else:
+                qs = CustomUser.objects.filter(matricule=matricule)
+            
+            if qs.exists():
+                raise ValidationError({
+                    'matricule': f"Le matricule '{matricule}' est déjà utilisé par un autre utilisateur."
+                })
+    
     def save(self, *args, **kwargs):
-        """Génère un matricule automatique si vide"""
+        """Sauvegarde avec gestion robuste des matricules"""
+        is_new = self.pk is None
+        
+        # Nettoyer le matricule
+        if self.matricule:
+            self.matricule = self.matricule.strip()
+        
+        # Générer un matricule si vide (nouvel utilisateur seulement)
+        if not self.matricule and is_new:
+            self.matricule = self.generate_matricule()
+        
+        # Pour les utilisateurs existants sans matricule, vérifier s'il faut en générer un
+        elif not self.matricule and not is_new:
+            # Vérifier si l'utilisateur avait déjà un matricule avant
+            try:
+                ancien = CustomUser.objects.get(pk=self.pk)
+                if not ancien.matricule:
+                    self.matricule = self.generate_matricule()
+            except CustomUser.DoesNotExist:
+                pass
+        
+        # Valider avant sauvegarde
+        try:
+            self.clean()
+        except ValidationError as e:
+            # Si validation échoue, essayer de générer un matricule automatique
+            if 'matricule' in e.error_dict:
+                if is_new or not self.matricule:
+                    self.matricule = self.generate_matricule()
+                else:
+                    # Pour les matricules manuels invalides, lever l'exception
+                    raise
+        
+        # Tentative de sauvegarde avec gestion des erreurs d'intégrité
+        try:
+            super().save(*args, **kwargs)
+        
+        except IntegrityError as e:
+            # Si erreur d'unicité du matricule
+            if 'matricule' in str(e).lower():
+                if is_new or not self.matricule:
+                    # Régénérer un matricule unique et réessayer
+                    self.matricule = self.generate_matricule()
+                    super().save(*args, **kwargs)
+                else:
+                    # Pour les matricules manuels en conflit, lever l'exception
+                    raise ValidationError({
+                        'matricule': f"Le matricule '{self.matricule}' est déjà utilisé. "
+                                     f"Veuillez en choisir un autre ou laisser vide pour générer automatiquement."
+                    })
+            else:
+                # Autre erreur d'intégrité
+                raise
+    
+    # ================= MÉTHODES UTILITAIRES SUPPLÉMENTAIRES =================
+    
+    def get_matricule_info(self):
+        """Retourne des informations sur le matricule"""
         if not self.matricule:
-            # Format: SOF-YYYY-XXXX
-            annee = timezone.now().year
-            dernier_user = CustomUser.objects.order_by('-id').first()
-            numero = dernier_user.id + 1 if dernier_user else 1
-            self.matricule = f"SOF-{annee}-{numero:04d}"
-        super().save(*args, **kwargs)
+            return None
+        
+        try:
+            match = re.match(r'^SOF-(\d{4})-(\d{4})$', self.matricule)
+            if match:
+                return {
+                    'annee': int(match.group(1)),
+                    'numero': int(match.group(2)),
+                    'format': 'valide'
+                }
+        except (ValueError, AttributeError):
+            pass
+        
+        return {'format': 'invalide'}
+    
+    @classmethod
+    def fix_duplicate_matricules(cls):
+        """Corrige les matricules dupliqués dans la base"""
+        from django.db.models import Count
+        
+        # Trouver les matricules dupliqués
+        duplicates = cls.objects.values('matricule').annotate(
+            count=Count('matricule')
+        ).filter(count__gt=1, matricule__isnull=False)
+        
+        corrections = []
+        
+        for dup in duplicates:
+            matricule = dup['matricule']
+            users = cls.objects.filter(matricule=matricule).order_by('id')
+            
+            # Garder le premier, corriger les autres
+            for i, user in enumerate(users):
+                if i == 0:
+                    corrections.append(f"✓ Gardé: {user.username} - {matricule}")
+                    continue
+                
+                # Générer un nouveau matricule unique
+                nouveau_matricule = cls.generate_matricule()
+                ancien_matricule = user.matricule
+                user.matricule = nouveau_matricule
+                user.save()
+                
+                corrections.append(
+                    f"✓ Corrigé: {user.username} - {ancien_matricule} → {nouveau_matricule}"
+                )
+        
+        return corrections
+    
+    @classmethod
+    def validate_all_matricules(cls):
+        """Valide tous les matricules dans la base"""
+        errors = []
+        
+        for user in cls.objects.filter(matricule__isnull=False):
+            try:
+                user.clean()
+            except ValidationError as e:
+                errors.append({
+                    'user': f"{user.username} (ID: {user.id})",
+                    'matricule': user.matricule,
+                    'error': str(e)
+                })
+        
+        return errors
 
+# ==========================================
+# SIGNALS POUR CustomUser
+# ==========================================
+
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
+
+@receiver(pre_save, sender=CustomUser)
+def customuser_pre_save(sender, instance, **kwargs):
+    """
+    Signal pour garantir l'unicité des matricules avant sauvegarde.
+    Cette fonction est appelée juste avant chaque sauvegarde d'un CustomUser.
+    """
+    # Nettoyer le matricule
+    if instance.matricule:
+        instance.matricule = instance.matricule.strip()
+    
+    # Vérifier les doublons pour les matricules non vides
+    if instance.matricule:
+        # Construire la requête pour vérifier l'unicité
+        if instance.pk:
+            # Utilisateur existant : exclure lui-même
+            qs = CustomUser.objects.filter(
+                matricule=instance.matricule
+            ).exclude(pk=instance.pk)
+        else:
+            # Nouvel utilisateur : vérifier tous
+            qs = CustomUser.objects.filter(matricule=instance.matricule)
+        
+        # Si un doublon est trouvé, générer un nouveau matricule
+        if qs.exists():
+            instance.matricule = CustomUser.generate_matricule()
 # ==========================================
 # MODÈLES DE CONFIGURATION
 # ==========================================

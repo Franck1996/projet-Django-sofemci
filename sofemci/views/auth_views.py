@@ -4,9 +4,11 @@ Vues d'authentification et de connexion
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
+from django.urls import reverse
 
 def login_view(request):
     """Vue de connexion"""
+    # Si l'utilisateur est déjà connecté, le rediriger vers le dashboard
     if request.user.is_authenticated:
         return redirect('dashboard')
     

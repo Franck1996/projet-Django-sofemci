@@ -13,23 +13,25 @@ from django.http import JsonResponse
 # ==========================================
 
 # Import depuis sofemci.views (depuis le __init__.py du dossier views)
+from sofemci.views import production_views
+from sofemci.views import dashboard_views
+from sofemci.views import auth_views
 from sofemci.views import (
     # Vues d'authentification
-    login_view, logout_view,
+    
     
     # Vues dashboard
-    dashboard_view, dashboard_direction_view, dashboard_ia_view,
+    dashboard_ia_view,
     
     # Vues production
     saisie_extrusion_view, saisie_sections_view,
-    saisie_imprimerie_ajax, saisie_soudure_ajax, saisie_recyclage_ajax,
     
     # Vues machines
     machines_list_view, machine_create_view, machine_edit_view,
     machine_delete_view, machine_detail_view, machine_change_status_ajax,
     
     # APIs utilitaires
-    api_create_zone, api_calculs_production, api_dashboard_data,
+    api_create_zone, 
     
     # Vues IA/maintenance prédictive
     lancer_analyse_complete, enregistrer_maintenance_view, 
@@ -51,29 +53,24 @@ urlpatterns = [
     # ==========================================
     # AUTHENTIFICATION
     # ==========================================
-    path('', login_view, name='home'),
-    path('login/', login_view, name='login'),
-    path('logout/', logout_view, name='logout'),
+    path('', auth_views.login_view, name='login'),
+    path('login/', auth_views.login_view, name='login'),
+    path('logout/', auth_views.logout_view, name='logout'),
     
     # ==========================================
     # DASHBOARDS
     # ==========================================
-    path('dashboard/', dashboard_view, name='dashboard'),
-    path('dashboard/direction/', dashboard_direction_view, name='dashboard_direction'),
+    path('dashboard/', dashboard_views.dashboard_view, name='dashboard'),
     path('dashboard/ia/', dashboard_ia_view, name='dashboard_ia'),
     
     # ==========================================
     # SAISIE PRODUCTION
     # ==========================================
-    path('saisie/extrusion/', saisie_extrusion_view, name='saisie_extrusion'),
-    path('saisie/sections/', saisie_sections_view, name='saisie_sections'),
+    path('saisie/extrusion/', production_views.saisie_extrusion_view, name='saisie_extrusion'),
+    path('saisie/sections/', production_views.saisie_sections_view, name='saisie_sections'),
     
-    # ==========================================
-    # APIs AJAX SAISIE
-    # ==========================================
-    path('ajax/saisie/imprimerie/', saisie_imprimerie_ajax, name='ajax_imprimerie'),
-    path('ajax/saisie/soudure/', saisie_soudure_ajax, name='ajax_soudure'),
-    path('ajax/saisie/recyclage/', saisie_recyclage_ajax, name='ajax_recyclage'),
+   
+    
     
     # ==========================================
     # GESTION DES MACHINES
@@ -89,8 +86,6 @@ urlpatterns = [
     # APIs UTILITAIRES
     # ==========================================
     path('api/zones/create/', api_create_zone, name='api_create_zone'),
-    path('api/calculs/', api_calculs_production, name='api_calculs'),
-    path('api/dashboard/', api_dashboard_data, name='api_dashboard'),
     
     # ==========================================
     # IA - MAINTENANCE PRÉDICTIVE

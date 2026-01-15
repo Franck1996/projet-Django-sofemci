@@ -8,18 +8,12 @@ from .auth_views import login_view, logout_view
 # Import des vues dashboard
 from .dashboard_views import (
     dashboard_view,
-    dashboard_direction_view,
-    api_dashboard_data,
 )
 
 # Import des vues de production
 from .production_views import (
     saisie_extrusion_view,
     saisie_sections_view,
-    saisie_imprimerie_ajax,
-    saisie_soudure_ajax,
-    saisie_recyclage_ajax,
-    api_calculs_production,
 )
 
 # Import des vues machines
@@ -88,8 +82,6 @@ __all__ = [
     
     # Dashboard
     'dashboard_view',
-    'dashboard_direction_view',
-    'api_dashboard_data',
     
     # Production
     'saisie_extrusion_view',

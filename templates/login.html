@@ -22,10 +22,18 @@
             </div>
           
             <div class="messages-container">
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                        <button type="button" class="close" onclick="this.parentElement.remove()">×</button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
             </div>
             
             <form method="post" class="login-form">
-                {% csrf_token %} 
+                {% csrf_token %}  <!-- AJOUT CRITIQUE ICI -->
                 
                 <div class="form-group">
                     <label for="username" class="form-label">
