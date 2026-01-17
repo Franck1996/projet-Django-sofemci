@@ -6,9 +6,10 @@ from django.core.validators import MinValueValidator, MaxValueValidator, RegexVa
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import datetime, timedelta
-import uuid
 import re
 from django.db import IntegrityError
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
 
 # ==========================================
 # MODÈLE UTILISATEUR PERSONNALISÉ
@@ -109,12 +110,16 @@ class CustomUser(AbstractUser):
         verbose_name_plural = "Utilisateurs"
         ordering = ['last_name', 'first_name']
         indexes = [
-            models.Index(fields=['matricule']),
-            models.Index(fields=['role']),
+            models.Index(fields=['matricule'], name='customuser_matricule_idx'),
+            models.Index(fields=['role'], name='customuser_role_idx'),
+            models.Index(fields=['last_name', 'first_name'], name='customuser_name_idx'),
         ]
     
     def __str__(self):
-        return f"{self.get_full_name()} ({self.get_role_display()})"
+        full_name = self.get_full_name()
+        if full_name:
+            return f"{full_name} ({self.get_role_display()})"
+        return f"{self.username} ({self.get_role_display()})"
     
     def get_nom_complet(self):
         """Retourne le nom complet formaté"""
@@ -209,12 +214,16 @@ class CustomUser(AbstractUser):
         # Chercher tous les matricules de l'année en cours
         matricules_existants = cls.objects.filter(
             matricule__startswith=prefixe
-        ).values_list('matricule', flat=True)
+        ).exclude(matricule__isnull=True).exclude(matricule__exact='').values_list('matricule', flat=True)
         
         # Extraire les numéros existants
         numeros_existants = []
+        pattern = re.compile(rf'^{re.escape(prefixe)}(\d{{4}})$')
+        
         for matricule in matricules_existants:
-            match = re.match(rf'^{re.escape(prefixe)}(\d{{4}})$', matricule)
+            if not matricule:
+                continue
+            match = pattern.match(matricule)
             if match:
                 try:
                     numeros_existants.append(int(match.group(1)))
@@ -222,19 +231,18 @@ class CustomUser(AbstractUser):
                     continue
         
         # Trouver le prochain numéro disponible
-        if numeros_existants:
-            max_numero = max(numeros_existants)
-            
-            # Chercher le premier "trou" dans la séquence
-            for i in range(1, max_numero + 2):
-                if i not in numeros_existants:
-                    return i
-            
-            # Si pas de trou, prendre le suivant
-            return max_numero + 1
-        else:
-            # Aucun matricule pour cette année
+        if not numeros_existants:
             return 1
+        
+        max_numero = max(numeros_existants)
+        
+        # Chercher le premier "trou" dans la séquence
+        for i in range(1, max_numero + 2):
+            if i not in numeros_existants:
+                return i
+        
+        # Si pas de trou, prendre le suivant
+        return max_numero + 1
     
     @classmethod
     def generate_matricule(cls):
@@ -272,10 +280,9 @@ class CustomUser(AbstractUser):
                 })
             
             # Vérifier l'unicité (sauf pour cet utilisateur)
+            qs = CustomUser.objects.filter(matricule=matricule)
             if self.pk:
-                qs = CustomUser.objects.filter(matricule=matricule).exclude(pk=self.pk)
-            else:
-                qs = CustomUser.objects.filter(matricule=matricule)
+                qs = qs.exclude(pk=self.pk)
             
             if qs.exists():
                 raise ValidationError({
@@ -289,6 +296,8 @@ class CustomUser(AbstractUser):
         # Nettoyer le matricule
         if self.matricule:
             self.matricule = self.matricule.strip()
+            if not self.matricule:
+                self.matricule = None
         
         # Générer un matricule si vide (nouvel utilisateur seulement)
         if not self.matricule and is_new:
@@ -296,7 +305,6 @@ class CustomUser(AbstractUser):
         
         # Pour les utilisateurs existants sans matricule, vérifier s'il faut en générer un
         elif not self.matricule and not is_new:
-            # Vérifier si l'utilisateur avait déjà un matricule avant
             try:
                 ancien = CustomUser.objects.get(pk=self.pk)
                 if not ancien.matricule:
@@ -306,10 +314,10 @@ class CustomUser(AbstractUser):
         
         # Valider avant sauvegarde
         try:
-            self.clean()
+            self.full_clean()
         except ValidationError as e:
-            # Si validation échoue, essayer de générer un matricule automatique
-            if 'matricule' in e.error_dict:
+            # Si validation échoue à cause du matricule, essayer de générer un matricule automatique
+            if 'matricule' in e.message_dict:
                 if is_new or not self.matricule:
                     self.matricule = self.generate_matricule()
                 else:
@@ -371,9 +379,9 @@ class CustomUser(AbstractUser):
         
         for dup in duplicates:
             matricule = dup['matricule']
-            users = cls.objects.filter(matricule=matricule).order_by('id')
+            users = cls.objects.filter(matricule=matricule).order_by('date_joined')
             
-            # Garder le premier, corriger les autres
+            # Garder le premier (le plus ancien), corriger les autres
             for i, user in enumerate(users):
                 if i == 0:
                     corrections.append(f"✓ Gardé: {user.username} - {matricule}")
@@ -398,7 +406,7 @@ class CustomUser(AbstractUser):
         
         for user in cls.objects.filter(matricule__isnull=False):
             try:
-                user.clean()
+                user.full_clean()
             except ValidationError as e:
                 errors.append({
                     'user': f"{user.username} (ID: {user.id})",
@@ -409,38 +417,6 @@ class CustomUser(AbstractUser):
         return errors
 
 # ==========================================
-# SIGNALS POUR CustomUser
-# ==========================================
-
-from django.db.models.signals import pre_save
-from django.dispatch import receiver
-
-@receiver(pre_save, sender=CustomUser)
-def customuser_pre_save(sender, instance, **kwargs):
-    """
-    Signal pour garantir l'unicité des matricules avant sauvegarde.
-    Cette fonction est appelée juste avant chaque sauvegarde d'un CustomUser.
-    """
-    # Nettoyer le matricule
-    if instance.matricule:
-        instance.matricule = instance.matricule.strip()
-    
-    # Vérifier les doublons pour les matricules non vides
-    if instance.matricule:
-        # Construire la requête pour vérifier l'unicité
-        if instance.pk:
-            # Utilisateur existant : exclure lui-même
-            qs = CustomUser.objects.filter(
-                matricule=instance.matricule
-            ).exclude(pk=instance.pk)
-        else:
-            # Nouvel utilisateur : vérifier tous
-            qs = CustomUser.objects.filter(matricule=instance.matricule)
-        
-        # Si un doublon est trouvé, générer un nouveau matricule
-        if qs.exists():
-            instance.matricule = CustomUser.generate_matricule()
-# ==========================================
 # MODÈLES DE CONFIGURATION
 # ==========================================
 
@@ -448,9 +424,9 @@ class Equipe(models.Model):
     """Équipe de production"""
     
     NOM_CHOICES = [
-        ('MATIN', 'Équipe Matin (06h-14h)'),
-        ('SOIR', 'Équipe Soir (14h-22h)'),
-        ('NUIT', 'Équipe Nuit (22h-06h)'),
+        ('MATIN', 'Équipe Du Matin'),
+        ('SOIR', 'Équipe Du Soir'),
+        ('NUIT', 'Équipe De Nuit'),
     ]
     
     nom = models.CharField(
@@ -501,6 +477,10 @@ class Equipe(models.Model):
         verbose_name = "Équipe"
         verbose_name_plural = "Équipes"
         ordering = ['heure_debut']
+        indexes = [
+            models.Index(fields=['nom'], name='equipe_nom_idx'),
+            models.Index(fields=['est_active'], name='equipe_active_idx'),
+        ]
     
     def __str__(self):
         return f"{self.get_nom_display()} ({self.heure_debut.strftime('%Hh%M')}-{self.heure_fin.strftime('%Hh%M')})"
@@ -583,19 +563,22 @@ class ZoneExtrusion(models.Model):
         verbose_name = "Zone d'extrusion"
         verbose_name_plural = "Zones d'extrusion"
         ordering = ['numero']
+        indexes = [
+            models.Index(fields=['numero'], name='zone_numero_idx'),
+            models.Index(fields=['active'], name='zone_active_idx'),
+            models.Index(fields=['chef_zone'], name='zone_chef_idx'),
+        ]
     
     def __str__(self):
         return f"Zone {self.numero} - {self.nom}"
     
     def machines_actives(self):
         """Retourne le nombre de machines actives dans cette zone"""
-        return Machine.objects.filter(
-            zone_extrusion=self,
-            etat='ACTIVE'
-        ).count()
+        from django.db.models import Count
+        return self.machine_set.filter(etat='ACTIVE').count()
 
 # ==========================================
-# MODÈLES MACHINES - AVEC CHAMPS MANQUANTS AJOUTÉS
+# MODÈLES MACHINES
 # ==========================================
 
 class Machine(models.Model):
@@ -668,14 +651,14 @@ class Machine(models.Model):
     )
     
     zone_extrusion = models.ForeignKey(
-        'ZoneExtrusion',
+        ZoneExtrusion,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         verbose_name="Zone d'extrusion (si applicable)"
     )
     
-    # === CHAMPS AJOUTÉS (MANQUANTS) ===
+    # === CHAMPS AJOUTÉS ===
     provenance = models.CharField(
         max_length=50,
         choices=PROVENANCE_CHOICES,
@@ -862,9 +845,11 @@ class Machine(models.Model):
         verbose_name_plural = "Machines"
         ordering = ['numero']
         indexes = [
-            models.Index(fields=['section', 'etat']),
-            models.Index(fields=['numero']),
-            models.Index(fields=['type_machine']),
+            models.Index(fields=['section', 'etat'], name='machine_section_etat_idx'),
+            models.Index(fields=['numero'], name='machine_numero_idx'),
+            models.Index(fields=['type_machine'], name='machine_type_idx'),
+            models.Index(fields=['zone_extrusion'], name='machine_zone_idx'),
+            models.Index(fields=['etat'], name='machine_etat_idx'),
         ]
     
     def __str__(self):
@@ -872,17 +857,25 @@ class Machine(models.Model):
     
     def clean(self):
         """Validation personnalisée"""
-        if self.temperature_actuelle > self.temperature_max_autorisee:
-            raise ValidationError(
-                f"La température actuelle ({self.temperature_actuelle}°C) "
-                f"dépasse la température maximale autorisée ({self.temperature_max_autorisee}°C)."
-            )
+        super().clean()
         
-        if self.consommation_electrique_kwh > self.consommation_electrique_nominale * 1.2:
-            raise ValidationError(
-                f"La consommation électrique actuelle ({self.consommation_electrique_kwh} kWh) "
-                f"dépasse de plus de 20% la consommation nominale ({self.consommation_electrique_nominale} kWh)."
-            )
+        # Validation température
+        if float(self.temperature_actuelle) > float(self.temperature_max_autorisee):
+            raise ValidationError({
+                'temperature_actuelle': 
+                    f"La température actuelle ({self.temperature_actuelle}°C) "
+                    f"dépasse la température maximale autorisée ({self.temperature_max_autorisee}°C)."
+            })
+        
+        # Validation consommation
+        if float(self.consommation_electrique_nominale) > 0:
+            consommation_max = float(self.consommation_electrique_nominale) * 1.2
+            if float(self.consommation_electrique_kwh) > consommation_max:
+                raise ValidationError({
+                    'consommation_electrique_kwh': 
+                        f"La consommation électrique actuelle ({self.consommation_electrique_kwh} kWh) "
+                        f"dépasse de plus de 20% la consommation nominale ({self.consommation_electrique_nominale} kWh)."
+                })
     
     def est_en_maintenance(self):
         """Vérifie si la machine est en maintenance"""
@@ -904,10 +897,9 @@ class Machine(models.Model):
     
     def save(self, *args, **kwargs):
         """Logique avant sauvegarde"""
-        self.clean()
+        self.full_clean()
         super().save(*args, **kwargs)
 
-        
 class HistoriqueMachine(models.Model):
     """Historique des événements de machine"""
     
@@ -989,7 +981,9 @@ class HistoriqueMachine(models.Model):
         verbose_name_plural = "Historiques machines"
         ordering = ['-date_evenement']
         indexes = [
-            models.Index(fields=['machine', 'date_evenement']),
+            models.Index(fields=['machine', 'date_evenement'], name='historique_machine_date_idx'),
+            models.Index(fields=['type_evenement'], name='historique_type_idx'),
+            models.Index(fields=['technicien'], name='historique_technicien_idx'),
         ]
     
     def __str__(self):
@@ -1037,17 +1031,19 @@ class ProductionExtrusion(models.Model):
         max_digits=10,
         decimal_places=2,
         verbose_name="Matière première (kg)",
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
     )
     
     nombre_machines_actives = models.IntegerField(
         verbose_name="Nombre de machines actives",
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
+        default=0
     )
     
     nombre_machinistes = models.IntegerField(
         verbose_name="Nombre de machinistes",
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
+        default=0
     )
     
     # === PRODUCTION ===
@@ -1055,28 +1051,28 @@ class ProductionExtrusion(models.Model):
         max_digits=10,
         decimal_places=2,
         verbose_name="Nombre de bobines (kg)",
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
     )
     
     production_finis_kg = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         verbose_name="Production finis (kg)",
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
     )
     
     production_semi_finis_kg = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         verbose_name="Production semi-finis (kg)",
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
     )
     
     dechets = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         verbose_name="Déchets générés (kg)",
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
     )
     
     # === CALCULS AUTOMATIQUES ===
@@ -1084,28 +1080,24 @@ class ProductionExtrusion(models.Model):
         max_digits=10,
         decimal_places=2,
         verbose_name="Production totale (kg)",
-        editable=False
     )
     
     rendement_pourcentage = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         verbose_name="Rendement matière (%)",
-        editable=False
     )
     
     taux_dechet_pourcentage = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         verbose_name="Taux de déchet (%)",
-        editable=False
     )
     
     production_par_machine = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         verbose_name="Production par machine (kg)",
-        editable=False
     )
     
     # === INFORMATIONS SUPPLÉMENTAIRES ===
@@ -1144,12 +1136,31 @@ class ProductionExtrusion(models.Model):
         ordering = ['-date_production', 'zone']
         unique_together = ['date_production', 'zone', 'equipe']
         indexes = [
-            models.Index(fields=['date_production', 'zone']),
-            models.Index(fields=['valide']),
+            models.Index(fields=['date_production', 'zone'], name='prod_extrusion_date_zone_idx'),
+            models.Index(fields=['valide'], name='prod_extrusion_valide_idx'),
+            models.Index(fields=['date_creation'], name='prod_extrusion_creation_idx'),
+            models.Index(fields=['equipe'], name='prod_extrusion_equipe_idx'),
         ]
     
     def __str__(self):
         return f"Extrusion {self.date_production} - {self.zone} - {self.equipe}"
+    
+    def clean(self):
+        """Validation avant sauvegarde"""
+        super().clean()
+        
+        # Validation production vs matière première
+        if float(self.matiere_premiere_kg) > 0:
+            production_totale = float(self.production_finis_kg) + float(self.production_semi_finis_kg)
+            if production_totale > float(self.matiere_premiere_kg):
+                raise ValidationError({
+                    'production_finis_kg': 
+                        f"La production totale ({production_totale} kg) ne peut pas "
+                        f"dépasser la matière première ({self.matiere_premiere_kg} kg).",
+                    'production_semi_finis_kg': 
+                        f"La production totale ({production_totale} kg) ne peut pas "
+                        f"dépasser la matière première ({self.matiere_premiere_kg} kg)."
+                })
     
     def save(self, *args, **kwargs):
         """Calcul automatique des indicateurs avant sauvegarde"""
@@ -1157,14 +1168,15 @@ class ProductionExtrusion(models.Model):
         self.total_production_kg = self.production_finis_kg + self.production_semi_finis_kg
         
         # Rendement matière
-        if self.matiere_premiere_kg > 0:
+        if float(self.matiere_premiere_kg) > 0:
             self.rendement_pourcentage = (self.total_production_kg / self.matiere_premiere_kg) * 100
         else:
             self.rendement_pourcentage = 0
         
         # Taux de déchet
-        if self.total_production_kg > 0:
-            self.taux_dechet_pourcentage = (self.dechets / (self.total_production_kg + self.dechets)) * 100
+        total_avec_dechets = self.total_production_kg + self.dechets
+        if float(total_avec_dechets) > 0:
+            self.taux_dechet_pourcentage = (self.dechets / total_avec_dechets) * 100
         else:
             self.taux_dechet_pourcentage = 0
         
@@ -1174,22 +1186,26 @@ class ProductionExtrusion(models.Model):
         else:
             self.production_par_machine = 0
         
+        self.full_clean()
         super().save(*args, **kwargs)
     
     def duree_production(self):
         """Calcule la durée de production en heures"""
-        debut = datetime.combine(datetime.today(), self.heure_debut)
-        fin = datetime.combine(datetime.today(), self.heure_fin)
-        if fin < debut:
-            fin += timedelta(days=1)
-        duree = fin - debut
-        return duree.total_seconds() / 3600
+        try:
+            debut = datetime.combine(self.date_production, self.heure_debut)
+            fin = datetime.combine(self.date_production, self.heure_fin)
+            if fin < debut:
+                fin += timedelta(days=1)
+            duree = fin - debut
+            return duree.total_seconds() / 3600
+        except (TypeError, AttributeError):
+            return 0
     
     def productivite_horaire(self):
         """Calcule la productivité horaire"""
         duree = self.duree_production()
         if duree > 0:
-            return self.total_production_kg / duree
+            return float(self.total_production_kg) / duree
         return 0
 
 class ProductionImprimerie(models.Model):
@@ -1209,28 +1225,29 @@ class ProductionImprimerie(models.Model):
     
     nombre_machines_actives = models.IntegerField(
         verbose_name="Nombre de machines actives",
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
+        default=0
     )
     
     production_bobines_finies_kg = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         verbose_name="Production bobines finies (kg)",
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
     )
     
     production_bobines_semi_finies_kg = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         verbose_name="Production bobines semi-finies (kg)",
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
     )
     
     dechets = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         verbose_name="Déchets générés (kg)",
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
     )
     
     # === CALCULS AUTOMATIQUES ===
@@ -1238,14 +1255,12 @@ class ProductionImprimerie(models.Model):
         max_digits=10,
         decimal_places=2,
         verbose_name="Production totale (kg)",
-        editable=False
     )
     
     taux_dechet_pourcentage = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         verbose_name="Taux de déchet (%)",
-        editable=False
     )
     
     # === INFORMATIONS SUPPLÉMENTAIRES ===
@@ -1283,8 +1298,9 @@ class ProductionImprimerie(models.Model):
         verbose_name_plural = "Productions imprimerie"
         ordering = ['-date_production']
         indexes = [
-            models.Index(fields=['date_production']),
-            models.Index(fields=['valide']),
+            models.Index(fields=['date_production'], name='prod_imprimerie_date_idx'),
+            models.Index(fields=['valide'], name='prod_imprimerie_valide_idx'),
+            models.Index(fields=['date_creation'], name='prod_imprimerie_creation_idx'),
         ]
     
     def __str__(self):
@@ -1294,8 +1310,9 @@ class ProductionImprimerie(models.Model):
         """Calcul automatique des indicateurs"""
         self.total_production_kg = self.production_bobines_finies_kg + self.production_bobines_semi_finies_kg
         
-        if self.total_production_kg > 0:
-            self.taux_dechet_pourcentage = (self.dechets / (self.total_production_kg + self.dechets)) * 100
+        total_avec_dechets = self.total_production_kg + self.dechets
+        if float(total_avec_dechets) > 0:
+            self.taux_dechet_pourcentage = (self.dechets / total_avec_dechets) * 100
         else:
             self.taux_dechet_pourcentage = 0
         
@@ -1303,12 +1320,15 @@ class ProductionImprimerie(models.Model):
     
     def duree_production(self):
         """Calcule la durée de production"""
-        debut = datetime.combine(datetime.today(), self.heure_debut)
-        fin = datetime.combine(datetime.today(), self.heure_fin)
-        if fin < debut:
-            fin += timedelta(days=1)
-        duree = fin - debut
-        return duree.total_seconds() / 3600
+        try:
+            debut = datetime.combine(self.date_production, self.heure_debut)
+            fin = datetime.combine(self.date_production, self.heure_fin)
+            if fin < debut:
+                fin += timedelta(days=1)
+            duree = fin - debut
+            return duree.total_seconds() / 3600
+        except (TypeError, AttributeError):
+            return 0
 
 class ProductionSoudure(models.Model):
     """Production de la section soudure"""
@@ -1327,7 +1347,8 @@ class ProductionSoudure(models.Model):
     
     nombre_machines_actives = models.IntegerField(
         verbose_name="Nombre de machines actives",
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
+        default=0
     )
     
     # === PRODUCTION STANDARD ===
@@ -1335,7 +1356,7 @@ class ProductionSoudure(models.Model):
         max_digits=10,
         decimal_places=2,
         verbose_name="Production bobines finies (kg)",
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
     )
     
     # === PRODUCTION SPÉCIFIQUE SOUDURE ===
@@ -1371,7 +1392,7 @@ class ProductionSoudure(models.Model):
         max_digits=10,
         decimal_places=2,
         verbose_name="Déchets générés (kg)",
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
     )
     
     # === CALCULS AUTOMATIQUES ===
@@ -1379,21 +1400,18 @@ class ProductionSoudure(models.Model):
         max_digits=10,
         decimal_places=2,
         verbose_name="Production spécifique totale (kg)",
-        editable=False
     )
     
     total_production_kg = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         verbose_name="Production totale (kg)",
-        editable=False
     )
     
     taux_dechet_pourcentage = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         verbose_name="Taux de déchet (%)",
-        editable=False
     )
     
     # === INFORMATIONS SUPPLÉMENTAIRES ===
@@ -1431,8 +1449,9 @@ class ProductionSoudure(models.Model):
         verbose_name_plural = "Productions soudure"
         ordering = ['-date_production']
         indexes = [
-            models.Index(fields=['date_production']),
-            models.Index(fields=['valide']),
+            models.Index(fields=['date_production'], name='prod_soudure_date_idx'),
+            models.Index(fields=['valide'], name='prod_soudure_valide_idx'),
+            models.Index(fields=['date_creation'], name='prod_soudure_creation_idx'),
         ]
     
     def __str__(self):
@@ -1452,8 +1471,9 @@ class ProductionSoudure(models.Model):
         self.total_production_kg = self.production_bobines_finies_kg + self.total_production_specifique_kg
         
         # Taux de déchet
-        if self.total_production_kg > 0:
-            self.taux_dechet_pourcentage = (self.dechets / (self.total_production_kg + self.dechets)) * 100
+        total_avec_dechets = self.total_production_kg + self.dechets
+        if float(total_avec_dechets) > 0:
+            self.taux_dechet_pourcentage = (self.dechets / total_avec_dechets) * 100
         else:
             self.taux_dechet_pourcentage = 0
         
@@ -1474,21 +1494,22 @@ class ProductionRecyclage(models.Model):
     
     nombre_moulinex = models.IntegerField(
         verbose_name="Nombre de moulinex",
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
+        default=0
     )
     
     production_broyage_kg = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         verbose_name="Production broyage (kg)",
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
     )
     
     production_bache_noir_kg = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         verbose_name="Bâche noire produite (kg)",
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
     )
 
     dechets = models.DecimalField(
@@ -1496,7 +1517,6 @@ class ProductionRecyclage(models.Model):
         decimal_places=2,
         verbose_name="Déchets générés (kg)",
         validators=[MinValueValidator(0)],
-      
     )
     
     # === CALCULS AUTOMATIQUES ===
@@ -1504,28 +1524,24 @@ class ProductionRecyclage(models.Model):
         max_digits=10,
         decimal_places=2,
         verbose_name="Production totale (kg)",
-        editable=False
     )
     
     production_par_moulinex = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         verbose_name="Production par moulinex (kg)",
-        editable=False
     )
     
     taux_transformation_pourcentage = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         verbose_name="Taux de transformation (%)",
-        editable=False
     )
 
-    taux_dechet_pourcentage = models.DecimalField(  # AJOUTER CE CHAMP
+    taux_dechet_pourcentage = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         verbose_name="Taux de déchet (%)",
-        editable=False
     )
     
     # === INFORMATIONS SUPPLÉMENTAIRES ===
@@ -1563,12 +1579,21 @@ class ProductionRecyclage(models.Model):
         verbose_name_plural = "Productions recyclage"
         ordering = ['-date_production', 'equipe']
         indexes = [
-            models.Index(fields=['date_production', 'equipe']),
-            models.Index(fields=['valide']),
+            models.Index(fields=['date_production', 'equipe'], name='prod_recyclage_date_equipe_idx'),
+            models.Index(fields=['valide'], name='prod_recyclage_valide_idx'),
+            models.Index(fields=['date_creation'], name='prod_recyclage_creation_idx'),
         ]
     
     def __str__(self):
         return f"Recyclage {self.date_production} - {self.equipe}"
+    
+    def clean(self):
+        """Validation personnalisée"""
+        super().clean()
+        # Note: On ne bloque plus si bâche > broyage, seulement avertissement
+        if float(self.production_broyage_kg) > 0 and float(self.production_bache_noir_kg) > float(self.production_broyage_kg):
+            # Log warning mais pas d'erreur
+            pass
     
     def save(self, *args, **kwargs):
         """Calcul automatique des indicateurs"""
@@ -1582,16 +1607,19 @@ class ProductionRecyclage(models.Model):
             self.production_par_moulinex = 0
         
         # Taux de transformation
-        if self.production_broyage_kg > 0:
+        if float(self.production_broyage_kg) > 0:
             self.taux_transformation_pourcentage = (self.production_bache_noir_kg / self.production_broyage_kg) * 100
         else:
             self.taux_transformation_pourcentage = 0
 
-        if self.total_production_kg > 0 or self.dechets > 0:
-            self.taux_dechet_pourcentage = (self.dechets / (self.total_production_kg + self.dechets)) * 100
+        # Taux de déchet
+        total_avec_dechets = self.total_production_kg + self.dechets
+        if float(total_avec_dechets) > 0:
+            self.taux_dechet_pourcentage = (self.dechets / total_avec_dechets) * 100
         else:
             self.taux_dechet_pourcentage = 0
         
+        self.full_clean()
         super().save(*args, **kwargs)
 
 # ==========================================
@@ -1714,8 +1742,11 @@ class Alerte(models.Model):
         verbose_name_plural = "Alertes"
         ordering = ['-date_creation', 'priorite']
         indexes = [
-            models.Index(fields=['statut', 'section']),
-            models.Index(fields=['date_creation']),
+            models.Index(fields=['statut', 'section'], name='alerte_statut_section_idx'),
+            models.Index(fields=['date_creation'], name='alerte_date_creation_idx'),
+            models.Index(fields=['cree_par'], name='alerte_cree_par_idx'),
+            models.Index(fields=['assigne_a'], name='alerte_assigne_a_idx'),
+            models.Index(fields=['priorite'], name='alerte_priorite_idx'),
         ]
     
     def __str__(self):
@@ -1804,9 +1835,11 @@ class AlerteIA(models.Model):
         help_text="Données anormales détectées"
     )
     
-    recommandations = models.TextField(default='', blank=True ,
+    recommandations = models.TextField(
+        default='',
+        blank=True,
         verbose_name="Recommandations IA"
-)
+    )
     
     date_creation = models.DateTimeField(
         default=timezone.now,
@@ -1838,8 +1871,10 @@ class AlerteIA(models.Model):
         verbose_name_plural = "Alertes IA"
         ordering = ['-date_creation', 'niveau']
         indexes = [
-            models.Index(fields=['machine', 'statut']),
-            models.Index(fields=['date_creation']),
+            models.Index(fields=['machine', 'statut'], name='alerte_ia_machine_statut_idx'),
+            models.Index(fields=['date_creation'], name='alerte_ia_date_creation_idx'),
+            models.Index(fields=['niveau'], name='alerte_ia_niveau_idx'),
+            models.Index(fields=['traite_par'], name='alerte_ia_traite_par_idx'),
         ]
     
     def __str__(self):
@@ -1866,70 +1901,86 @@ class AlerteIA(models.Model):
         super().save(*args, **kwargs)
 
 # ==========================================
+# SIGNALS POUR CustomUser
+# ==========================================
+
+@receiver(pre_save, sender=CustomUser)
+def customuser_pre_save(sender, instance, **kwargs):
+    """
+    Signal pour garantir l'unicité des matricules avant sauvegarde.
+    Cette fonction est appelée juste avant chaque sauvegarde d'un CustomUser.
+    """
+    # Nettoyer le matricule
+    if instance.matricule:
+        instance.matricule = instance.matricule.strip()
+        if not instance.matricule:
+            instance.matricule = None
+    
+    # Vérifier les doublons pour les matricules non vides
+    if instance.matricule:
+        # Construire la requête pour vérifier l'unicité
+        if instance.pk:
+            # Utilisateur existant : exclure lui-même
+            qs = CustomUser.objects.filter(
+                matricule=instance.matricule
+            ).exclude(pk=instance.pk)
+        else:
+            # Nouvel utilisateur : vérifier tous
+            qs = CustomUser.objects.filter(matricule=instance.matricule)
+        
+        # Si un doublon est trouvé, générer un nouveau matricule
+        if qs.exists():
+            instance.matricule = CustomUser.generate_matricule()
+
+# ==========================================
 # FONCTIONS UTILITAIRES
 # ==========================================
 
 def calculer_rendement_matiere(production_totale, matiere_premiere):
     """Calcule le rendement matière en pourcentage"""
-    if matiere_premiere <= 0:
+    try:
+        if float(matiere_premiere) <= 0:
+            return 0
+        return (float(production_totale) / float(matiere_premiere)) * 100
+    except (ValueError, TypeError, ZeroDivisionError):
         return 0
-    return (production_totale / matiere_premiere) * 100
 
 def calculer_taux_dechet(dechets, production_totale):
     """Calcule le taux de déchet en pourcentage"""
-    total = production_totale + dechets
-    if total <= 0:
+    try:
+        total = float(production_totale) + float(dechets)
+        if total <= 0:
+            return 0
+        return (float(dechets) / total) * 100
+    except (ValueError, TypeError, ZeroDivisionError):
         return 0
-    return (dechets / total) * 100
 
 def generer_numero_machine(section, type_machine):
     """Génère un numéro de machine unique"""
-    prefixe = section[:3].upper()
-    type_code = type_machine[:3].upper()
+    prefixe = section[:3].upper() if section else 'GEN'
+    type_code = type_machine[:3].upper() if type_machine else 'MCH'
     date_code = timezone.now().strftime('%y%m')
     
-    # Chercher le dernier numéro pour cette combinaison
-    dernier = Machine.objects.filter(
-        section=section,
-        type_machine=type_machine
-    ).order_by('-numero').first()
-    
-    if dernier and dernier.numero.startswith(f"{prefixe}-{type_code}-{date_code}-"):
-        try:
-            sequence = int(dernier.numero.split('-')[-1]) + 1
-        except:
+    try:
+        # Chercher le dernier numéro pour cette combinaison
+        dernier = Machine.objects.filter(
+            section=section,
+            type_machine=type_machine
+        ).order_by('-numero').first()
+        
+        if dernier and dernier.numero.startswith(f"{prefixe}-{type_code}-{date_code}-"):
+            try:
+                sequence = int(dernier.numero.split('-')[-1]) + 1
+            except (ValueError, IndexError):
+                sequence = 1
+        else:
             sequence = 1
-    else:
-        sequence = 1
-    
-    return f"{prefixe}-{type_code}-{date_code}-{sequence:03d}"
-
-# ==========================================
-# SIGNALS (si utilisés)
-# ==========================================
-
-from django.db.models.signals import post_save, pre_save
-from django.dispatch import receiver
-
-@receiver(pre_save, sender=ProductionExtrusion)
-def pre_save_production_extrusion(sender, instance, **kwargs):
-    """Validation avant sauvegarde"""
-    if instance.matiere_premiere_kg > 0:
-        production_totale = instance.production_finis_kg + instance.production_semi_finis_kg
-        if production_totale > instance.matiere_premiere_kg:
-            raise ValidationError(
-                f"La production totale ({production_totale} kg) ne peut pas "
-                f"dépasser la matière première ({instance.matiere_premiere_kg} kg)."
-            )
-
-@receiver(pre_save, sender=ProductionRecyclage)
-def pre_save_production_recyclage(sender, instance, **kwargs):
-    """Validation recyclage"""
-    if instance.production_broyage_kg > 0:
-        # Note: On ne bloque plus si bâche > broyage, seulement avertissement
-        if instance.production_bache_noir_kg > instance.production_broyage_kg:
-            print(f"⚠️  Note: Bâche ({instance.production_bache_noir_kg} kg) > "
-                  f"Broyage ({instance.production_broyage_kg} kg)")
+        
+        return f"{prefixe}-{type_code}-{date_code}-{sequence:03d}"
+    except Exception:
+        # Fallback en cas d'erreur
+        timestamp = int(timezone.now().timestamp() % 10000)
+        return f"{prefixe}-{type_code}-{date_code}-{timestamp:04d}"
 
 # ==========================================
 # MÉTHODES DE SERVICE
@@ -1943,34 +1994,37 @@ def get_statistiques_machine(machine_id):
             'nom': f"{machine.numero}",
             'type': machine.get_type_machine_display(),
             'etat': machine.get_etat_display(),
-            'score_sante': machine.score_sante_global,
+            'score_sante': float(machine.score_sante_global),
             'prochaine_maintenance': machine.prochaine_maintenance_prevue,
-            'heures_fonctionnement': machine.heures_fonctionnement_totales,
+            'heures_fonctionnement': float(machine.heures_fonctionnement_totales),
             'pannes_30_jours': machine.nombre_pannes_1_dernier_mois,
         }
-    except Machine.DoesNotExist:
+    except (Machine.DoesNotExist, ValueError, TypeError):
         return None
 
 def get_kpi_production(date_debut, date_fin):
     """Calcule les KPI de production sur une période"""
     from django.db.models import Sum, Avg
     
-    productions = ProductionExtrusion.objects.filter(
-        date_production__range=[date_debut, date_fin]
-    )
-    
-    if not productions.exists():
+    try:
+        productions = ProductionExtrusion.objects.filter(
+            date_production__range=[date_debut, date_fin]
+        )
+        
+        if not productions.exists():
+            return None
+        
+        stats = {
+            'production_totale': float(productions.aggregate(Sum('total_production_kg'))['total_production_kg__sum'] or 0),
+            'matiere_totale': float(productions.aggregate(Sum('matiere_premiere_kg'))['matiere_premiere_kg__sum'] or 0),
+            'rendement_moyen': float(productions.aggregate(Avg('rendement_pourcentage'))['rendement_pourcentage__avg'] or 0),
+            'dechets_totaux': float(productions.aggregate(Sum('dechets'))['dechets__sum'] or 0),
+            'nb_jours': productions.count(),
+        }
+        
+        return stats
+    except Exception:
         return None
-    
-    stats = {
-        'production_totale': float(productions.aggregate(Sum('total_production_kg'))['total_production_kg__sum'] or 0),
-        'matiere_totale': float(productions.aggregate(Sum('matiere_premiere_kg'))['matiere_premiere_kg__sum'] or 0),
-        'rendement_moyen': float(productions.aggregate(Avg('rendement_pourcentage'))['rendement_pourcentage__avg'] or 0),
-        'dechets_totaux': float(productions.aggregate(Sum('dechets'))['dechets__sum'] or 0),
-        'nb_jours': productions.count(),
-    }
-    
-    return stats
 
 # ==========================================
 # CONSTANTES
